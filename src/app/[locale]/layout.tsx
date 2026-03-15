@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Open_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { locale as rootLocale } from "next/root-params";
 import { getMessages, getTranslations } from "next-intl/server";
@@ -9,7 +9,7 @@ import "../globals.css";
 import { env } from "@/env";
 import { routing } from "@/i18n/routing";
 
-const openSans = Open_Sans({ subsets: ["latin"], display: "swap" });
+const font = Plus_Jakarta_Sans({ subsets: ["latin"], display: "swap" });
 
 export const generateStaticParams = () => routing.locales.map((locale) => ({ locale }));
 
@@ -33,7 +33,7 @@ export default async function LocaleLayout({ children }: { children: React.React
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={openSans.className}>
+    <html lang={locale} className={font.className}>
       <body className="bg-gray-50 leading-relaxed text-gray-900 antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}

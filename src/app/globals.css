@@ -2,16 +2,23 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
+  /* Brand color palette — warm amber/gold derived from Fyysikkokilta yellow.
+     To rebrand, replace these values. 600 and 700 must pass WCAG AA on white. */
   --color-brand-50: #fefce8;
   --color-brand-100: #fef9c3;
   --color-brand-200: #fef08a;
-  --color-brand-300: #fbdb1d;
-  --color-brand-400: #f5c800;
-  --color-brand-500: #d4a800;
-  --color-brand-600: #a78300;
-  --color-brand-700: #7c6200;
-  --color-brand-800: #534100;
-  --color-brand-900: #2a2100;
+  --color-brand-300: #fde047;
+  --color-brand-400: #facc15;
+  --color-brand-500: #eab308;
+  --color-brand-600: #a16207;
+  --color-brand-700: #854d0e;
+  --color-brand-800: #713f12;
+  --color-brand-900: #422006;
+
+  /* Surface color for header/dark chrome areas. */
+  --color-surface: #201e1e;
+  /* Accent color for decorative highlights (borders, badges). */
+  --color-accent: #fbdb1d;
 }
 
 /* Reset cursor to default for non-interactive elements */
@@ -43,19 +50,32 @@ input[type="number"] {
   cursor: text;
 }
 
-/* Typography matching original Ilmomasiina design */
+/* Typography */
 h1 {
   font-weight: 800;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 h2 {
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
   color: var(--color-gray-500);
 }
 
 h3 {
   font-weight: 600;
+}
+
+/* Table styling */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table thead th {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
 }

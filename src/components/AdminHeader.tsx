@@ -17,18 +17,25 @@ export default function AdminHeader() {
   }, [router]);
 
   return (
-    <header className="bg-[#201e1e] text-white">
+    <header className="border-b-2 border-accent bg-surface text-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-        <Link href="/admin" className="font-bold uppercase tracking-wide text-white no-underline">
+        <Link href="/admin" className="font-extrabold uppercase tracking-widest text-accent no-underline">
           <span className="hidden text-lg sm:inline">{env.NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT}</span>
           <span className="text-base sm:hidden">{env.NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT_SHORT}</span>
-          <span className="ml-2 text-xs font-normal normal-case tracking-normal text-gray-400">(admin)</span>
+          <span className="ml-2 text-xs font-normal normal-case tracking-normal text-gray-500">(admin)</span>
         </Link>
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-sm text-gray-300 no-underline hover:text-white">
+        <div className="flex items-center gap-5">
+          <Link
+            href="/"
+            className="text-xs font-medium uppercase tracking-wider text-gray-300 no-underline transition-colors hover:text-accent"
+          >
             {t("eventList")}
           </Link>
-          <button type="button" className="text-sm text-gray-300 hover:text-white" onClick={handleLogout}>
+          <button
+            type="button"
+            className="text-xs font-medium uppercase tracking-wider text-gray-300 transition-colors hover:text-accent"
+            onClick={handleLogout}
+          >
             {t("logout")}
           </button>
         </div>

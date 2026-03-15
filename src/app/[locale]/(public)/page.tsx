@@ -104,17 +104,20 @@ export default async function EventListPage({
 
   return (
     <>
-      <h1 className="mb-6 text-2xl font-bold">{t("title")}</h1>
+      <div className="mb-8 flex items-center gap-3">
+        <div className="h-6 w-1 bg-accent" />
+        <h1 className="text-2xl font-extrabold tracking-wider">{t("title")}</h1>
+      </div>
 
       {/* Desktop table */}
-      <div className="hidden overflow-x-auto sm:block">
+      <div className="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white sm:block">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-gray-200">
-              <th className="pb-3 pr-4 font-semibold text-gray-700">{t("name")}</th>
-              <th className="pb-3 pr-4 font-semibold text-gray-700">{t("date")}</th>
-              <th className="pb-3 pr-4 font-semibold text-gray-700">{t("signup")}</th>
-              <th className="pb-3 font-semibold text-gray-700">{t("signups")}</th>
+            <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="px-4 py-3 font-semibold text-gray-600">{t("name")}</th>
+              <th className="px-4 py-3 font-semibold text-gray-600">{t("date")}</th>
+              <th className="px-4 py-3 font-semibold text-gray-600">{t("signup")}</th>
+              <th className="px-4 py-3 font-semibold text-gray-600">{t("signups")}</th>
             </tr>
           </thead>
           <tbody>
@@ -122,16 +125,19 @@ export default async function EventListPage({
               if (row.type === "event") {
                 const stateText = getSignupStateText(row.signupState, locale, tState);
                 return (
-                  <tr key={row.id} className="border-b border-gray-100">
-                    <td className="min-w-[300px] py-3 pr-4">
-                      <Link href={`/events/${row.slug}`} className="text-brand-600 hover:underline">
+                  <tr key={row.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50">
+                    <td className="min-w-[300px] px-4 py-3">
+                      <Link
+                        href={`/events/${row.slug}`}
+                        className="font-medium text-gray-900 no-underline hover:text-brand-600"
+                      >
                         {row.title}
                       </Link>
                     </td>
-                    <td className="py-3 pr-4 text-gray-600">{row.date ? formatDate(row.date, locale) : ""}</td>
-                    <td className={`py-3 pr-4 text-sm ${stateText.className}`}>{stateText.label}</td>
+                    <td className="px-4 py-3 text-gray-700">{row.date ? formatDate(row.date, locale) : ""}</td>
+                    <td className={`px-4 py-3 text-sm ${stateText.className}`}>{stateText.label}</td>
                     {row.signupState.state !== SignupState.disabled && (
-                      <td className="py-3 text-gray-600">
+                      <td className="px-4 py-3 text-gray-700">
                         {row.signupCount !== undefined && row.signupCount}
                         {row.quotaSize != null && <>&ensp;/&ensp;{row.quotaSize}</>}
                       </td>
@@ -140,13 +146,13 @@ export default async function EventListPage({
                 );
               }
               return (
-                <tr key={row.id} className="border-b border-gray-100 bg-gray-50">
-                  <td className="py-2 pl-6 pr-4 text-gray-500">
+                <tr key={row.id} className="border-b border-gray-100 bg-gray-50/50">
+                  <td className="py-2 pl-8 pr-4 text-sm text-gray-600">
                     {row.type === "openquota" ? t("openQuota") : row.title}
                   </td>
-                  <td className="py-2 pr-4" aria-label="Date" />
-                  <td className="py-2 pr-4" aria-label="Signup state" />
-                  <td className="py-2 text-gray-600">
+                  <td className="px-4 py-2" aria-label="Date" />
+                  <td className="px-4 py-2" aria-label="Signup state" />
+                  <td className="px-4 py-2 text-gray-700">
                     {row.signupCount}
                     {row.quotaSize != null && <>&ensp;/&ensp;{row.quotaSize}</>}
                   </td>
@@ -173,9 +179,9 @@ export default async function EventListPage({
             );
           }
           return (
-            <div key={row.id} className="pl-4 text-sm text-gray-500">
+            <div key={row.id} className="pl-4 text-sm text-gray-600">
               <span className="font-semibold">{row.type === "openquota" ? t("openQuota") : row.title}</span>
-              <span className="ml-2 text-gray-600">
+              <span className="ml-2 text-gray-700">
                 {row.signupCount}
                 {row.quotaSize != null && ` / ${row.quotaSize}`}
               </span>
