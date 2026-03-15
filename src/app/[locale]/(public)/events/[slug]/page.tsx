@@ -1,5 +1,6 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import Markdown from "@/components/Markdown";
 import SignupButton from "@/components/SignupButton";
@@ -35,6 +36,18 @@ function formatSignupTime(date: string, locale: string): string {
     hour12: false,
     timeZone: process.env.APP_TIMEZONE ?? "Europe/Helsinki",
   }).format(new Date(date));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const locale = await getLocale();
+  try {
+    const event = await getEventBySlug(slug);
+    const localized = getLocalizedEvent(event, locale);
+    return { title: localized.title };
+  } catch {
+    return {};
+  }
 }
 
 export default async function SingleEventPage({ params }: { params: Promise<{ locale: string; slug: string }> }) {

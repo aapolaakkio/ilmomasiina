@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
 import { Link, redirect } from "@/i18n/navigation";
@@ -64,6 +65,11 @@ function getSignupStateText(
     default:
       return { label: "", className: "" };
   }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("events");
+  return { title: t("title") };
 }
 
 export default async function EventListPage({

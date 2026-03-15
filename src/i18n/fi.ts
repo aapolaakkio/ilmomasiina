@@ -1,6 +1,7 @@
 const fi = {
   meta: {
     locale: "fi",
+    description: "Tapahtumien ilmoittautumisjärjestelmä",
   },
   common: {
     back: "Takaisin",

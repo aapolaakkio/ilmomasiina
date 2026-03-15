@@ -1,6 +1,7 @@
 const en = {
   meta: {
     locale: "en",
+    description: "Event signup system",
   },
   common: {
     back: "Go back",
