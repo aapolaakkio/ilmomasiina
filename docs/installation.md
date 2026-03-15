@@ -152,19 +152,10 @@ Especially for development, running PostgreSQL with Docker may be the easiest op
 
 Ilmomasiina needs a way to send emails, both for signup confirmation and user passwords.
 
-Mailgun and SMTP providers are currently supported. With minor changes, sending mail could
-be also done via Sendgrid or other services. Ilmomasiina uses Nodemailer - PRs welcome.
+SMTP providers are supported for sending email. Ilmomasiina uses Nodemailer.
 
 **Note:** If Ilmomasiina is run without an email provider configured, email contents will
 be printed to the console instead. This can be used for debugging.
-
-#### Mailgun
-
-[Mailgun](https://www.mailgun.com/) is relatively cheap and can be enabled via env variables.
-
-- `MAILGUN_API_KEY` = Mailgun API key (created under *Domain settings* &rarr; *Sending API keys*)
-- `MAILGUN_DOMAIN` = Authorized sending domain in Mailgun
-- `MAILGUN_HOST` = `api.eu.mailgun.net` or `api.mailgun.net` depending on region
 
 #### SMTP
 
@@ -256,7 +247,7 @@ B-tier App Service Plans have been tried and at least B1 doesn't seem to handle 
     - `NEW_EDIT_TOKEN_SECRET` = secure random string (see [_Generating secrets_](#generating-secrets))
     - `FEATHERS_AUTH_SECRET` = secure random string (see [_Generating secrets_](#generating-secrets))
     - `MAIL_FROM` = "From" email for system messages
-    - `MAILGUN_*` **or** `SMTP_*` for email credentials (see [_Email sending_](#email-sending))
+    - `SMTP_*` for email credentials (see [_Email sending_](#email-sending))
     - `BASE_URL` = `https://{your-app-name}.azurewebsites.net/`
     - `BRANDING_MAIL_FOOTER_TEXT` and `BRANDING_MAIL_FOOTER_LINK` (may be empty)
 7. Access the app at `https://{your-app-name}.azurewebsites.net/`.

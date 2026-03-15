@@ -1,0 +1,250 @@
+import { and, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
+
+import type {
+  AdminSignupCreateBody,
+  AdminSignupSchema,
+  AdminSignupUpdateBody,
+  SignupID,
+  SignupUpdateBody,
+  SignupUpdateResponse,
+} from "@/models";
+import { AuditEvent } from "@/models";
+
+import type { AuditLogger } from "../../auditlog";
+import { type DrizzleDb, db } from "../../db";
+import { getEffectivePaymentStatus, isConfirmed } from "../../db/computed";
+import { activeSignupCutoff } from "../../db/filters";
+import { signups } from "../../db/schema";
+import { sendSignupConfirmationMail } from "../../mail/signups";
+import { formatSignupForAdmin } from "../events/getEventDetails";
+import { expireExistingPaymentsForSignupUpdate } from "../payment/stripe";
+import { assignSignupPositions } from "./assignSignupPositions";
+import { NoSuchQuota, NoSuchSignup, SignupsClosed } from "./errors";
+import { signupEditable } from "./helpers";
+import { updateExistingSignup } from "./updateSignupLogic";
+
+async function getSignupAndEventForUpdate(id: SignupID, tx: DrizzleDb) {
+  // Locked read stays as db.select() for FOR UPDATE support
+  const [signup] = await tx
+    .select()
+    .from(signups)
+    .where(
+      and(
+        eq(signups.id, id),
+        isNull(signups.deletedAt),
+        or(isNotNull(signups.confirmedAt), gt(signups.createdAt, activeSignupCutoff())),
+      ),
+    )
+    .for("update");
+
+  if (!signup) throw new NoSuchSignup("Signup expired or already deleted");
+
+  // Fetch quota + event + questions + languages
+  const quotaData = await tx.query.quotas.findFirst({
+    where: { id: signup.quotaId },
+    with: {
+      event: {
+        with: {
+          questions: {
+            where: { deletedAt: { isNull: true } },
+            orderBy: { order: "asc" },
+            with: { languages: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!quotaData?.event) throw new NoSuchSignup("Signup expired or already deleted");
+
+  const { event } = quotaData;
+
+  // Flatten question languages for updateExistingSignup
+  const questionLangRows = event.questions.flatMap((q) => q.languages);
+
+  return {
+    signup,
+    quota: { ...quotaData, title: quotaData.title },
+    event: { ...event, title: event.title, questions: event.questions },
+    questionLangRows,
+  };
+}
+
+/** Re-fetch a signup with answers, payments, and compute its position from all event signups. */
+async function refetchSignupWithPosition(signupId: string) {
+  const signup = await db.query.signups.findFirst({
+    where: { id: signupId },
+    with: {
+      answers: true,
+      payments: { columns: { status: true } },
+      quota: {
+        columns: {},
+        with: {
+          event: {
+            columns: { openQuotaSize: true },
+            with: {
+              quotas: {
+                where: { deletedAt: { isNull: true } },
+                columns: { id: true, size: true },
+                with: {
+                  signups: {
+                    where: {
+                      deletedAt: { isNull: true },
+                      OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: activeSignupCutoff() } }],
+                    },
+                    orderBy: { createdAt: "asc" },
+                    columns: { id: true, quotaId: true, createdAt: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!signup?.quota?.event) throw new NoSuchSignup("Signup not found after update");
+
+  const event = signup.quota.event;
+  const allSignups = event.quotas
+    .flatMap((q) => q.signups)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
+
+  const positionMap = assignSignupPositions(
+    allSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
+    event.quotas.map((q) => ({ id: q.id, size: q.size })),
+    event.openQuotaSize,
+  );
+  const pos = positionMap.get(signupId);
+
+  return {
+    ...signup,
+    status: pos?.status ?? null,
+    position: pos?.position ?? null,
+  };
+}
+
+/** Update a signup as the user who created it. */
+export async function updateSignupAsUser(
+  signupId: SignupID,
+  body: SignupUpdateBody,
+  auditLogger: AuditLogger,
+): Promise<SignupUpdateResponse> {
+  await expireExistingPaymentsForSignupUpdate(signupId);
+
+  const { updatedSignupId, wasConfirmed } = await db.transaction(async (tx) => {
+    const { signup, quota, event, questionLangRows } = await getSignupAndEventForUpdate(signupId, tx);
+
+    if (!signupEditable(event, signup)) {
+      throw new SignupsClosed("Signups closed for this event.");
+    }
+
+    const confirmed = isConfirmed(signup);
+    await updateExistingSignup(signup, event, quota, questionLangRows, body, tx, false);
+    await auditLogger(AuditEvent.EDIT_SIGNUP, {
+      signup: { id: signup.id, firstName: signup.firstName, lastName: signup.lastName },
+      event: { id: event.id, title: event.title },
+      tx,
+    });
+
+    return { updatedSignupId: signup.id, wasConfirmed: confirmed };
+  });
+
+  const updated = await refetchSignupWithPosition(updatedSignupId);
+
+  await sendSignupConfirmationMail({ ...updated, payments: updated.payments }, wasConfirmed ? "edit" : "signup", false);
+
+  const response = {
+    ...updated,
+    confirmed: isConfirmed(updated),
+    answers: updated.answers,
+    paymentStatus: getEffectivePaymentStatus(updated, updated.payments),
+  };
+  return response as unknown as SignupUpdateResponse;
+}
+
+/** Update a signup as an admin. */
+export async function updateSignupAsAdmin(
+  signupId: SignupID,
+  body: AdminSignupUpdateBody,
+  auditLogger: AuditLogger,
+  sendEmail: boolean = true,
+): Promise<AdminSignupSchema> {
+  await expireExistingPaymentsForSignupUpdate(signupId);
+
+  await db.transaction(async (tx) => {
+    const { signup, quota, event, questionLangRows } = await getSignupAndEventForUpdate(signupId, tx);
+    await updateExistingSignup(signup, event, quota, questionLangRows, body, tx, true);
+    await auditLogger(AuditEvent.EDIT_SIGNUP, {
+      signup: { id: signup.id, firstName: signup.firstName, lastName: signup.lastName },
+      event: { id: event.id, title: event.title },
+      tx,
+    });
+  });
+
+  const updated = await refetchSignupWithPosition(signupId);
+
+  if (sendEmail) {
+    await sendSignupConfirmationMail({ ...updated, payments: updated.payments }, "edit", true);
+  }
+
+  return formatSignupForAdmin(updated, updated.answers, updated.payments);
+}
+
+/** Create a signup as an admin. */
+export async function createSignupAsAdmin(
+  body: AdminSignupCreateBody,
+  auditLogger: AuditLogger,
+  sendEmail: boolean = true,
+): Promise<AdminSignupSchema> {
+  const signupId = await db.transaction(async (tx) => {
+    // Single relational query for quota + event + questions + languages
+    const quotaData = await tx.query.quotas.findFirst({
+      where: { id: body.quotaId },
+      with: {
+        event: {
+          with: {
+            questions: {
+              where: { deletedAt: { isNull: true } },
+              orderBy: { order: "asc" },
+              with: { languages: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!quotaData?.event) throw new NoSuchQuota("Quota doesn't exist.");
+
+    const { event } = quotaData;
+    const questionLangRows = event.questions.flatMap((q) => q.languages);
+
+    const [newSignup] = await tx.insert(signups).values({ quotaId: quotaData.id }).returning();
+
+    await updateExistingSignup(
+      newSignup,
+      { ...event, questions: event.questions },
+      { ...quotaData, title: quotaData.title },
+      questionLangRows,
+      body,
+      tx,
+      true,
+    );
+    await auditLogger(AuditEvent.CREATE_SIGNUP, {
+      signup: { id: newSignup.id },
+      event: { id: event.id, title: event.title },
+      tx,
+    });
+
+    return newSignup.id;
+  });
+
+  const updated = await refetchSignupWithPosition(signupId);
+
+  if (sendEmail) {
+    await sendSignupConfirmationMail({ ...updated, payments: updated.payments }, "signup", true);
+  }
+
+  return formatSignupForAdmin(updated, updated.answers, updated.payments);
+}

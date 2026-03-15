@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.next/**",
+    "*.svg",
+    "*.png",
+    "*.md",
+    "*.scss",
+    "*.json",
+    "src/app/global-not-found.tsx",
+    "test/routes/**",
+    "test/unit/signups/**",
+    "test/fillDatabase.ts",
+    "test/setup.ts",
+    "test/testData.ts"
+  ],
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "no-restricted-imports": [
+      "error",
+      {
+        "name": "next/link",
+        "message": "Please import from `@/i18n/navigation` instead."
+      },
+      {
+        "name": "next/navigation",
+        "importNames": ["redirect", "permanentRedirect", "useRouter", "usePathname"],
+        "message": "Please import from `@/i18n/navigation` instead."
+      }
+    ]
+  }
+}

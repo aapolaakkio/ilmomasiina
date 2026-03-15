@@ -15,8 +15,15 @@ coverage/
 
 data/
 
-src/react-app-env.d.ts
-
 package-lock.json
 
 scripts/
+
+.claude/
+
+docs/superpowers
+
+.next/
+next-env.d.ts
+
+tsconfig.tsbuildinfo

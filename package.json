@@ -3,45 +3,75 @@
   "version": "3.0.0-alpha.1",
   "private": true,
   "license": "MIT",
+  "type": "module",
   "engines": {
     "node": "^24"
   },
-  "packageManager": "pnpm@10.28.0",
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "bootstrap": "pnpm install",
-    "clean": "pnpm run -r clean",
-    "build": "pnpm run -r --workspace-concurrency=1 build",
-    "start": "pnpm run -r --parallel start",
-    "lint": "eslint packages",
-    "lint:fix": "npm run lint -- --fix",
-    "format": "prettier --write --list-different packages/*/{src,test}/**/*.{ts,tsx,scss}",
-    "typecheck": "pnpm run -r --workspace-concurrency=1 typecheck",
-    "test": "pnpm run -r test",
-    "test:backend": "pnpm run --filter ilmomasiina-backend test"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --build",
+    "lint": "oxlint src test",
+    "lint:fix": "oxlint --fix src test",
+    "format": "oxfmt \"src/**/*.{ts,tsx}\" \"test/**/*.ts\"",
+    "format:check": "oxfmt --check \"src/**/*.{ts,tsx}\" \"test/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Tietokilta/ilmomasiina"
+    "url": "git+https://github.com/aapolaakkio/ilmomasiina"
   },
   "bugs": {
-    "url": "https://github.com/Tietokilta/ilmomasiina/issues"
+    "url": "https://github.com/aapolaakkio/ilmomasiina/issues"
   },
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
-    "eslint": "^8.57.1",
-    "eslint-config-airbnb": "^19.0.4",
-    "eslint-config-airbnb-typescript": "^17.1.0",
-    "eslint-config-prettier": "^9.1.2",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-jest": "^27.9.0",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-promise": "^6.6.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^4.6.2",
-    "eslint-plugin-simple-import-sort": "^12.1.1",
-    "prettier": "^3.7.4",
-    "typescript": "~5.9.3"
+    "@base-ui/react": "^1.3.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@next/env": "^16.1.6",
+    "@react-email/components": "^1.0.9",
+    "@t3-oss/env-nextjs": "^0.13.10",
+    "@tailwindcss/typography": "^0.5.19",
+    "bcrypt": "^6.0.0",
+    "drizzle-orm": "1.0.0-beta.17-67b1795",
+    "fast-jwt": "^6.1.0",
+    "ics": "^3.8.1",
+    "lucide-react": "^0.577.0",
+    "next": "^16.1.6",
+    "next-intl": "^4.8.3",
+    "next-safe-action": "^8.1.8",
+    "nodemailer": "^8.0.2",
+    "pg": "^8.20.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "stripe": "^20.4.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.3.0",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^25.5.0",
+    "@types/nodemailer": "^7.0.11",
+    "@types/pg": "^8.18.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.1.0",
+    "drizzle-kit": "1.0.0-beta.17-67b1795",
+    "oxfmt": "^0.40.0",
+    "oxlint": "^1.55.0",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1",
+    "typescript": "~5.9.3",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.0"
   },
   "browserslist": {
     "production": [
@@ -55,24 +85,10 @@
       "last 1 safari version"
     ]
   },
-  "babel": {
-    "presets": [
-      "react-app"
-    ]
-  },
   "pnpm": {
-    "peerDependencyRules": {
-      "ignoreMissing": [
-        "jquery",
-        "popper.js",
-        "eslint"
-      ]
-    },
     "overrides": {
       "react-final-form@6.5.9>react": "^19.2.0",
       "react-final-form-arrays@3.1.4>react": "^19.2.0",
-      "email-templates@*>preview-email": "-",
-      "@types/email-templates@*>juice": "^11.1.0",
       "@types/nodemailer@*>@aws-sdk/client-sesv2": "-"
     }
   }
