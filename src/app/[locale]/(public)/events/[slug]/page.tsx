@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import Markdown from "@/components/Markdown";
 import SignupButton from "@/components/SignupButton";
+import { env } from "@/env";
 import { Link } from "@/i18n/navigation";
 import { verifyAdminSession } from "@/auth/jwt";
 import { getLocalizedEvent } from "@/lib/localizedEvent";
@@ -130,6 +131,15 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
             )}
           </div>
           {localizedEvent.description && <Markdown>{localizedEvent.description}</Markdown>}
+          {env.NEXT_PUBLIC_BRANDING_CANCELLATION_LINK && (
+            <p className="mt-6 border-t border-gray-200 pt-4 text-sm text-gray-600">
+              {t("cancellation")}{" "}
+              <a href={env.NEXT_PUBLIC_BRANDING_CANCELLATION_LINK} className="text-brand-600 hover:underline">
+                {t("cancellationLink")}
+              </a>
+              .
+            </p>
+          )}
         </div>
 
         <div className="space-y-4">

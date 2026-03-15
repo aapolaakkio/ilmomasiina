@@ -104,6 +104,9 @@ const fi = {
     signupOpen: "Ilmoittautuminen auki.",
     signupClosed: "Ilmoittautuminen sulkeutunut.",
     signupNotOpen: "Ilmoittautuminen ei ole vielä auki.",
+    cancellation:
+      "Ilmoittautumisen sulkeuduttua ilmoittautuminen on sitova. Tämän jälkeen maksulliseen tapahtumaan ilmoittautunut on velvollinen maksamaan osallistumismaksun tai löytämään paikalleen toisen osallistujan. Peruutuskäytännöt löydät",
+    cancellationLink: "täältä",
     signupError: {
       quotaDeleted: "Valitsemasi kiintiö on poistettu.",
       closed: "Tapahtuman ilmoittautuminen on sulkeutunut.",
@@ -398,6 +401,10 @@ const fi = {
       paymentPending: "Odottaa",
       paymentPaid: "Maksettu",
       paymentRefunded: "Palautettu",
+      checkMemberships: "Tarkista jäsenyys",
+      checkMembershipsPlaceholder: "Syötä sähköpostiosoitteet riveittäin",
+      checkMembershipsDisabled: "Sähköpostiosoitteiden keräys ei ole käytössä",
+      membership: "Jäsenyys",
       editModal: {
         titleEdit: "Muokkaa ilmoittautumista",
         titleCreate: "Luo ilmoittautuminen",

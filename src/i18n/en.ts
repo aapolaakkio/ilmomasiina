@@ -103,6 +103,9 @@ const en = {
     signupOpen: "Signup open.",
     signupClosed: "Signup closed.",
     signupNotOpen: "Signup not yet open.",
+    cancellation:
+      "The sign up is binding when sign-up closes. After this, the person who has signed up to a paid event is obligated to pay the participation fee or find another participant to attend in one's place. The cancellation policy can be found",
+    cancellationLink: "here",
     signupError: {
       quotaDeleted: "The quota you chose has been deleted.",
       closed: "The signup for this event has closed.",
@@ -396,6 +399,10 @@ const en = {
       paymentPending: "Pending",
       paymentPaid: "Paid",
       paymentRefunded: "Refunded",
+      checkMemberships: "Check memberships",
+      checkMembershipsPlaceholder: "Enter email addresses separated by line breaks",
+      checkMembershipsDisabled: "Collecting email addresses is disabled",
+      membership: "Membership",
       editModal: {
         titleEdit: "Edit signup",
         titleCreate: "Create signup",

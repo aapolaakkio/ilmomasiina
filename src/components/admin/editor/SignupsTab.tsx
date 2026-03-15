@@ -45,8 +45,10 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
 
   const [editingSignup, setEditingSignup] = useState<AdminSignupSchema | "new" | null>(null);
   const [groupByQuota, setGroupByQuota] = useState(false);
+  const [memberEmails, setMemberEmails] = useState<string[]>([]);
 
   const paymentsEnabled = savedEvent?.payments !== "disabled";
+  const hasMemberCheck = savedEvent?.emailQuestion && memberEmails.length > 0;
 
   const signups = useMemo<FlatSignup[]>(
     () =>
@@ -126,6 +128,7 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
     const headers = [
       ...(savedEvent.nameQuestion ? [t("firstName"), t("lastName")] : []),
       ...(savedEvent.emailQuestion ? [t("email")] : []),
+      ...(hasMemberCheck ? [t("membership")] : []),
       t("quota"),
       t("status"),
       ...savedEvent.questions.map((q) => q.question),
@@ -136,6 +139,7 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
     const rows = signups.map((signup) => [
       ...(savedEvent.nameQuestion ? [signup.firstName ?? "", signup.lastName ?? ""] : []),
       ...(savedEvent.emailQuestion ? [signup.email ?? ""] : []),
+      ...(hasMemberCheck ? [signup.email && memberEmails.includes(signup.email) ? "Yes" : "No"] : []),
       signup.quotaTitle,
       formatStatus(signup),
       ...savedEvent.questions.map((q) => {
@@ -184,6 +188,7 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
         </>
       )}
       {savedEvent?.emailQuestion && <th className="pb-3 pr-4 font-semibold text-gray-700">{t("email")}</th>}
+      {hasMemberCheck && <th className="pb-3 pr-4 font-semibold text-gray-700">{t("membership")}</th>}
       <th className="pb-3 pr-4 font-semibold text-gray-700">{t("quota")}</th>
       <th className="pb-3 pr-4 font-semibold text-gray-700">{t("status")}</th>
       {paymentsEnabled && (
@@ -220,6 +225,9 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
           </>
         )}
         {savedEvent?.emailQuestion && <td className="py-2 pr-4">{signup.email}</td>}
+        {hasMemberCheck && (
+          <td className="py-2 pr-4">{signup.email && memberEmails.includes(signup.email) ? "\u2705" : ""}</td>
+        )}
         <td className="py-2 pr-4">{signup.quotaTitle}</td>
         <td className="py-2 pr-4 text-gray-600">{formatStatus(signup)}</td>
         {paymentsEnabled && (
@@ -271,6 +279,27 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
             {t("groupByQuota")}
           </label>
         )}
+      </div>
+
+      <div className="mb-4">
+        <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="check-memberships">
+          {t("checkMemberships")}
+        </label>
+        <textarea
+          id="check-memberships"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-gray-50 disabled:text-gray-500"
+          rows={3}
+          disabled={!savedEvent?.emailQuestion}
+          placeholder={t(savedEvent?.emailQuestion ? "checkMembershipsPlaceholder" : "checkMembershipsDisabled")}
+          onChange={(e) =>
+            setMemberEmails(
+              e.target.value
+                .split("\n")
+                .map((email) => email.trim())
+                .filter(Boolean),
+            )
+          }
+        />
       </div>
 
       {signups.length === 0 ? (
