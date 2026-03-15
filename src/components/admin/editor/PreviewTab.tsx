@@ -103,22 +103,11 @@ export default function PreviewTab({ form }: Props) {
                 key={quota.id}
                 variant="secondary"
                 className="mb-2 w-full"
-                disabled
-                onClick={() => setShowSignupForm(true)}
+                onClick={() => setShowSignupForm(!showSignupForm)}
               >
                 {previewQuotas.length === 1 ? t("signupNow") : t("signupQuota", { quota: quota.title })}
               </Button>
             ))}
-            {previewQuotas.length > 0 && (
-              <Button
-                variant="outline"
-                size="small"
-                className="mt-1"
-                onClick={() => setShowSignupForm(!showSignupForm)}
-              >
-                {showSignupForm ? "\u2191 Hide signup form" : "\u2193 Preview signup form"}
-              </Button>
-            )}
           </div>
 
           {/* Quota status preview */}

@@ -137,7 +137,15 @@ export default function AdminEventsClient({ events }: Props) {
                     </Link>
                   </td>
                   <td className="py-3 pr-4 text-gray-600">{formatDate(event.date, "fi-FI")}</td>
-                  <td className="py-3 pr-4 text-gray-600">{getEventStatus(event, t)}</td>
+                  <td className="py-3 pr-4 text-gray-600">
+                    {!event.draft && event.slug ? (
+                      <Link href={`/events/${event.slug}`} className="text-brand-600 hover:underline" target="_blank">
+                        {getEventStatus(event, t)}
+                      </Link>
+                    ) : (
+                      getEventStatus(event, t)
+                    )}
+                  </td>
                   <td className="py-3 pr-4 text-gray-600">{totalSignups(event)}</td>
                   <td className="py-3">
                     <div className="flex gap-1">

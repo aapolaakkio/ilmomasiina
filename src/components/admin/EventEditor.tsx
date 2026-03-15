@@ -583,7 +583,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
           <PreviewTab form={form} />
         </Tabs.Panel>
         <Tabs.Panel value="signups">
-          <SignupsTab savedEvent={savedEvent} />
+          <SignupsTab savedEvent={savedEvent} onEventChange={setSavedEvent} />
         </Tabs.Panel>
       </Tabs.Root>
 
