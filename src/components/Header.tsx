@@ -13,7 +13,7 @@ export default function Header() {
   const switchLabel = locale === "fi" ? "In English" : "Suomeksi";
 
   return (
-    <header className="bg-gray-900 text-white">
+    <header className="bg-[#201e1e] text-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link href="/" className="font-bold uppercase tracking-wide text-white no-underline">
           <span className="hidden text-lg sm:inline">{env.NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT}</span>

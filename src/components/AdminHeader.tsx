@@ -17,7 +17,7 @@ export default function AdminHeader() {
   }, [router]);
 
   return (
-    <header className="bg-gray-900 text-white">
+    <header className="bg-[#201e1e] text-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link href="/admin" className="font-bold uppercase tracking-wide text-white no-underline">
           <span className="hidden text-lg sm:inline">{env.NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT}</span>

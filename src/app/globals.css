@@ -2,16 +2,16 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --color-brand-50: #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-200: #bfdbfe;
-  --color-brand-300: #93c5fd;
-  --color-brand-400: #60a5fa;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --color-brand-800: #1e40af;
-  --color-brand-900: #1e3a8a;
+  --color-brand-50: #fefce8;
+  --color-brand-100: #fef9c3;
+  --color-brand-200: #fef08a;
+  --color-brand-300: #fbdb1d;
+  --color-brand-400: #f5c800;
+  --color-brand-500: #d4a800;
+  --color-brand-600: #a78300;
+  --color-brand-700: #7c6200;
+  --color-brand-800: #534100;
+  --color-brand-900: #2a2100;
 }
 
 /* Reset cursor to default for non-interactive elements */
