@@ -15,6 +15,7 @@
 - Use comments to explain complex logic. Stay concise.
 - Always import via either relative paths or the `@/` alias. Paths starting with `src` fail after compilation.
 - Always use `env` from `@/env` instead of `process.env` for environment variables.
+  - Exception: `src/proxy.ts` (middleware) and `src/auth/constants.ts` use `process.env` directly because middleware cannot import `@/env`.
 - Do not add unnecessary eslint-disable comments. The project uses Oxlint which reads them.
 
 # Project structure
@@ -35,10 +36,13 @@
 - `src/i18n/` — Internationalization (next-intl) with Finnish and English translations.
 - `src/env.ts` — Validated environment variables via @t3-oss/env-nextjs.
 - `src/db/` — Drizzle schema, relations, connection, and query helpers.
+  - `src/db/filters.ts` — Shared query filters (`activeSignupCutoff()` for signup expiry cutoff).
 - `src/services/` — All business logic (used by server actions).
 - `src/auth/` — Authentication (JWT, admin sessions, password auth, safe-action client).
+  - `src/auth/constants.ts` — Shared auth constants (`SESSION_TTL`) used by both `jwt.ts` and `proxy.ts`.
 - `src/cron/` — Scheduled maintenance tasks.
 - `src/mail/` — Email sending logic and React Email templates.
+  - `src/mail/formatDate.ts` — Timezone-aware date formatting via `Intl.DateTimeFormat`.
 - `src/auditlog/` — Audit logging.
 - `src/util/` — Shared server utilities (cache, errors, debug).
 - `src/proxy.ts` — Admin auth middleware (JWT cookie verification).

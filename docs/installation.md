@@ -19,12 +19,11 @@ build your own Docker image (if using Docker):
 | What to customize | Where |
 |-|-|
 | Hosting in a subfolder instead of directly at `https://ilmo.your.domain/` | build args |
-| Colors | [`packages/ilmomasiina-frontend/src/styles/_definitions.scss`](../packages/ilmomasiina-frontend/src/styles/_definitions.scss) |
-| Header logo | `packages/ilmomasiina-frontend/src/assets/logo.svg` (can also be disabled from `_definitions.scss`) |
-| Favicon | `packages/ilmomasiina-frontend/public/*.png` |
-| Header title | build args or [`packages/ilmomasiina-frontend/src/branding.ts`](../packages/ilmomasiina-frontend/src/branding.ts) |
-| Footer links | build args or [`packages/ilmomasiina-frontend/src/branding.ts`](../packages/ilmomasiina-frontend/src/branding.ts) |
-| Translations | `packages/ilmomasiina-*/src/locales/*.json` |
+| Colors | CSS variables (`--color-brand-*`) in your Tailwind config |
+| Favicon | `src/app/favicon.ico` and related files |
+| Header title | `NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT` env variable |
+| Footer links | `NEXT_PUBLIC_BRANDING_FOOTER_*` env variables |
+| Translations | `src/i18n/fi.ts` and `src/i18n/en.ts` |
 | Timezone | build args |
 | Default language | build args |
 | Payment currency | build args |
@@ -238,12 +237,7 @@ B-tier App Service Plans have been tried and at least B1 doesn't seem to handle 
     - *Monitoring* and *Tags* can be skipped
 6. Read [.env.example](../.env.example). Set relevant variables as *Application settings* on the *Configuration* page. You'll need at least:
     - `PORT` and `WEBSITES_PORT` must match (you can set both to 3000)
-    - `DB_DIALECT` = `postgres`
-    - `DB_HOST` = Domain name of your PostgreSQL server (from *Connect* page)
-    - `DB_USER` = username of PostgreSQL user (above: `ilmo_user`)
-    - `DB_PASSWORD` = password of PostgreSQL user
-    - `DB_DATABASE` = name of PostgreSQL database
-    - `DB_SSL` = `true` (required with Azure's default config)
+    - `DATABASE_URL` = PostgreSQL connection string (e.g. `postgresql://ilmo_user:password@host:5432/ilmomasiina?sslmode=require`)
     - `NEW_EDIT_TOKEN_SECRET` = secure random string (see [_Generating secrets_](#generating-secrets))
     - `FEATHERS_AUTH_SECRET` = secure random string (see [_Generating secrets_](#generating-secrets))
     - `MAIL_FROM` = "From" email for system messages
@@ -288,14 +282,13 @@ If you don't want to use Docker Compose, or already have a database, you can run
 You can also set up a production deployment without Docker. **This method is not recommended.**
 
 1. Install a suitable Node version (e.g. using nvm).
-2. Run `corepack enable`, then `pnpm install --frozen-lockfile` to setup cross-dependencies.
-   between packages and install other dependencies.
+2. Run `corepack enable`, then `pnpm install --frozen-lockfile` to install dependencies.
 3. Create a `.env` file at the root of this repository. You can copy [.env.example](../.env.example) to begin and read the instructions within.
 4. **Optional:** Make [customizations](#customization) in other files if necessary.
-5. Run `npm run clean` followed by `npm run build`.
-6. Use e.g. `systemd` or `pm2` (`npm install -g pm2`) to run the server process:
+5. Run `pnpm build` to build the Next.js application.
+6. Use e.g. `systemd` or `pm2` to run the server process:
     ```
-    node packages/ilmomasiina-backend/dist/bin/server.js
+    pnpm start
     ```
 7. Access the app at <http://localhost:3000>.
 
@@ -353,36 +346,15 @@ but you'll need to [set up your own database](#database-setup). That is easiest 
 
 There's also a [Docker Compose setup](#docker-compose-1) with some significant drawbacks.
 
-### VS Code setup
-
-Currently Prettier is not used in the project, so here is a recommended `.vscode/settings.json` config:
-
-```json
-{
-  "[typescript]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features"
-  },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
-}
-```
-
 ### Running without Docker
 
 1. Install a suitable Node version (e.g. using nvm).
 2. Install a database.
     - See [_Database setup_](#database-setup) for instructions on setting up PostgreSQL.
     - You can also use Docker for a database.
-    - SQLite may also work, but is currently untested.
 3. Create a `.env` file at the root of this repository. You can copy [.env.example](../.env.example) to begin and read the instructions within.
-4. Run `corepack enable`, then `pnpm install --frozen-lockfile` to setup cross-dependencies.
-   between packages and install other dependencies.
-5. Run `npm start` or `pnpm start`. This will start the frontend and backend dev servers in parallel.
-    - If you want cleaner output, you can run `npm start` separately in `packages/ilmomasiina-frontend` and
-      `packages/ilmomasiina-backend`.
-    - Alternatively, you can use `pnpm run --filter=@tietokilta/ilmomasiina-frontend start`
-      (and similar for the backend).
+4. Run `corepack enable`, then `pnpm install` to install dependencies.
+5. Run `pnpm dev` to start the Next.js development server.
 6. Access the app at <http://localhost:3000>.
 
 ### Docker Compose
@@ -397,19 +369,17 @@ pre-configured PostgreSQL server, so an external database server is not required
 3. Access the app at <http://localhost:3000>.
 
 Due to how the dev Docker is set up, you will still need to rebuild the development image if you change the
-dependencies, package.json or ESLint configs. You'll also need Node.js and pnpm installed locally to do that.
+dependencies or package.json. You'll also need Node.js and pnpm installed locally to do that.
 
 ### Test database setup
 
 To run tests, you'll likely want another test database so test data doesn't clutter your manual development database.
 
 1. Follow the same steps as in [the usual database setup](#database-setup), but name the database something different. This example uses `ilmo_test`.
-2. Create a `.env.test` file at the root of this repository. Assuming your test database runs on the same PostgreSQL server, just put this in:
+2. Create a `.env.test` file at the root of this repository. Assuming your test database runs on the same PostgreSQL server, set `DATABASE_URL` to point to the test database and add:
     ```shell
-    DB_DATABASE=ilmo_test
+    DATABASE_URL=postgresql://ilmo_user:password@localhost:5432/ilmo_test
     THIS_IS_A_TEST_DB_AND_CAN_BE_WIPED=1
     ```
     - The latter line is required to avoid accidental loss of data, because the test suite truncates all database
-      tables whenever you run `npm test`. **Make absolutely sure you're not using an important database for testing.**
-      You most likely want to move your regular database configs to `.env.development` or `.env.production`, and copy
-      the necessary bits over to `.env.test`.
+      tables whenever you run `pnpm test`. **Make absolutely sure you're not using an important database for testing.**

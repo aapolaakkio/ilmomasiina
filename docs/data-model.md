@@ -1,13 +1,13 @@
 # Data model
 
-Ilmomasiina uses Sequelize to store data in a relational database.
+Ilmomasiina uses Drizzle ORM to store data in PostgreSQL. The schema is defined in `src/db/schema.ts`.
 
 ## Models
 
 ```
- ╷───────┐1     *┌───────┐1     *┌────────┐
- │ Event ├───────┤ Quota ├───────┤ Signup │
- └───┬───┘       └───────┘       └────┬───┘
+ ╷───────┐1     *┌───────┐1     *┌────────┐1     *┌─────────┐
+ │ Event ├───────┤ Quota ├───────┤ Signup ├───────┤ Payment │
+ └───┬───┘       └───────┘       └────┬───┘       └─────────┘
      │1                               │1
      │                                │
      │*                               │*
@@ -16,10 +16,21 @@ Ilmomasiina uses Sequelize to store data in a relational database.
 └──────────┘                     └────────┘
 
 
-                 ┌──────┐
-                 │ User │
-                 └──────┘
+                 ┌──────┐        ┌──────────┐
+                 │ User │        │ AuditLog │
+                 └──────┘        └──────────┘
 ```
+
+Multi-language content is stored in separate language rows:
+
+```
+Event ──1:*── EventLanguage
+Quota ──1:*── QuotaLanguage
+Question ──1:*── QuestionLanguage
+```
+
+The default language content lives on the main table row. Non-default language content is stored in the
+corresponding language table (e.g. `EventLanguage`). The `reconstructEventLanguages` helper merges these.
 
 ### Event
 
@@ -51,15 +62,12 @@ Each Question has one **Event** and zero or more **Answers**.
 
 ### Signup
 
-**Signup** instances are assigned to a **Quota**. Signup instances hold their basic fields (name/email) and their
-cached quota assignment.
+**Signup** instances are assigned to a **Quota**. Signup instances hold their basic fields (name/email).
 
 Signups can be enumerated and deleted per-event by admins, and in a limited fashion by users.
 They can also be viewed, modified and deleted using their edit token, which is computed statelessly.
 
-Each Signup has one **Quota** and zero or more **Answers**.
-There is one for each **Question** in the associated **Event**, but the count may be mismatched if Questions
-have changed.
+Each Signup has one **Quota**, zero or more **Answers**, and zero or more **Payments**.
 
 ### Answer
 
@@ -70,15 +78,26 @@ transparent to the API.
 
 Each Answer has one **Signup** and one **Question**.
 
+### Payment
+
+**Payment** instances track Stripe Checkout Session payments for a **Signup**.
+
+See [payments.md](payments.md) for the full payment state machine.
+
 ### User
 
 **User** instances hold an email address and hashed password.
 
-Users are not related to any other models. This model is only used for local login, and can be enumerated, created
-and deleted by admins.
+Users are not related to any other models. This model is only used for local admin login, and can be enumerated,
+created and deleted by admins.
 
-## Paranoid mode
+## Soft deletion
 
-Tables other than **User** use Sequelize's paranoid mode by default. This means their data is not deleted immediately,
-only marked as deleted. The `removeDeletedData.ts` script periodically deletes this data permanently with a
-configurable grace period, to allow restoration of accidentally deleted data.
+Tables other than **User** use soft deletion (a `deletedAt` timestamp). The `removeDeletedData.ts` cron job
+periodically hard-deletes soft-deleted data after a configurable grace period (`DELETION_GRACE_PERIOD_DAYS`),
+to allow restoration of accidentally deleted data.
+
+## Shared query helpers
+
+- `activeSignupCutoff()` in `src/db/filters.ts` — returns the cutoff date for unconfirmed signup expiry,
+  centralizing the `SIGNUP_CONFIRM_MINS` calculation used across the codebase.

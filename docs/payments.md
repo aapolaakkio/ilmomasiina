@@ -105,7 +105,7 @@ When an admin marks a signup as manually paid, any existing Checkout Session mus
 
 ### Effective Payment Status
 
-The `Signup.effectivePaymentStatus` getter determines the signup's payment status:
+The `getEffectivePaymentStatus()` function in `src/db/computed.ts` determines the signup's payment status:
 
 1. If paid via online payment OR manually → `PAID`
 2. If signup has no price → `null`

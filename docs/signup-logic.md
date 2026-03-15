@@ -17,30 +17,28 @@ When a user signs up, their **Signup** is attached to a single **Quota** instanc
 
 ## Position computation
 
-The quota assignment and position of signups is stored in the database.
+The quota assignment and position of signups is computed on-the-fly using `assignSignupPositions()` from
+`src/services/signups/assignSignupPositions.ts`. This pure function takes all active signups and quotas
+and returns a position map.
 
-`computeSignupPosition.ts` can be called to refresh the assignments and positions of all signups in an event.
-This code is idempotent and:
-- Computes new statuses based on the above rules
-- Stores changed statuses in the database
-- Sends notifications to signups that moved out of the queue
+`computeSignupPosition.ts` contains helpers for detecting position changes after mutations:
+- `fetchActiveSignupsForEvent()` — fetches active signups using `activeSignupCutoff()` from `src/db/filters.ts`
+- `fetchActiveQuotasForEvent()` — fetches active quotas
+- `handlePositionSideEffects()` — compares old vs new positions and sends promotion emails
 
-This computation locks the Event in the database to ensure no changes are made during it, including overlapping
-refreshes. This may be a performance bottleneck - in the future, these updates may be batched to avoid waiting on
-locks, but such a change is not trivial due to transactions.
-
-The following actions currently trigger a refresh:
-- Creation of new signup (`POST /api/signups`)
-- Expiration of signups (`deleteUnconfirmedSignups.ts`)
-- Deletion of signups by user or admin (`DELETE /api/signups/<id>`, `DELETE /api/admin/signups/<id>`)
-- Any modifications on the event (`UPDATE /api/admin/events/<id>`)
+The following actions trigger position side effects:
+- Deletion of signups by user or admin
+- Expiration of unconfirmed signups (`deleteUnconfirmedSignups.ts` cron job)
+- Modifications to event quotas (via `updateEvent`)
 
 ## Expired signups
 
-Signups expire after not being confirmed for 30 minutes (configurable).
-They immediately stop matching Signup's `defaultScope` and stop being visible to users.
+Signups expire after not being confirmed within `SIGNUP_CONFIRM_MINS` minutes (default: 30).
+The cutoff is computed by `activeSignupCutoff()` in `src/db/filters.ts` and is used consistently
+across all queries that filter active signups.
 
-Following this, the `deleteUnconfirmedSignups.ts` cron job will delete them and trigger a state refresh.
+Expired signups immediately stop appearing in queries. Following this, the `deleteUnconfirmedSignups.ts`
+cron job hard-deletes them and triggers position side effects (promotions from queue).
 
 ## Signup flow
 
@@ -53,9 +51,10 @@ Following this, the `deleteUnconfirmedSignups.ts` cron job will delete them and 
                                 │ User clicks quota button │
                                 └─────────────┬────────────┘
                                               │
-                                    ╔═════════╧═════════╗
-                                    ║ POST /api/signups ║
-                                    ╚═════════╤═════════╝
+                                   ╔══════════╧══════════╗
+                                   ║ createNewSignup     ║
+                                   ║ (server action)     ║
+                                   ╚══════════╤══════════╝
                                               │
                               ┌───────────────┴────────────────┐
                               │    User receives edit token    │
@@ -69,22 +68,23 @@ Following this, the `deleteUnconfirmedSignups.ts` cron job will delete them and 
     └───────────┬──────────┘                         │             └─────────┬─────────┘
                 │                                    │                       │
    ╔════════════╧════════════╗                       │          ┌────────────┴────────────┐
-   ║ PATCH /api/signups/<id> ║                       │          │ Unconfirmed signup goes │
-   ╚════════════╤════════════╝                       │          │   out of defaultScope   │
-                │                                    │          └────────────┬────────────┘
-   ┌────────────┴────────────┐                       │                       │
-   │ Confirmation email sent │                       │          ┌────────────┴─────────────┐
-   └────────────┬────────────┘                       │          │ deleteUnconfirmedSignups │
-                │                                    │          │      cron job fires      │
-                ├────────────────────────────┐       │          └────────────┬─────────────┘
+   ║ updateSignupAsUser      ║                       │          │ Unconfirmed signup      │
+   ║ (server action)         ║                       │          │ expires after cutoff    │
+   ╚════════════╤════════════╝                       │          └────────────┬────────────┘
+                │                                    │                       │
+   ┌────────────┴────────────┐                       │          ┌────────────┴─────────────┐
+   │ Confirmation email sent │                       │          │ deleteUnconfirmedSignups │
+   └────────────┬────────────┘                       │          │      cron job fires      │
+                │                                    │          └────────────┬─────────────┘
+                ├────────────────────────────┐       │                       │
                 │                            │       │                       │
    ┌────────────┴───────────┐         ┌──────┴───────┴──────┐                │
    │  Admin deletes signup  │         │ User cancels signup │                │
    └────────────┬───────────┘         └──────────┬──────────┘                │
                 │                                │                           │
-╔═══════════════╧════════════════╗  ╔════════════╧═════════════╗             │
-║ DELETE /api/admin/signups/<id> ║  ║ DELETE /api/signups/<id> ║             │
-╚═══════════════╤════════════════╝  ╚════════════╤═════════════╝             │
+   ╔════════════╧════════════╗     ╔═════════════╧═════════════╗             │
+   ║ deleteSignup (admin)    ║     ║ deleteSignup (user)       ║             │
+   ╚════════════╤════════════╝     ╚═════════════╤═════════════╝             │
                 │                                │                           │
                 └─────────────────────────────┬──┴───────────────────────────┘
                                               │
