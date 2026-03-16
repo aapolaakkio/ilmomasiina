@@ -251,7 +251,7 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
                               ) : signup.firstName && signup.lastName ? (
                                 `${signup.firstName} ${signup.lastName}`
                               ) : (
-                                t("nameHidden")
+                                <span className="italic text-gray-400">{t("nameHidden")}</span>
                               )}
                             </td>
                           )}
@@ -266,8 +266,11 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
                           {localizedEvent.quotas.length > 1 && quota.type !== SignupStatus.IN_QUOTA && (
                             <td className="px-3 py-2">{signup.quota?.title}</td>
                           )}
-                          <td className="px-3 py-2" title={signup.createdAt}>
+                          <td className="group px-3 py-2">
                             {formatSignupTime(signup.createdAt, locale)}
+                            <span className="hidden group-hover:inline text-gray-400">
+                              .{String(new Date(signup.createdAt).getMilliseconds()).padStart(3, "0")}
+                            </span>
                           </td>
                         </tr>
                       ))}
