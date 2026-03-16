@@ -146,13 +146,13 @@ export default async function EventListPage({
                 );
               }
               return (
-                <tr key={row.id} className="border-b border-gray-100 bg-gray-50/50">
-                  <td className="py-2 pl-8 pr-4 text-sm text-gray-600">
+                <tr key={row.id} className="bg-gray-50/50">
+                  <td className="py-1 pl-8 pr-4 text-sm text-gray-600">
                     {row.type === "openquota" ? t("openQuota") : row.title}
                   </td>
-                  <td className="px-4 py-2" aria-label="Date" />
-                  <td className="px-4 py-2" aria-label="Signup state" />
-                  <td className="px-4 py-2 text-gray-700">
+                  <td className="px-4 py-1" aria-label="Date" />
+                  <td className="px-4 py-1" aria-label="Signup state" />
+                  <td className="px-4 py-1 text-gray-700">
                     {row.signupCount}
                     {row.quotaSize != null && <>&ensp;/&ensp;{row.quotaSize}</>}
                   </td>
