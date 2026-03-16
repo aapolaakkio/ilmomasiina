@@ -4,7 +4,9 @@
 - `pnpm format`: Format all files using Oxfmt.
 - `pnpm lint`: Lint all files using Oxlint.
 - `pnpm typecheck`: Run TypeScript type checking.
-- `pnpm test`: Run tests using Vitest.
+- `pnpm test`: Run all Playwright tests.
+- `pnpm test:api`: Run API tests only.
+- `pnpm test:e2e`: Run E2E browser tests only.
 
 # Code style
 
@@ -46,7 +48,9 @@
 - `src/auditlog/` — Audit logging.
 - `src/util/` — Shared server utilities (cache, errors, debug).
 - `src/proxy.ts` — Admin auth middleware (JWT cookie verification).
-- `test/` — Backend test suite (Vitest).
+- `tests/` — Playwright test suite.
+  - `tests/api/` — API tests (no browser).
+  - `tests/e2e/` — E2E browser tests (Chromium).
 
 # Server actions (next-safe-action)
 

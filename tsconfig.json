@@ -29,19 +29,14 @@
     "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "test/**/*.ts",
+    "tests/**/*.ts",
     ".next/types/**/*.ts",
-    "vitest.config.mts",
+    "playwright.config.ts",
     "drizzle.config.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    ".next",
-    "test/routes",
-    "test/unit/signups",
-    "test/fillDatabase.ts",
-    "test/setup.ts",
-    "test/testData.ts"
+    ".next"
   ]
 }

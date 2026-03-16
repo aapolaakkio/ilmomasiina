@@ -27,3 +27,7 @@ docs/superpowers
 next-env.d.ts
 
 tsconfig.tsbuildinfo
+
+/test-results/
+/playwright-report/
+/blob-report/
