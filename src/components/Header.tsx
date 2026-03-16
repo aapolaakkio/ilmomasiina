@@ -4,13 +4,18 @@ import { useLocale } from "next-intl";
 
 import { env } from "@/env";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
+
+const localeLabels: Record<string, string> = {
+  fi: "Suomi",
+  en: "English",
+  sv: "Svenska",
+};
 
 export default function Header() {
   const locale = useLocale();
   const pathname = usePathname();
   const router = useRouter();
-  const otherLocale = locale === "fi" ? "en" : "fi";
-  const switchLabel = locale === "fi" ? "In English" : "Suomeksi";
 
   return (
     <header className="border-b-2 border-accent bg-surface text-white">
@@ -26,13 +31,17 @@ export default function Header() {
           >
             Admin
           </Link>
-          <button
-            type="button"
-            className="text-xs font-medium uppercase tracking-wider text-gray-300 transition-colors hover:text-accent"
-            onClick={() => router.replace(pathname, { locale: otherLocale })}
+          <select
+            className="cursor-pointer rounded border border-gray-600 bg-transparent px-2 py-1 text-xs font-medium uppercase tracking-wider text-gray-300 transition-colors hover:text-accent focus:border-accent focus:outline-none"
+            value={locale}
+            onChange={(e) => router.replace(pathname, { locale: e.target.value })}
           >
-            {switchLabel}
-          </button>
+            {routing.locales.map((loc) => (
+              <option key={loc} value={loc} className="bg-surface text-white">
+                {localeLabels[loc] ?? loc}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
     </header>

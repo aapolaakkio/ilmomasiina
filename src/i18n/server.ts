@@ -1,9 +1,11 @@
 import en from "../i18n/en";
 import fi from "../i18n/fi";
+import sv from "../i18n/sv";
 
 const resources = {
   en,
   fi,
+  sv,
 } as const;
 
 export type KnownLanguage = keyof typeof resources;

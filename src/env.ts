@@ -2,7 +2,8 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import Stripe from "stripe";
 import { z, ZodType } from "zod";
 
-import { knownLanguages } from "./i18n/server";
+// Must be kept in sync with i18n/routing.ts locales
+const knownLanguages = ["fi", "en", "sv"];
 
 // Vite/Vitest sets BASE_URL, which conflicts with our app config.
 if (process.env.VITEST) {
@@ -110,12 +111,6 @@ export const env = createEnv({
     BRANDING_MAIL_FOOTER_TEXT: z.string(),
     BRANDING_MAIL_FOOTER_LINK: z.string(),
     BRANDING_ICAL_CALENDAR_NAME: z.string().default("Ilmomasiina"),
-    DEFAULT_LANGUAGE: z
-      .string()
-      .default("fi")
-      .refine((value) => knownLanguages.includes(value as (typeof knownLanguages)[number]), {
-        message: `DEFAULT_LANGUAGE must be one of: ${knownLanguages.join(", ")}`,
-      }),
     ICAL_UID_DOMAIN: nullableString,
     APP_TIMEZONE: z.string().default("Europe/Helsinki"),
     BASE_URL: z.string(),
@@ -145,6 +140,12 @@ export const env = createEnv({
     NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK: nullableString,
     NEXT_PUBLIC_BRANDING_LOGIN_PLACEHOLDER_EMAIL: z.string().default("admin@example.com"),
     NEXT_PUBLIC_BRANDING_CANCELLATION_LINK: nullableString,
+    NEXT_PUBLIC_DEFAULT_LANGUAGE: z
+      .string()
+      .default("fi")
+      .refine((value) => knownLanguages.includes(value as (typeof knownLanguages)[number]), {
+        message: `NEXT_PUBLIC_DEFAULT_LANGUAGE must be one of: ${knownLanguages.join(", ")}`,
+      }),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
@@ -165,7 +166,6 @@ export const env = createEnv({
     BRANDING_MAIL_FOOTER_TEXT: process.env.BRANDING_MAIL_FOOTER_TEXT,
     BRANDING_MAIL_FOOTER_LINK: process.env.BRANDING_MAIL_FOOTER_LINK,
     BRANDING_ICAL_CALENDAR_NAME: process.env.BRANDING_ICAL_CALENDAR_NAME,
-    DEFAULT_LANGUAGE: process.env.DEFAULT_LANGUAGE,
     ICAL_UID_DOMAIN: process.env.ICAL_UID_DOMAIN,
     APP_TIMEZONE: process.env.APP_TIMEZONE,
     BASE_URL: process.env.BASE_URL,
@@ -193,6 +193,7 @@ export const env = createEnv({
     NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK: process.env.NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK,
     NEXT_PUBLIC_BRANDING_LOGIN_PLACEHOLDER_EMAIL: process.env.NEXT_PUBLIC_BRANDING_LOGIN_PLACEHOLDER_EMAIL,
     NEXT_PUBLIC_BRANDING_CANCELLATION_LINK: process.env.NEXT_PUBLIC_BRANDING_CANCELLATION_LINK,
+    NEXT_PUBLIC_DEFAULT_LANGUAGE: process.env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
   },
   emptyStringAsUndefined: false,
 });

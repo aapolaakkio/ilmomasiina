@@ -36,7 +36,7 @@ export default class EmailService {
       const { html, lng } = await renderMailTemplate({
         template: "confirmation",
         language,
-        defaultLanguage: env.DEFAULT_LANGUAGE,
+        defaultLanguage: env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
         branding: {
           footerText: env.BRANDING_MAIL_FOOTER_TEXT,
           footerLink: env.BRANDING_MAIL_FOOTER_LINK,
@@ -60,7 +60,7 @@ export default class EmailService {
       const { html, lng } = await renderMailTemplate({
         template: "payment",
         language,
-        defaultLanguage: env.DEFAULT_LANGUAGE,
+        defaultLanguage: env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
         branding: {
           footerText: env.BRANDING_MAIL_FOOTER_TEXT,
           footerLink: env.BRANDING_MAIL_FOOTER_LINK,
@@ -79,7 +79,7 @@ export default class EmailService {
       const { html, lng } = await renderMailTemplate({
         template: "newUser",
         language,
-        defaultLanguage: env.DEFAULT_LANGUAGE,
+        defaultLanguage: env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
         branding: {
           footerText: env.BRANDING_MAIL_FOOTER_TEXT,
           footerLink: env.BRANDING_MAIL_FOOTER_LINK,
@@ -101,7 +101,7 @@ export default class EmailService {
       const { html, lng } = await renderMailTemplate({
         template: "resetPassword",
         language,
-        defaultLanguage: env.DEFAULT_LANGUAGE,
+        defaultLanguage: env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
         branding: {
           footerText: env.BRANDING_MAIL_FOOTER_TEXT,
           footerLink: env.BRANDING_MAIL_FOOTER_LINK,
@@ -123,7 +123,7 @@ export default class EmailService {
       const { html, lng } = await renderMailTemplate({
         template: "queueMail",
         language,
-        defaultLanguage: env.DEFAULT_LANGUAGE,
+        defaultLanguage: env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
         branding: {
           footerText: env.BRANDING_MAIL_FOOTER_TEXT,
           footerLink: env.BRANDING_MAIL_FOOTER_LINK,

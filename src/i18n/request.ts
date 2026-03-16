@@ -4,8 +4,11 @@ import { getRequestConfig } from "next-intl/server";
 
 import en from "./en";
 import fi from "./fi";
+import sv from "./sv";
 
 import { routing } from "./routing";
+
+const messages = { fi, en, sv } as const;
 
 export default getRequestConfig(async ({ locale }) => {
   if (!locale) {
@@ -15,6 +18,6 @@ export default getRequestConfig(async ({ locale }) => {
 
   return {
     locale,
-    messages: locale === "fi" ? fi : en,
+    messages: messages[locale as keyof typeof messages] ?? fi,
   };
 });

@@ -86,7 +86,7 @@ export function getEffectivePaymentStatus(
  * Gets the effective default language for an event, falling back to config.
  */
 export function getDefaultLanguage(event: { defaultLanguage: string | null }): string {
-  return event.defaultLanguage ?? env.DEFAULT_LANGUAGE;
+  return event.defaultLanguage ?? env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
 }
 
 /**

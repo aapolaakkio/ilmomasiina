@@ -35,7 +35,7 @@ interface MailSignup {
 /** Fetches information for a "promoted from queue" email and sends it. */
 export const sendPromotedFromQueueMail = sendSynchronouslyInTest(async (signup: MailSignup) => {
   if (!signup.email) return;
-  const lang = signup.language ?? env.DEFAULT_LANGUAGE;
+  const lang = signup.language ?? env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
 
   const signupPayments = await db.query.payments.findMany({
     where: { signupId: signup.id },
@@ -86,7 +86,7 @@ interface ConfirmationSignup extends MailSignup {
 export const sendSignupConfirmationMail = sendSynchronouslyInTest(
   async (signup: ConfirmationSignup, type: ConfirmationMailParams["type"], admin: boolean) => {
     if (!signup.email) return;
-    const lang = signup.language ?? env.DEFAULT_LANGUAGE;
+    const lang = signup.language ?? env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
 
     const signupPayments =
       signup.payments ??
@@ -175,7 +175,7 @@ export const sendPaymentConfirmationMail = sendSynchronouslyInTest(
     });
     if (!signupRow?.email) return;
 
-    const lang = signupRow.language ?? env.DEFAULT_LANGUAGE;
+    const lang = signupRow.language ?? env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
 
     const quotaData = await db.query.quotas.findFirst({
       where: { id: signupRow.quotaId },
