@@ -153,6 +153,7 @@ const fi = {
     delete: {
       action: "Poista ilmoittautuminen",
       confirm: "Paina uudelleen varmistukseksi…",
+      warning: "Ilmoittautumisen poistamista ei voi perua. Jos olet jonossa, menetät paikkasi.",
     },
     fieldError: {
       missing: "Tämä kenttä on pakollinen.",

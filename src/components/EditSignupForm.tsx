@@ -574,7 +574,8 @@ export default function EditSignupForm({ data, editToken }: Props) {
 
       {/* Delete */}
       {canEdit && !isNew && (
-        <div className="mt-8 border-t border-gray-200 pt-4">
+        <div className="mt-8 border-t border-gray-200 pt-4 text-center">
+          <p className="mb-3 text-sm text-gray-500">{t("delete.warning")}</p>
           <DeleteConfirmButton onDelete={handleDelete} disabled={submitting} />
         </div>
       )}

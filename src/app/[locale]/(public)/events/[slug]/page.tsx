@@ -266,7 +266,9 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
                           {localizedEvent.quotas.length > 1 && quota.type !== SignupStatus.IN_QUOTA && (
                             <td className="px-3 py-2">{signup.quota?.title}</td>
                           )}
-                          <td className="px-3 py-2">{formatSignupTime(signup.createdAt, locale)}</td>
+                          <td className="px-3 py-2" title={signup.createdAt}>
+                            {formatSignupTime(signup.createdAt, locale)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

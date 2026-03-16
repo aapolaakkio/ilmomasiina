@@ -258,20 +258,37 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
                 onChange={(e) => setAnswer(question.id, e.target.value)}
               />
             )}
-            {question.type === QuestionType.SELECT && question.options && (
-              <select
-                className={selectClassName}
-                value={(answers[question.id] as string) ?? ""}
-                onChange={(e) => setAnswer(question.id, e.target.value)}
-              >
-                <option value="">{tFields("selectPlaceholder")}</option>
-                {question.options.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            )}
+            {question.type === QuestionType.SELECT &&
+              question.options &&
+              (question.options.length <= 3 ? (
+                <div className="space-y-1">
+                  {question.options.map((opt) => (
+                    <label key={opt} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name={`q-${question.id}`}
+                        className="h-4 w-4 border-gray-300 text-brand-600"
+                        checked={(answers[question.id] as string) === opt}
+                        onChange={() => setAnswer(question.id, opt)}
+                      />
+                      {opt}
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <select
+                  className={selectClassName}
+                  value={(answers[question.id] as string) ?? ""}
+                  onChange={(e) => setAnswer(question.id, e.target.value)}
+                >
+                  <option value="">{tFields("selectPlaceholder")}</option>
+                  {question.options.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              ))}
             {question.type === QuestionType.CHECKBOX &&
               question.options?.map((opt) => (
                 <div key={opt} className="flex items-center gap-2 py-1">

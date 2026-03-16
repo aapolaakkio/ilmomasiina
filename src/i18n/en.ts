@@ -151,6 +151,7 @@ const en = {
     delete: {
       action: "Delete signup",
       confirm: "Click again to confirm…",
+      warning: "Deleting your signup cannot be undone. If you are in a queue, you will lose your position.",
     },
     fieldError: {
       missing: "This field is mandatory.",
