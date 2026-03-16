@@ -403,6 +403,9 @@ const fi = {
       invalidSlug: "URL-osoitteessa voi käyttää vain merkkejä A-Z, a-z, 0-9, - ja _",
       dateInverted: "Tapahtuma ei voi päättyä ennen kuin se alkaa",
       registrationDateInverted: "Ilmoittautuminen ei voi päättyä ennen kuin se alkaa",
+      dateMissing: "Joko tapahtuman ajankohta tai ilmoittautumisajat täytyy asettaa",
+      endDateWithoutDate: "Loppuaika voidaan asettaa vain kun alkuaika on asetettu",
+      registrationDateIncomplete: "Sekä ilmon alku- että loppuaika täytyy asettaa",
     },
     editConflict: {
       title: "Päällekkäinen muokkaus",

@@ -402,6 +402,9 @@ const en = {
       invalidSlug: "Only the characters A-Z, a-z, 0-9, - and _ are allowed",
       dateInverted: "The event cannot end before it starts",
       registrationDateInverted: "The signup cannot close before it opens",
+      dateMissing: "Either the event date or signup dates must be set",
+      endDateWithoutDate: "End date can only be set when a start date is set",
+      registrationDateIncomplete: "Both signup open and close dates must be set",
     },
     editConflict: {
       title: "Conflicting edits",

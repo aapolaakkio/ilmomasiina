@@ -89,6 +89,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
                       <Field.Label htmlFor={`quota-title-${i}`}>
                         {t("quotas.quotaName")}
                         <LocalizedIndicator />
+                        {isDefaultLang && <span className="ml-0.5 text-red-500">*</span>}
                       </Field.Label>
                       <input
                         id={`quota-title-${i}`}

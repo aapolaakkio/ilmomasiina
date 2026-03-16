@@ -82,6 +82,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
                     <Field.Label htmlFor={`question-text-${i}`}>
                       {t("questions.questionText")}
                       <LocalizedIndicator />
+                      {isDefaultLang && <span className="ml-0.5 text-red-500">*</span>}
                     </Field.Label>
                     <input
                       id={`question-text-${i}`}

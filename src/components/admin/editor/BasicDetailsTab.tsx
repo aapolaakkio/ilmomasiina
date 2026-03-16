@@ -131,6 +131,7 @@ export default function BasicDetailsTab({
         <Field.Label htmlFor="editor-title">
           {t("basic.name")}
           <LocalizedIndicator />
+          {isDefaultLang && <span className="ml-0.5 text-red-500">*</span>}
         </Field.Label>
         <input
           id="editor-title"
@@ -144,7 +145,10 @@ export default function BasicDetailsTab({
         <FieldError error={fieldErrors.title} />
       </Field.Root>
       <Field.Root>
-        <Field.Label htmlFor="editor-slug">{t("basic.url")}</Field.Label>
+        <Field.Label htmlFor="editor-slug">
+          {t("basic.url")}
+          <span className="ml-0.5 text-red-500">*</span>
+        </Field.Label>
         <input
           id="editor-slug"
           type="text"
@@ -178,56 +182,69 @@ export default function BasicDetailsTab({
         </datalist>
       </Field.Root>
 
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field.Root className="mb-0">
-          <Field.Label htmlFor="editor-date">{t("basic.startDate")}</Field.Label>
-          <input
-            id="editor-date"
-            type="datetime-local"
-            className={inputClassName}
-            value={isoToLocal(form.date)}
-            onChange={(e) => updateField("date", localToIso(e.target.value))}
-            disabled={readOnly}
-          />
-        </Field.Root>
-        <Field.Root className="mb-0">
-          <Field.Label htmlFor="editor-endDate">{t("basic.endDate")}</Field.Label>
-          <input
-            id="editor-endDate"
-            type="datetime-local"
-            className={inputClassName}
-            value={isoToLocal(form.endDate)}
-            onChange={(e) => updateField("endDate", localToIso(e.target.value))}
-            disabled={readOnly}
-          />
-          <FieldError error={fieldErrors.dateInverted} />
-        </Field.Root>
-      </div>
-
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field.Root className="mb-0">
-          <Field.Label htmlFor="editor-regStart">{t("basic.registrationStart")}</Field.Label>
-          <input
-            id="editor-regStart"
-            type="datetime-local"
-            className={inputClassName}
-            value={isoToLocal(form.registrationStartDate)}
-            onChange={(e) => updateField("registrationStartDate", localToIso(e.target.value))}
-            disabled={readOnly}
-          />
-        </Field.Root>
-        <Field.Root className="mb-0">
-          <Field.Label htmlFor="editor-regEnd">{t("basic.registrationEnd")}</Field.Label>
-          <input
-            id="editor-regEnd"
-            type="datetime-local"
-            className={inputClassName}
-            value={isoToLocal(form.registrationEndDate)}
-            onChange={(e) => updateField("registrationEndDate", localToIso(e.target.value))}
-            disabled={readOnly}
-          />
-          <FieldError error={fieldErrors.registrationDateInverted} />
-        </Field.Root>
+      <div className="mb-4 space-y-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field.Root className="mb-0">
+            <Field.Label htmlFor="editor-date">
+              {t("basic.startDate")}
+              {!form.registrationStartDate && <span className="ml-0.5 text-red-500">*</span>}
+            </Field.Label>
+            <input
+              id="editor-date"
+              type="datetime-local"
+              className={inputClassName}
+              value={isoToLocal(form.date)}
+              onChange={(e) => updateField("date", localToIso(e.target.value))}
+              disabled={readOnly}
+            />
+          </Field.Root>
+          <Field.Root className="mb-0">
+            <Field.Label htmlFor="editor-endDate">{t("basic.endDate")}</Field.Label>
+            <input
+              id="editor-endDate"
+              type="datetime-local"
+              className={inputClassName}
+              value={isoToLocal(form.endDate)}
+              onChange={(e) => updateField("endDate", localToIso(e.target.value))}
+              disabled={readOnly}
+            />
+            <FieldError error={fieldErrors.dateInverted} />
+            <FieldError error={fieldErrors.endDateWithoutDate} />
+          </Field.Root>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field.Root className="mb-0">
+            <Field.Label htmlFor="editor-regStart">
+              {t("basic.registrationStart")}
+              {!form.date && <span className="ml-0.5 text-red-500">*</span>}
+            </Field.Label>
+            <input
+              id="editor-regStart"
+              type="datetime-local"
+              className={inputClassName}
+              value={isoToLocal(form.registrationStartDate)}
+              onChange={(e) => updateField("registrationStartDate", localToIso(e.target.value))}
+              disabled={readOnly}
+            />
+          </Field.Root>
+          <Field.Root className="mb-0">
+            <Field.Label htmlFor="editor-regEnd">
+              {t("basic.registrationEnd")}
+              {!form.date && <span className="ml-0.5 text-red-500">*</span>}
+            </Field.Label>
+            <input
+              id="editor-regEnd"
+              type="datetime-local"
+              className={inputClassName}
+              value={isoToLocal(form.registrationEndDate)}
+              onChange={(e) => updateField("registrationEndDate", localToIso(e.target.value))}
+              disabled={readOnly}
+            />
+            <FieldError error={fieldErrors.registrationDateInverted} />
+            <FieldError error={fieldErrors.registrationDateIncomplete} />
+          </Field.Root>
+        </div>
+        <FieldError error={fieldErrors.dateMissing} />
       </div>
 
       <div className="mb-4 flex items-center gap-2">

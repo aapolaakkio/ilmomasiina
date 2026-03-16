@@ -402,6 +402,9 @@ const sv = {
       invalidSlug: "Endast tecknen A-Z, a-z, 0-9, - och _ är tillåtna",
       dateInverted: "Evenemanget kan inte sluta före det börjar",
       registrationDateInverted: "Anmälan kan inte stänga före den öppnar",
+      dateMissing: "Antingen evenemangets datum eller anmälningsdatum måste anges",
+      endDateWithoutDate: "Slutdatum kan bara anges när startdatum är angivet",
+      registrationDateIncomplete: "Både öppnings- och stängningsdatum för anmälan måste anges",
     },
     editConflict: {
       title: "Motstridiga editeringar",

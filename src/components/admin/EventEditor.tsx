@@ -48,6 +48,8 @@ function stripIdsForCopy(event: AdminEventResponse) {
   };
 }
 
+const optionalDateOrEmpty = z.union([z.string().min(1), z.date(), z.null()]);
+
 const editorSchema = z
   .object({
     title: z.string().min(1).max(255),
@@ -69,10 +71,10 @@ const editorSchema = z
         question: z.string().min(1).max(255),
       }),
     ),
-    date: z.union([z.string(), z.date(), z.null()]),
-    endDate: z.union([z.string(), z.date(), z.null()]),
-    registrationStartDate: z.union([z.string(), z.date(), z.null()]),
-    registrationEndDate: z.union([z.string(), z.date(), z.null()]),
+    date: optionalDateOrEmpty,
+    endDate: optionalDateOrEmpty,
+    registrationStartDate: optionalDateOrEmpty,
+    registrationEndDate: optionalDateOrEmpty,
   })
   .refine((data) => !data.date || !data.endDate || new Date(data.endDate) >= new Date(data.date), {
     path: ["dateInverted"],
@@ -86,6 +88,23 @@ const editorSchema = z
     {
       path: ["registrationDateInverted"],
       message: "registrationDateInverted",
+    },
+  )
+  .refine((data) => data.date || data.registrationStartDate, {
+    path: ["dateMissing"],
+    message: "dateMissing",
+  })
+  .refine((data) => !(data.endDate && !data.date), {
+    path: ["endDateWithoutDate"],
+    message: "endDateWithoutDate",
+  })
+  .refine(
+    (data) =>
+      (data.registrationStartDate && data.registrationEndDate) ||
+      (!data.registrationStartDate && !data.registrationEndDate),
+    {
+      path: ["registrationDateIncomplete"],
+      message: "registrationDateIncomplete",
     },
   );
 
@@ -184,7 +203,15 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
   const tabErrors = useMemo(() => {
     const keys = Object.keys(fieldErrors);
     if (keys.length === 0) return { basic: false, quotas: false, questions: false };
-    const basicFields = ["title", "slug", "dateInverted", "registrationDateInverted"];
+    const basicFields = [
+      "title",
+      "slug",
+      "dateInverted",
+      "registrationDateInverted",
+      "dateMissing",
+      "endDateWithoutDate",
+      "registrationDateIncomplete",
+    ];
     return {
       basic: keys.some((k) => basicFields.includes(k)),
       quotas: keys.some((k) => k === "quotas" || k.startsWith("quotas[")),
@@ -239,6 +266,9 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
     (field: string, msg: string) => {
       if (msg === "dateInverted") return t("errors.dateInverted");
       if (msg === "registrationDateInverted") return t("errors.registrationDateInverted");
+      if (msg === "dateMissing") return t("errors.dateMissing");
+      if (msg === "endDateWithoutDate") return t("errors.endDateWithoutDate");
+      if (msg === "registrationDateIncomplete") return t("errors.registrationDateIncomplete");
       if (/regex|pattern/i.test(msg)) return t("errors.invalidSlug");
       if (/too.*small|at least|>=\s*1/i.test(msg)) return t("errors.required");
       if (/too.*big|at most/i.test(msg)) return t("errors.tooLong");
@@ -257,10 +287,10 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
         slug: form.slug,
         quotas: form.quotas.map((q) => ({ title: q.title, size: q.size })),
         questions: form.questions.map((q) => ({ question: q.question })),
-        date: form.date,
-        endDate: form.endDate,
-        registrationStartDate: form.registrationStartDate,
-        registrationEndDate: form.registrationEndDate,
+        date: form.date || null,
+        endDate: form.endDate || null,
+        registrationStartDate: form.registrationStartDate || null,
+        registrationEndDate: form.registrationEndDate || null,
       };
 
       const valid = validate(editorSchema, validationData, mapEditorError);
