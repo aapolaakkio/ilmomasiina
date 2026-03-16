@@ -59,79 +59,81 @@ export async function createEvent(body: EventCreateBody, auditLogger: AuditLogge
       await tx.insert(eventLanguages).values(allEventLangs);
     }
 
-    // Insert questions (non-localizable fields only) and their language rows
-    if (questionsToCreate.length > 0) {
-      const questionRows = await tx
-        .insert(questions)
-        .values(
-          questionsToCreate.map((q, order) => ({
-            question: q.question,
-            options: q.options ?? null,
-            type: q.type,
-            prices: q.prices,
-            required: q.required,
-            public: q.public,
-            eventId: created.id,
-            order,
-          })),
-        )
-        .returning({ id: questions.id });
+    // Insert questions and quotas in parallel (both depend only on the event ID)
+    await Promise.all([
+      // Insert questions and their language rows
+      (async () => {
+        if (questionsToCreate.length === 0) return;
+        const questionRows = await tx
+          .insert(questions)
+          .values(
+            questionsToCreate.map((q, order) => ({
+              question: q.question,
+              options: q.options ?? null,
+              type: q.type,
+              prices: q.prices,
+              required: q.required,
+              public: q.public,
+              eventId: created.id,
+              order,
+            })),
+          )
+          .returning({ id: questions.id });
 
-      // Insert non-default question language rows only
-      const allQuestionLangs: (typeof questionLanguages.$inferInsert)[] = [];
-      for (let i = 0; i < questionRows.length; i++) {
-        const qId = questionRows[i].id;
-        for (const [lang, langData] of Object.entries(bodyLanguages ?? {})) {
-          const langQuestion = langData.questions?.[i];
-          if (langQuestion) {
-            allQuestionLangs.push({
-              questionId: qId,
-              language: lang,
-              question: langQuestion.question,
-              options: langQuestion.options ?? null,
-            });
+        const allQuestionLangs: (typeof questionLanguages.$inferInsert)[] = [];
+        for (let i = 0; i < questionRows.length; i++) {
+          const qId = questionRows[i].id;
+          for (const [lang, langData] of Object.entries(bodyLanguages ?? {})) {
+            const langQuestion = langData.questions?.[i];
+            if (langQuestion) {
+              allQuestionLangs.push({
+                questionId: qId,
+                language: lang,
+                question: langQuestion.question,
+                options: langQuestion.options ?? null,
+              });
+            }
           }
         }
-      }
-      if (allQuestionLangs.length > 0) {
-        await tx.insert(questionLanguages).values(allQuestionLangs);
-      }
-    }
+        if (allQuestionLangs.length > 0) {
+          await tx.insert(questionLanguages).values(allQuestionLangs);
+        }
+      })(),
+      // Insert quotas and their language rows
+      (async () => {
+        if (body.quotas.length === 0) return;
+        const quotaRows = await tx
+          .insert(quotas)
+          .values(
+            body.quotas.map((q, order) => ({
+              title: q.title,
+              size: q.size,
+              price: q.price ?? 0,
+              eventId: created.id,
+              order,
+            })),
+          )
+          .returning({ id: quotas.id });
 
-    // Insert quotas (non-localizable fields only) and their language rows
-    if (body.quotas.length > 0) {
-      const quotaRows = await tx
-        .insert(quotas)
-        .values(
-          body.quotas.map((q, order) => ({
-            title: q.title,
-            size: q.size,
-            price: q.price ?? 0,
-            eventId: created.id,
-            order,
-          })),
-        )
-        .returning({ id: quotas.id });
-
-      // Insert non-default quota language rows only
-      const allQuotaLangs: (typeof quotaLanguages.$inferInsert)[] = [];
-      for (let i = 0; i < quotaRows.length; i++) {
-        const qId = quotaRows[i].id;
-        for (const [lang, langData] of Object.entries(bodyLanguages ?? {})) {
-          const langQuota = langData.quotas?.[i];
-          if (langQuota) {
-            allQuotaLangs.push({
-              quotaId: qId,
-              language: lang,
-              title: langQuota.title,
-            });
+        const allQuotaLangs: (typeof quotaLanguages.$inferInsert)[] = [];
+        for (let i = 0; i < quotaRows.length; i++) {
+          const qId = quotaRows[i].id;
+          for (const [lang, langData] of Object.entries(bodyLanguages ?? {})) {
+            const langQuota = langData.quotas?.[i];
+            if (langQuota) {
+              allQuotaLangs.push({
+                quotaId: qId,
+                language: lang,
+                title: langQuota.title,
+              });
+            }
           }
         }
-      }
-      if (allQuotaLangs.length > 0) {
-        await tx.insert(quotaLanguages).values(allQuotaLangs);
-      }
-    }
+        if (allQuotaLangs.length > 0) {
+          await tx.insert(quotaLanguages).values(allQuotaLangs);
+        }
+      })(),
+    ]);
 
     await auditLogger(AuditEvent.CREATE_EVENT, { event: { id: created.id, title: body.title }, tx });
     return created.id;
