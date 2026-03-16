@@ -1,4 +1,4 @@
-import { and, count, gt, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, count, gt, inArray, isNotNull, isNull, or } from "drizzle-orm";
 
 import type { AdminEventListResponse, EventListQuery, UserEventListResponse } from "@/models";
 
@@ -10,7 +10,7 @@ import { InitialSetupNeeded, isInitialSetupDone } from "../admin/users/helpers";
 
 const DEFAULT_MAX_AGE_DAYS = 7;
 
-/** Fetch signup counts per quota for the given quota IDs. */
+/** Fetch signup counts per quota for the given quota IDs in a single aggregation query. */
 async function fetchSignupCounts(quotaIds: string[]): Promise<Map<string, number>> {
   if (quotaIds.length === 0) return new Map();
   const rows = await db
@@ -18,7 +18,7 @@ async function fetchSignupCounts(quotaIds: string[]): Promise<Map<string, number
     .from(signups)
     .where(
       and(
-        sql`${signups.quotaId} IN ${quotaIds}`,
+        inArray(signups.quotaId, quotaIds),
         isNull(signups.deletedAt),
         or(isNotNull(signups.confirmedAt), gt(signups.createdAt, activeSignupCutoff())),
       ),
@@ -45,52 +45,20 @@ function sortEvents<T extends { date: Date | null; registrationEndDate?: Date | 
   });
 }
 
-async function fetchEventsListForUser(category?: string, maxAge: number = DEFAULT_MAX_AGE_DAYS) {
-  if (!Number.isFinite(maxAge) || maxAge < 0) throw new Error("invalid maxAge");
-  const since = new Date(Date.now() - Math.round(maxAge) * 86_400_000);
-
-  // Relational query: events with languages, quotas, questions
-  const eventRows = await db.query.events.findMany({
-    where: {
-      deletedAt: { isNull: true },
-      listed: true,
-      draft: false,
-      OR: [{ registrationEndDate: { gt: since } }, { date: { gt: since } }, { endDate: { gt: since } }],
-      ...(category ? { category } : {}),
-    },
-    with: {
-      languages: true,
-      quotas: {
-        where: { deletedAt: { isNull: true } },
-        orderBy: { order: "asc" },
-        with: { languages: true },
-      },
-      questions: {
-        where: { deletedAt: { isNull: true } },
-        columns: { id: true, eventId: true, question: true, options: true },
-        with: { languages: true },
-      },
-    },
-  });
-
-  if (eventRows.length === 0) return [];
-
-  const allQuotaIds = eventRows.flatMap((e) => e.quotas.map((q) => q.id));
-  const signupCountMap = await fetchSignupCounts(allQuotaIds);
-
-  const enrichedEvents = eventRows.map((event) => {
-    const langFields = reconstructEventLanguages(event, event.languages, event.quotas, event.questions, false);
-    return { ...event, ...langFields };
-  });
-
-  return sortEvents(enrichedEvents).map((event) => ({
-    ...event,
-    quotas: event.quotas.map((quota) => ({
-      ...quota,
-      signupCount: signupCountMap.get(quota.id) ?? 0,
-    })),
-  }));
-}
+/** Shared relational include for event list queries. */
+const eventListWith = {
+  languages: true,
+  quotas: {
+    where: { deletedAt: { isNull: true } },
+    orderBy: { order: "asc" as const },
+    with: { languages: true },
+  },
+  questions: {
+    where: { deletedAt: { isNull: true } },
+    columns: { id: true, eventId: true, question: true, options: true },
+    with: { languages: true },
+  },
+} as const;
 
 /** Get the public events list. */
 export async function getEventsListForUser(
@@ -101,7 +69,39 @@ export async function getEventsListForUser(
     throw new InitialSetupNeeded("Initial setup of Ilmomasiina is needed.");
   }
 
-  const res = await fetchEventsListForUser(query.category, query.maxAge);
+  const maxAge = query.maxAge ?? DEFAULT_MAX_AGE_DAYS;
+  if (!Number.isFinite(maxAge) || maxAge < 0) throw new Error("invalid maxAge");
+  const since = new Date(Date.now() - Math.round(maxAge) * 86_400_000);
+
+  const eventRows = await db.query.events.findMany({
+    where: {
+      deletedAt: { isNull: true },
+      listed: true,
+      draft: false,
+      OR: [{ registrationEndDate: { gt: since } }, { date: { gt: since } }, { endDate: { gt: since } }],
+      ...(query.category ? { category: query.category } : {}),
+    },
+    with: eventListWith,
+  });
+
+  if (eventRows.length === 0) return [] as unknown as UserEventListResponse;
+
+  const allQuotaIds = eventRows.flatMap((e) => e.quotas.map((q) => q.id));
+  const signupCountMap = await fetchSignupCounts(allQuotaIds);
+
+  const enrichedEvents = eventRows.map((event) => {
+    const langFields = reconstructEventLanguages(event, event.languages, event.quotas, event.questions, false);
+    return { ...event, ...langFields };
+  });
+
+  const res = sortEvents(enrichedEvents).map((event) => ({
+    ...event,
+    quotas: event.quotas.map((quota) => ({
+      ...quota,
+      signupCount: signupCountMap.get(quota.id) ?? 0,
+    })),
+  }));
+
   return res as unknown as UserEventListResponse;
 }
 
@@ -112,19 +112,7 @@ export async function getEventsListForAdmin(query: EventListQuery): Promise<Admi
       deletedAt: { isNull: true },
       ...(query.category ? { category: query.category } : {}),
     },
-    with: {
-      languages: true,
-      quotas: {
-        where: { deletedAt: { isNull: true } },
-        orderBy: { order: "asc" },
-        with: { languages: true },
-      },
-      questions: {
-        where: { deletedAt: { isNull: true } },
-        columns: { id: true, eventId: true, question: true, options: true },
-        with: { languages: true },
-      },
-    },
+    with: eventListWith,
   });
 
   if (eventRows.length === 0) return [] as AdminEventListResponse;

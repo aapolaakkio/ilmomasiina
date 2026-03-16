@@ -8,45 +8,21 @@ import { reconstructEventLanguages } from "../../db/helpers";
 import { answers, signups } from "../../db/schema";
 import { assignSignupPositions } from "../signups/assignSignupPositions";
 
-async function getBasicEventInfo(eventSlug: EventSlug) {
-  const event = await db.query.events.findFirst({
+async function getEventDetailsForUser(eventSlug: EventSlug) {
+  const hideBeforeDate = new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000);
+
+  // Single query: fetch the event with all related data in one go
+  const fullEvent = await db.query.events.findFirst({
     where: {
       slug: eventSlug,
       deletedAt: { isNull: true },
       draft: false,
       OR: [
-        { registrationEndDate: { gt: new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000) } },
-        { date: { gt: new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000) } },
-        { endDate: { gt: new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000) } },
+        { registrationEndDate: { gt: hideBeforeDate } },
+        { date: { gt: hideBeforeDate } },
+        { endDate: { gt: hideBeforeDate } },
       ],
     },
-    with: {
-      questions: {
-        where: { deletedAt: { isNull: true } },
-        orderBy: { order: "asc" },
-      },
-    },
-  });
-
-  if (!event) throw new Error("No event found with slug");
-
-  const publicQuestionIds = event.questions.filter((q) => q.public).map((q) => q.id);
-
-  return {
-    event: { ...event, effectiveEndDate: getEffectiveEndDate(event) },
-    publicQuestions: publicQuestionIds,
-  };
-}
-
-async function getEventDetailsForUser(eventSlug: EventSlug) {
-  const { event, publicQuestions } = await getBasicEventInfo(eventSlug);
-
-  const effectiveEnd = event.effectiveEndDate;
-  const isOld = effectiveEnd != null && effectiveEnd < Date.now() - 7 * 86_400_000;
-
-  // Fetch full event with languages, quotas (with languages + signups if not old)
-  const fullEvent = await db.query.events.findFirst({
-    where: { id: event.id },
     with: {
       languages: true,
       quotas: {
@@ -54,18 +30,14 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
         orderBy: { order: "asc" },
         with: {
           languages: true,
-          ...(isOld
-            ? {}
-            : {
-                signups: {
-                  where: {
-                    deletedAt: { isNull: true },
-                    OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: activeSignupCutoff() } }],
-                  },
-                  orderBy: { createdAt: "asc" },
-                  with: { answers: { where: { deletedAt: { isNull: true } } } },
-                },
-              }),
+          signups: {
+            where: {
+              deletedAt: { isNull: true },
+              OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: activeSignupCutoff() } }],
+            },
+            orderBy: { createdAt: "asc" },
+            with: { answers: { where: { deletedAt: { isNull: true } } } },
+          },
         },
       },
       questions: {
@@ -76,7 +48,13 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
     },
   });
 
-  if (!fullEvent) throw new Error("No event found");
+  if (!fullEvent) throw new Error("No event found with slug");
+
+  const event = { ...fullEvent, effectiveEndDate: getEffectiveEndDate(fullEvent) };
+  const publicQuestions = fullEvent.questions.filter((q) => q.public).map((q) => q.id);
+
+  // For very old events, strip signups to avoid serving stale data
+  const isOld = event.effectiveEndDate != null && event.effectiveEndDate < Date.now() - 7 * 86_400_000;
 
   const langFields = reconstructEventLanguages(
     fullEvent,
@@ -88,11 +66,9 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
 
   // Flatten signups across quotas for position computation
   const allSignups: (typeof signups.$inferSelect & { answers: (typeof answers.$inferSelect)[] })[] = [];
-  for (const quota of fullEvent.quotas) {
-    if ("signups" in quota) {
-      for (const s of quota.signups as (typeof signups.$inferSelect & {
-        answers: (typeof answers.$inferSelect)[];
-      })[]) {
+  if (!isOld) {
+    for (const quota of fullEvent.quotas) {
+      for (const s of quota.signups) {
         allSignups.push(s);
       }
     }
@@ -108,10 +84,7 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
 
   // Build quota rows with titles, signups, and counts
   const quotaRows = fullEvent.quotas.map((quota) => {
-    const quotaSignups =
-      "signups" in quota
-        ? (quota.signups as (typeof signups.$inferSelect & { answers: (typeof answers.$inferSelect)[] })[])
-        : [];
+    const quotaSignups = isOld ? [] : quota.signups;
 
     // Filter answers to only public questions, attach computed positions
     const filteredSignups = quotaSignups.map((s) => {
