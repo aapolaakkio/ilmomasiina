@@ -28,10 +28,10 @@ export async function isInitialSetupDone(db: DrizzleDb): Promise<boolean> {
 
 /** Add a user email to the allowlist. */
 export async function createUser(
-  params: { email: string },
+  params: { email: string; role?: "admin" | "user" },
   auditLogger: AuditLogger,
   tx: DrizzleDb,
-): Promise<{ id: number; email: string }> {
+): Promise<{ id: number; email: string; role: "admin" | "user" }> {
   const existing = await tx.query.users.findFirst({
     where: { email: params.email },
     columns: { id: true },
@@ -39,7 +39,10 @@ export async function createUser(
 
   if (existing) throw new Error("User with given email already exists");
 
-  const [user] = await tx.insert(users).values({ email: params.email }).returning({ id: users.id, email: users.email });
+  const [user] = await tx
+    .insert(users)
+    .values({ email: params.email, ...(params.role ? { role: params.role } : {}) })
+    .returning({ id: users.id, email: users.email, role: users.role });
 
   await auditLogger(AuditEvent.CREATE_USER, {
     extra: { id: user.id, email: user.email },

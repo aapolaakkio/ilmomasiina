@@ -28,6 +28,7 @@ export default function AdminUsersClient({ users }: Props) {
 
   // Invite form
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "user">("user");
   const inviteValidation = useFormValidation();
 
   const inviteSchema = useMemo(() => z.object({ email: z.email().min(1).max(255) }), []);
@@ -57,7 +58,7 @@ export default function AdminUsersClient({ users }: Props) {
       });
       if (!valid) return;
 
-      executeInvite({ email: inviteEmail });
+      executeInvite({ email: inviteEmail, role: inviteRole });
     },
     [inviteEmail, invitePending, inviteValidation, inviteSchema, executeInvite, t],
   );
@@ -109,6 +110,7 @@ export default function AdminUsersClient({ users }: Props) {
           <thead>
             <tr className="border-b border-gray-200">
               <th className="pb-3 pr-4 font-semibold text-gray-700">{t("email")}</th>
+              <th className="pb-3 pr-4 font-semibold text-gray-700">{t("role")}</th>
               <th className="pb-3 font-semibold text-gray-700">{t("actions")}</th>
             </tr>
           </thead>
@@ -116,6 +118,7 @@ export default function AdminUsersClient({ users }: Props) {
             {users.map((user) => (
               <tr key={user.id} className="border-b border-gray-100">
                 <td className="py-3 pr-4">{user.email}</td>
+                <td className="py-3 pr-4 text-gray-600">{t(`role_${user.role}`)}</td>
                 <td className="py-3">
                   <Button
                     variant="danger"
@@ -150,6 +153,14 @@ export default function AdminUsersClient({ users }: Props) {
             />
             <FieldError error={inviteValidation.fieldErrors.email} />
           </div>
+          <select
+            className={inputClassName}
+            value={inviteRole}
+            onChange={(e) => setInviteRole(e.target.value as "admin" | "user")}
+          >
+            <option value="user">{t("role_user")}</option>
+            <option value="admin">{t("role_admin")}</option>
+          </select>
           <Button type="submit" variant="secondary" disabled={isProcessing}>
             {t("createSubmit")}
           </Button>

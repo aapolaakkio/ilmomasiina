@@ -16,7 +16,10 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 
+import type { UserID } from "@/models";
+
 import BasicDetailsTab from "./editor/BasicDetailsTab";
+import EditorsTab from "./editor/EditorsTab";
 import EmailsTab from "./editor/EmailsTab";
 import LanguageManager from "./editor/LanguageManager";
 import PreviewTab from "./editor/PreviewTab";
@@ -30,6 +33,8 @@ type Props = {
   isNew: boolean;
   copy?: boolean;
   categories: string[];
+  editors: { userId: UserID; email: string }[];
+  readOnly?: boolean;
 };
 
 function stripIdsForCopy(event: AdminEventResponse) {
@@ -84,7 +89,7 @@ const editorSchema = z
     },
   );
 
-export default function EventEditor({ event: initialEvent, isNew, copy, categories }: Props) {
+export default function EventEditor({ event: initialEvent, isNew, copy, categories, editors, readOnly }: Props) {
   const router = useRouter();
   const t = useTranslations("editor");
   const effectiveIsNew = isNew || !!copy;
@@ -375,6 +380,12 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
 
       <h1 className="mb-4 text-2xl font-bold">{effectiveIsNew ? t("titleNew") : t("titleEdit")}</h1>
 
+      {readOnly && (
+        <Alert variant="info" className="mb-4">
+          {t("readOnly")}
+        </Alert>
+      )}
+
       {error && (
         <Alert variant="danger" className="mb-4">
           {error}
@@ -520,6 +531,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
         updateField={updateField}
         selectedLanguage={selectedLanguage}
         onSelectLanguage={setSelectedLanguage}
+        readOnly={readOnly}
       />
 
       <Tabs.Root defaultValue="basic">
@@ -538,7 +550,8 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
           </Tabs.Tab>
           <Tabs.Tab value="emails">{t("tabs.emails")}</Tabs.Tab>
           <Tabs.Tab value="preview">{t("tabs.preview")}</Tabs.Tab>
-          <Tabs.Tab value="signups">{t("tabs.signups")}</Tabs.Tab>
+          {!readOnly && <Tabs.Tab value="signups">{t("tabs.signups")}</Tabs.Tab>}
+          {!effectiveIsNew && savedEvent && <Tabs.Tab value="editors">{t("tabs.editors")}</Tabs.Tab>}
         </Tabs.List>
 
         <Tabs.Panel value="basic">
@@ -550,6 +563,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
             categories={categories}
             eventId={savedEvent?.id}
             isNew={effectiveIsNew}
+            readOnly={readOnly}
           />
         </Tabs.Panel>
         <Tabs.Panel value="quotas">
@@ -558,6 +572,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
             updateField={updateField}
             fieldErrors={fieldErrors}
             selectedLanguage={selectedLanguage}
+            readOnly={readOnly}
           />
         </Tabs.Panel>
         <Tabs.Panel value="questions">
@@ -566,6 +581,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
             updateField={updateField}
             fieldErrors={fieldErrors}
             selectedLanguage={selectedLanguage}
+            readOnly={readOnly}
           />
         </Tabs.Panel>
         <Tabs.Panel value="emails">
@@ -574,46 +590,63 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
             updateField={updateField}
             fieldErrors={fieldErrors}
             selectedLanguage={selectedLanguage}
+            readOnly={readOnly}
           />
         </Tabs.Panel>
         <Tabs.Panel value="preview">
           <PreviewTab form={form} />
         </Tabs.Panel>
-        <Tabs.Panel value="signups">
-          <SignupsTab savedEvent={savedEvent} onEventChange={setSavedEvent} />
-        </Tabs.Panel>
+        {!readOnly && (
+          <Tabs.Panel value="signups">
+            <SignupsTab savedEvent={savedEvent} onEventChange={setSavedEvent} />
+          </Tabs.Panel>
+        )}
+        {!effectiveIsNew && savedEvent && (
+          <Tabs.Panel value="editors">
+            <EditorsTab eventId={savedEvent.id} initialEditors={editors} readOnly={readOnly} />
+          </Tabs.Panel>
+        )}
       </Tabs.Root>
 
       {/* Save buttons */}
-      <hr className="my-4 border-gray-200" />
-      <nav className="flex gap-2">
-        {effectiveIsNew ? (
-          <>
-            <Button variant="secondary" disabled={submitting} loading={submitting} onClick={() => handleSave(true)}>
-              {t("saveDraft")}
-            </Button>
-            <Button variant="primary" disabled={submitting} loading={submitting} onClick={() => handleSave(false)}>
-              {t("publish")}
-            </Button>
-          </>
-        ) : (
-          <>
-            {!form.draft && (
-              <Button variant="outline" disabled={submitting} onClick={() => handleSave(true)}>
-                {t("convertToDraft")}
-              </Button>
+      {!readOnly && (
+        <>
+          <hr className="my-4 border-gray-200" />
+          <nav className="flex gap-2">
+            {effectiveIsNew ? (
+              <>
+                <Button variant="secondary" disabled={submitting} loading={submitting} onClick={() => handleSave(true)}>
+                  {t("saveDraft")}
+                </Button>
+                <Button variant="primary" disabled={submitting} loading={submitting} onClick={() => handleSave(false)}>
+                  {t("publish")}
+                </Button>
+              </>
+            ) : (
+              <>
+                {!form.draft && (
+                  <Button variant="outline" disabled={submitting} onClick={() => handleSave(true)}>
+                    {t("convertToDraft")}
+                  </Button>
+                )}
+                <Button
+                  variant="primary"
+                  disabled={submitting}
+                  loading={submitting}
+                  onClick={() => handleSave(form.draft)}
+                >
+                  {t("saveChanges")}
+                </Button>
+                {form.draft && (
+                  <Button variant="success" disabled={submitting} onClick={() => handleSave(false)}>
+                    {t("publish")}
+                  </Button>
+                )}
+              </>
             )}
-            <Button variant="primary" disabled={submitting} loading={submitting} onClick={() => handleSave(form.draft)}>
-              {t("saveChanges")}
-            </Button>
-            {form.draft && (
-              <Button variant="success" disabled={submitting} onClick={() => handleSave(false)}>
-                {t("publish")}
-              </Button>
-            )}
-          </>
-        )}
-      </nav>
+          </nav>
+        </>
+      )}
     </>
   );
 }

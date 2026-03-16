@@ -48,6 +48,7 @@ export default function BasicDetailsTab({
   updateField,
   fieldErrors,
   selectedLanguage,
+  readOnly,
   categories,
   eventId,
   isNew,
@@ -138,6 +139,7 @@ export default function BasicDetailsTab({
           value={getLocalized("title")}
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder={!isDefaultLang ? form.title : undefined}
+          disabled={readOnly}
         />
         <FieldError error={fieldErrors.title} />
       </Field.Root>
@@ -149,6 +151,7 @@ export default function BasicDetailsTab({
           className={inputClassName}
           value={form.slug}
           onChange={(e) => handleSlugChange(e.target.value)}
+          disabled={readOnly}
         />
         {slugStatus === "checking" && <p className="mt-1 text-sm text-gray-500">{t("basic.urlChecking")}</p>}
         {slugStatus === "free" && <p className="mt-1 text-sm text-green-600">{t("basic.urlFree")}</p>}
@@ -166,6 +169,7 @@ export default function BasicDetailsTab({
           list="categories"
           value={form.category}
           onChange={(e) => updateField("category", e.target.value)}
+          disabled={readOnly}
         />
         <datalist id="categories">
           {categories.map((c) => (
@@ -183,6 +187,7 @@ export default function BasicDetailsTab({
             className={inputClassName}
             value={isoToLocal(form.date)}
             onChange={(e) => updateField("date", localToIso(e.target.value))}
+            disabled={readOnly}
           />
         </Field.Root>
         <Field.Root className="mb-0">
@@ -193,6 +198,7 @@ export default function BasicDetailsTab({
             className={inputClassName}
             value={isoToLocal(form.endDate)}
             onChange={(e) => updateField("endDate", localToIso(e.target.value))}
+            disabled={readOnly}
           />
           <FieldError error={fieldErrors.dateInverted} />
         </Field.Root>
@@ -207,6 +213,7 @@ export default function BasicDetailsTab({
             className={inputClassName}
             value={isoToLocal(form.registrationStartDate)}
             onChange={(e) => updateField("registrationStartDate", localToIso(e.target.value))}
+            disabled={readOnly}
           />
         </Field.Root>
         <Field.Root className="mb-0">
@@ -217,6 +224,7 @@ export default function BasicDetailsTab({
             className={inputClassName}
             value={isoToLocal(form.registrationEndDate)}
             onChange={(e) => updateField("registrationEndDate", localToIso(e.target.value))}
+            disabled={readOnly}
           />
           <FieldError error={fieldErrors.registrationDateInverted} />
         </Field.Root>
@@ -229,6 +237,7 @@ export default function BasicDetailsTab({
           id="listed"
           checked={form.listed}
           onChange={(e) => updateField("listed", e.target.checked)}
+          disabled={readOnly}
         />
         <label htmlFor="listed" className="text-sm text-gray-700">
           {t("basic.listed")}
@@ -241,6 +250,7 @@ export default function BasicDetailsTab({
           id="signupsPublic"
           checked={form.signupsPublic}
           onChange={(e) => updateField("signupsPublic", e.target.checked)}
+          disabled={readOnly}
         />
         <label htmlFor="signupsPublic" className="text-sm text-gray-700">
           {t("basic.signupsPublic")}
@@ -259,6 +269,7 @@ export default function BasicDetailsTab({
           value={getLocalized("location")}
           onChange={(e) => setLocalized("location", e.target.value)}
           placeholder={!isDefaultLang ? form.location : undefined}
+          disabled={readOnly}
         />
       </Field.Root>
       <Field.Root>
@@ -273,24 +284,24 @@ export default function BasicDetailsTab({
           value={getLocalized("price")}
           onChange={(e) => setLocalized("price", e.target.value)}
           placeholder={!isDefaultLang ? form.price : undefined}
+          disabled={readOnly}
         />
         <small className="mt-1 text-xs text-gray-500">{t("basic.priceInfo")}</small>
       </Field.Root>
-      {isDefaultLang && (
-        <Field.Root>
-          <Field.Label htmlFor="editor-payments">{t("basic.payments")}</Field.Label>
-          <select
-            id="editor-payments"
-            className={selectClassName}
-            value={form.payments}
-            onChange={(e) => updateField("payments", e.target.value as PaymentMode)}
-          >
-            <option value={PaymentMode.DISABLED}>{t("basic.paymentsDisabled")}</option>
-            <option value={PaymentMode.MANUAL}>{t("basic.paymentsManual")}</option>
-            <option value={PaymentMode.ONLINE}>{t("basic.paymentsOnline")}</option>
-          </select>
-        </Field.Root>
-      )}
+      <Field.Root>
+        <Field.Label htmlFor="editor-payments">{t("basic.payments")}</Field.Label>
+        <select
+          id="editor-payments"
+          className={selectClassName}
+          value={form.payments}
+          onChange={(e) => updateField("payments", e.target.value as PaymentMode)}
+          disabled={readOnly}
+        >
+          <option value={PaymentMode.DISABLED}>{t("basic.paymentsDisabled")}</option>
+          <option value={PaymentMode.MANUAL}>{t("basic.paymentsManual")}</option>
+          <option value={PaymentMode.ONLINE}>{t("basic.paymentsOnline")}</option>
+        </select>
+      </Field.Root>
       <Field.Root>
         <Field.Label htmlFor="editor-webpageUrl">
           {t("basic.website")}
@@ -303,6 +314,7 @@ export default function BasicDetailsTab({
           value={getLocalized("webpageUrl")}
           onChange={(e) => setLocalized("webpageUrl", e.target.value)}
           placeholder={!isDefaultLang ? form.webpageUrl : undefined}
+          disabled={readOnly}
         />
       </Field.Root>
       <Field.Root>
@@ -317,6 +329,7 @@ export default function BasicDetailsTab({
           value={getLocalized("description")}
           onChange={(e) => setLocalized("description", e.target.value)}
           placeholder={!isDefaultLang ? form.description : undefined}
+          disabled={readOnly}
         />
         <small className="mt-1 text-xs text-gray-500">{t("basic.descriptionInfo")}</small>
       </Field.Root>

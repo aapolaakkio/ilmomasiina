@@ -19,6 +19,8 @@ import { generateRandomId, RANDOM_ID_LENGTH } from "./randomId";
 
 // --- Enums (names match Sequelize-generated enum type names) ---
 
+export const userRoleEnum = pgEnum("enum_user_role", ["admin", "user"]);
+
 export const paymentModeEnum = pgEnum("enum_event_payments", [
   PaymentMode.DISABLED,
   PaymentMode.MANUAL,
@@ -217,10 +219,21 @@ export const payments = pgTable(
 export const users = pgTable("user", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  role: userRoleEnum("role").notNull().default("user"),
 
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const eventEditors = pgTable(
+  "event_editor",
+  {
+    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).notNull(),
+    userId: integer("userId").notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.eventId, t.userId] }), index("idx_event_editor_userId").on(t.userId)],
+);
 
 export const auditlogs = pgTable("auditlog", {
   id: serial("id").primaryKey(),

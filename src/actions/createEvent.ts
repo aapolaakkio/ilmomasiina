@@ -9,8 +9,8 @@ import { createEvent } from "@/services/admin/events/createEvent";
 export const createEventAction = actionClient
   .use(isAuthorizedMiddleware)
   .inputSchema(eventCreateBody)
-  .action(async ({ parsedInput, ctx: { auditLogger } }) => {
-    const result = await createEvent(parsedInput, auditLogger);
+  .action(async ({ parsedInput, ctx: { session, auditLogger } }) => {
+    const result = await createEvent(parsedInput, auditLogger, session.user);
     revalidatePath("/admin");
     revalidatePath("/");
     return result;

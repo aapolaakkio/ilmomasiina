@@ -13,7 +13,7 @@ import { SortableList } from "@/components/ui/Sortable";
 import LocalizedIndicator from "./LocalizedIndicator";
 import { type EditorTabProps, generateKey } from "./types";
 
-export default function QuotasTab({ form, updateField, fieldErrors, selectedLanguage }: EditorTabProps) {
+export default function QuotasTab({ form, updateField, fieldErrors, selectedLanguage, readOnly }: EditorTabProps) {
   const t = useTranslations("editor");
   const isDefaultLang = selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage];
 
@@ -53,6 +53,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
           className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
           id="nameQuestion"
           checked={form.nameQuestion}
+          disabled={readOnly}
           onChange={(e) => updateField("nameQuestion", e.target.checked)}
         />
         <label htmlFor="nameQuestion" className="text-sm text-gray-700">
@@ -65,6 +66,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
           className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
           id="emailQuestion"
           checked={form.emailQuestion}
+          disabled={readOnly}
           onChange={(e) => updateField("emailQuestion", e.target.checked)}
         />
         <label htmlFor="emailQuestion" className="text-sm text-gray-700">
@@ -75,7 +77,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
       <h3 className="mb-3 text-lg font-semibold">{t("quotas.title")}</h3>
       {fieldErrors.quotas && <FieldError error={fieldErrors.quotas} />}
 
-      <SortableList items={sortableItems} onReorder={handleReorder}>
+      <SortableList items={sortableItems} onReorder={handleReorder} disabled={readOnly}>
         {(item, i) => {
           const quota = form.quotas[i];
           return (
@@ -93,6 +95,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
                         type="text"
                         className={inputClassName}
                         value={getQuotaTitle(i)}
+                        disabled={readOnly}
                         onChange={(e) => setQuotaTitle(i, e.target.value)}
                         placeholder={!isDefaultLang ? quota.title : undefined}
                       />
@@ -108,6 +111,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
                         className={inputClassName}
                         value={quota.size ?? ""}
                         placeholder={t("quotas.quotaSizeUnlimited")}
+                        disabled={readOnly}
                         onChange={(e) => {
                           const quotas = [...form.quotas];
                           quotas[i] = { ...quota, size: e.target.value ? Number(e.target.value) : null };
@@ -121,6 +125,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
                   <Button
                     variant="danger"
                     className="mt-6 shrink-0"
+                    disabled={readOnly}
                     onClick={() =>
                       updateField(
                         "quotas",
@@ -141,6 +146,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
         variant="outline"
         size="small"
         className="mt-2"
+        disabled={readOnly}
         onClick={() => updateField("quotas", [...form.quotas, { key: generateKey(), title: "", size: null, price: 0 }])}
       >
         {t("quotas.addQuota")}
@@ -154,6 +160,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
             type="number"
             className={`${inputClassName} w-[200px]`}
             value={form.openQuotaSize}
+            disabled={readOnly}
             onChange={(e) => updateField("openQuotaSize", Number(e.target.value))}
           />
         </Field.Root>

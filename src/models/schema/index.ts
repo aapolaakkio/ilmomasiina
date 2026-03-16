@@ -2,6 +2,7 @@ export * from "./auditLog";
 export * from "./category";
 export * from "./errors";
 export * from "./event";
+export * from "./eventEditor";
 export * from "./eventList";
 export * from "./headers";
 export * from "./payment";

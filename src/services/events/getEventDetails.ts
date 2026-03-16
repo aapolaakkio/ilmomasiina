@@ -250,3 +250,40 @@ export async function getEventBySlug(slug: EventSlug): Promise<UserEventResponse
 export async function getEventByIdForAdmin(eventId: EventID): Promise<AdminEventResponse> {
   return eventDetailsForAdmin(eventId);
 }
+
+/** Get event details without signups (for users who can view but not edit). */
+export async function getEventByIdForViewer(eventId: EventID): Promise<AdminEventResponse> {
+  const event = await db.query.events.findFirst({
+    where: { id: eventId },
+    with: {
+      languages: true,
+      questions: {
+        where: { deletedAt: { isNull: true } },
+        orderBy: { order: "asc" },
+        with: { languages: true },
+      },
+      quotas: {
+        where: { deletedAt: { isNull: true } },
+        orderBy: { order: "asc" },
+        with: { languages: true },
+      },
+    },
+  });
+
+  if (!event) throw new Error("No event found with id");
+
+  const langFields = reconstructEventLanguages(event, event.languages, event.quotas, event.questions, true);
+
+  const res = {
+    ...event,
+    ...langFields,
+    quotas: event.quotas.map((quota) => ({
+      ...quota,
+      signups: [],
+      signupCount: 0,
+    })),
+  };
+
+  // Same branded-type cast as eventDetailsForAdmin above
+  return res as unknown as AdminEventResponse;
+}

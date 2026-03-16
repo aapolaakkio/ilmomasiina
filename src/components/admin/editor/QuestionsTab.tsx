@@ -14,7 +14,7 @@ import { QuestionType } from "@/models";
 import LocalizedIndicator from "./LocalizedIndicator";
 import { type EditorTabProps, generateKey } from "./types";
 
-export default function QuestionsTab({ form, updateField, fieldErrors, selectedLanguage }: EditorTabProps) {
+export default function QuestionsTab({ form, updateField, fieldErrors, selectedLanguage, readOnly }: EditorTabProps) {
   const t = useTranslations("editor");
   const isDefaultLang = selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage];
 
@@ -71,7 +71,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
 
   return (
     <div>
-      <SortableList items={sortableItems} onReorder={handleReorder}>
+      <SortableList items={sortableItems} onReorder={handleReorder} disabled={readOnly}>
         {(item, i) => {
           const question = form.questions[i];
           return (
@@ -90,6 +90,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
                       value={getQuestionText(i)}
                       onChange={(e) => setQuestionText(i, e.target.value)}
                       placeholder={!isDefaultLang ? question.question : undefined}
+                      disabled={readOnly}
                     />
                     <FieldError error={fieldErrors[`questions[${i}].question`]} />
                   </Field.Root>
@@ -101,6 +102,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
                       id={`question-type-${i}`}
                       className={selectClassName}
                       value={question.type}
+                      disabled={readOnly}
                       onChange={(e) => {
                         const questions = [...form.questions];
                         questions[i] = { ...question, type: e.target.value as QuestionType };
@@ -124,6 +126,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
                     className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                     id={`question-required-${i}`}
                     checked={question.required}
+                    disabled={readOnly}
                     onChange={(e) => {
                       const questions = [...form.questions];
                       questions[i] = { ...question, required: e.target.checked };
@@ -140,6 +143,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
                     className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                     id={`question-public-${i}`}
                     checked={question.public}
+                    disabled={readOnly}
                     onChange={(e) => {
                       const questions = [...form.questions];
                       questions[i] = { ...question, public: e.target.checked };
@@ -168,10 +172,12 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
                         value={getOptionText(i, j)}
                         onChange={(e) => setOptionText(i, j, e.target.value)}
                         placeholder={!isDefaultLang ? opt : undefined}
+                        disabled={readOnly}
                       />
                       <Button
                         variant="danger"
                         size="small"
+                        disabled={readOnly}
                         onClick={() => {
                           const questions = [...form.questions];
                           const options = (question.options ?? []).filter((_, k) => k !== j);
@@ -186,6 +192,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
                   <Button
                     variant="outline"
                     size="small"
+                    disabled={readOnly}
                     onClick={() => {
                       const questions = [...form.questions];
                       questions[i] = { ...question, options: [...(question.options ?? []), ""] };
@@ -200,6 +207,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
               <Button
                 variant="danger"
                 size="small"
+                disabled={readOnly}
                 onClick={() =>
                   updateField(
                     "questions",
@@ -217,6 +225,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
       <Button
         variant="outline"
         className="mt-2"
+        disabled={readOnly}
         onClick={() =>
           updateField("questions", [
             ...form.questions,

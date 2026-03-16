@@ -50,15 +50,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 });
 
 /** Get admin user info from the current Auth.js session. Returns null if not authenticated. */
-export async function getAdminSession(): Promise<{ user: UserID; email: string } | null> {
+export async function getAdminSession(): Promise<{ user: UserID; email: string; role: "admin" | "user" } | null> {
   const session = await auth();
   if (!session?.user?.email) return null;
 
   const dbUser = await db.query.users.findFirst({
     where: { email: session.user.email },
-    columns: { id: true },
+    columns: { id: true, role: true },
   });
   if (!dbUser) return null;
 
-  return { user: dbUser.id as UserID, email: session.user.email };
+  return { user: dbUser.id as UserID, email: session.user.email, role: dbUser.role };
 }

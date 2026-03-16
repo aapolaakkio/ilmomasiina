@@ -6,7 +6,7 @@ import LocalizedIndicator from "./LocalizedIndicator";
 import type { EditorTabProps } from "./types";
 import { getLocalizedValue, setLocalizedValue } from "./types";
 
-export default function EmailsTab({ form, updateField, selectedLanguage }: EditorTabProps) {
+export default function EmailsTab({ form, updateField, selectedLanguage, readOnly }: EditorTabProps) {
   const t = useTranslations("editor");
   const isDefaultLang = selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage];
 
@@ -21,6 +21,7 @@ export default function EmailsTab({ form, updateField, selectedLanguage }: Edito
           id="editor-verificationEmail"
           className={inputClassName}
           rows={8}
+          disabled={readOnly}
           value={getLocalizedValue(form, "verificationEmail", selectedLanguage)}
           onChange={(e) => setLocalizedValue(form, updateField, "verificationEmail", e.target.value, selectedLanguage)}
           placeholder={!isDefaultLang ? form.verificationEmail : undefined}

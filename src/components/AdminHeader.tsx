@@ -6,6 +6,8 @@ import { logoutAction } from "@/actions/logout";
 import { env } from "@/env";
 import { Link } from "@/i18n/navigation";
 
+import LanguageChanger from "./LanguageChanger";
+
 export default function AdminHeader() {
   const t = useTranslations("header");
 
@@ -32,6 +34,7 @@ export default function AdminHeader() {
               {t("logout")}
             </button>
           </form>
+          <LanguageChanger />
         </div>
       </div>
     </header>

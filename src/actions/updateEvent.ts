@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 
+import { requireEventAccess } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
 import { eventID, eventUpdateBody } from "@/models/schema/event";
 import { updateEvent } from "@/services/admin/events/updateEvent";
@@ -16,7 +17,8 @@ const schema = z.object({
 export const updateEventAction = actionClient
   .use(isAuthorizedMiddleware)
   .inputSchema(schema)
-  .action(async ({ parsedInput, ctx: { auditLogger } }) => {
+  .action(async ({ parsedInput, ctx: { session, auditLogger } }) => {
+    await requireEventAccess(session, parsedInput.eventId);
     try {
       const result = await updateEvent(parsedInput.eventId, parsedInput.body, auditLogger);
       revalidatePath("/admin");

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import AdminUsersClient from "@/components/admin/AdminUsers";
@@ -11,7 +12,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AdminUsersPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
+  if (session.role !== "admin") notFound();
 
   const users = await listUsers();
 

@@ -11,9 +11,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AdminEventsListPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const events = await getEventsListForAdmin({});
 
-  return <AdminEventsClient events={events} />;
+  return <AdminEventsClient events={events} role={session.role} />;
 }

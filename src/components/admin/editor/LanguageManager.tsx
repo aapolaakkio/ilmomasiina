@@ -15,9 +15,10 @@ type Props = {
   updateField: <K extends keyof EditorFormState>(key: K, value: EditorFormState[K]) => void;
   selectedLanguage: string;
   onSelectLanguage: (lang: string) => void;
+  readOnly?: boolean;
 };
 
-export default function LanguageManager({ form, updateField, selectedLanguage, onSelectLanguage }: Props) {
+export default function LanguageManager({ form, updateField, selectedLanguage, onSelectLanguage, readOnly }: Props) {
   const t = useTranslations("editor");
 
   const addLanguage = (lang: string) => {
@@ -110,8 +111,9 @@ export default function LanguageManager({ form, updateField, selectedLanguage, o
           const isActive = isDefault || hasVersion;
 
           if (!isActive) {
+            if (readOnly) return null;
             return (
-              <Button key={lang} variant="outline" size="small" onClick={() => addLanguage(lang)}>
+              <Button key={lang} variant="outline" size="small" className="h-8" onClick={() => addLanguage(lang)}>
                 + {lang.toUpperCase()}
               </Button>
             );
@@ -119,15 +121,20 @@ export default function LanguageManager({ form, updateField, selectedLanguage, o
 
           return (
             <div key={lang} className="flex items-center gap-1">
-              <Button variant={isSelected ? "primary" : "outline"} size="small" onClick={() => onSelectLanguage(lang)}>
+              <Button
+                variant={isSelected ? "primary" : "outline"}
+                size="small"
+                className="h-8"
+                onClick={() => onSelectLanguage(lang)}
+              >
                 {lang.toUpperCase()}
                 {isDefault && (
-                  <Badge variant="info" className="ml-1">
+                  <Badge variant="info" className="ml-1 py-0">
                     {t("languages.default")}
                   </Badge>
                 )}
               </Button>
-              {!isDefault && hasVersion && (
+              {!readOnly && !isDefault && hasVersion && (
                 <>
                   <Button
                     variant="outline"

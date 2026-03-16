@@ -1,22 +1,11 @@
 "use client";
 
-import { useLocale } from "next-intl";
-
 import { env } from "@/env";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
-import { routing } from "@/i18n/routing";
+import { Link } from "@/i18n/navigation";
 
-const localeLabels: Record<string, string> = {
-  fi: "Suomi",
-  en: "English",
-  sv: "Svenska",
-};
+import LanguageChanger from "./LanguageChanger";
 
 export default function Header() {
-  const locale = useLocale();
-  const pathname = usePathname();
-  const router = useRouter();
-
   return (
     <header className="border-b-2 border-accent bg-surface text-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
@@ -31,17 +20,7 @@ export default function Header() {
           >
             Admin
           </Link>
-          <select
-            className="cursor-pointer rounded border border-gray-600 bg-transparent px-2 py-1 text-xs font-medium uppercase tracking-wider text-gray-300 transition-colors hover:text-accent focus:border-accent focus:outline-none"
-            value={locale}
-            onChange={(e) => router.replace(pathname, { locale: e.target.value })}
-          >
-            {routing.locales.map((loc) => (
-              <option key={loc} value={loc} className="bg-surface text-white">
-                {localeLabels[loc] ?? loc}
-              </option>
-            ))}
-          </select>
+          <LanguageChanger />
         </div>
       </div>
     </header>

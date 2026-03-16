@@ -48,9 +48,10 @@ function getEventStatus(event: AdminEventListResponse[number], t: (key: string) 
 
 type Props = {
   events: AdminEventListResponse;
+  role: "admin" | "user";
 };
 
-export default function AdminEventsClient({ events }: Props) {
+export default function AdminEventsClient({ events, role }: Props) {
   const router = useRouter();
   const t = useTranslations("adminEvents");
   const [showPast, setShowPast] = useState(false);
@@ -94,16 +95,20 @@ export default function AdminEventsClient({ events }: Props) {
         </Alert>
       )}
       <nav className="mb-4 flex flex-wrap gap-2">
-        <Link href="/admin/users">
-          <Button variant="outline" size="small">
-            {t("users")}
-          </Button>
-        </Link>
-        <Link href="/admin/auditlog">
-          <Button variant="outline" size="small">
-            {t("auditLog")}
-          </Button>
-        </Link>
+        {role === "admin" && (
+          <>
+            <Link href="/admin/users">
+              <Button variant="outline" size="small">
+                {t("users")}
+              </Button>
+            </Link>
+            <Link href="/admin/auditlog">
+              <Button variant="outline" size="small">
+                {t("auditLog")}
+              </Button>
+            </Link>
+          </>
+        )}
         <Link href="/admin/edit/new">
           <Button variant="primary" size="small">
             {t("newEvent")}

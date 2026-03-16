@@ -21,3 +21,11 @@ export const isAuthorizedMiddleware = createMiddleware().define(async ({ next })
   const auditLogger = await createAdminAuditLogger(session);
   return next({ ctx: { session, auditLogger } });
 });
+
+/** Middleware that requires the user to be an admin. Must be chained after isAuthorizedMiddleware. */
+export const isAdminMiddleware = createMiddleware<{ ctx: { session: { role: string } } }>().define(
+  async ({ next, ctx }) => {
+    if (ctx.session.role !== "admin") throw new ActionError("Forbidden");
+    return next({ ctx });
+  },
+);

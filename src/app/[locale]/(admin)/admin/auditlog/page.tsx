@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import AuditLogClient from "@/components/admin/AuditLog";
@@ -10,7 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AuditLogPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
+  if (session.role !== "admin") notFound();
 
   return <AuditLogClient />;
 }

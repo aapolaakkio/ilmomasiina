@@ -8,6 +8,7 @@ export const relations = defineRelations(schema, (r) => ({
     quotas: r.many.quotas(),
     questions: r.many.questions(),
     languages: r.many.eventLanguages(),
+    editors: r.many.eventEditors(),
   },
   eventLanguages: {
     event: r.one.events({
@@ -65,6 +66,19 @@ export const relations = defineRelations(schema, (r) => ({
     signup: r.one.signups({
       from: r.payments.signupId,
       to: r.signups.id,
+    }),
+  },
+  users: {
+    editors: r.many.eventEditors(),
+  },
+  eventEditors: {
+    event: r.one.events({
+      from: r.eventEditors.eventId,
+      to: r.events.id,
+    }),
+    user: r.one.users({
+      from: r.eventEditors.userId,
+      to: r.users.id,
     }),
   },
 }));

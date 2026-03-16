@@ -10,6 +10,7 @@ import type { UserID } from "@/models";
 export interface AdminTokenData {
   user: UserID;
   email: string;
+  role: "admin" | "user";
 }
 
 /** Require admin authentication. Redirects to /login if not authenticated. */

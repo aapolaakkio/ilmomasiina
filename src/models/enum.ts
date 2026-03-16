@@ -1,3 +1,9 @@
+/** User roles. */
+export enum UserRole {
+  ADMIN = "admin",
+  USER = "user",
+}
+
 /** Possible statuses for a signup. */
 export enum SignupStatus {
   IN_QUOTA = "in-quota",

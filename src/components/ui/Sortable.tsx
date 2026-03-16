@@ -7,12 +7,14 @@ import { CSS } from "@dnd-kit/utilities";
 
 type SortableItemProps = {
   id: string;
+  disabled?: boolean;
   children: ReactNode;
 };
 
-function SortableItem({ id, children }: SortableItemProps) {
+function SortableItem({ id, disabled, children }: SortableItemProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id,
+    disabled,
   });
 
   return (
@@ -25,8 +27,9 @@ function SortableItem({ id, children }: SortableItemProps) {
         <button
           ref={setActivatorNodeRef}
           type="button"
-          className="mt-3 flex-shrink-0 touch-none px-1 text-gray-400 hover:text-gray-600"
+          className={`mt-3 flex-shrink-0 touch-none px-1 ${disabled ? "cursor-not-allowed text-gray-300" : "text-gray-400 hover:text-gray-600"}`}
           aria-label="Drag to reorder"
+          disabled={disabled}
           {...listeners}
           {...attributes}
         >
@@ -48,10 +51,11 @@ function SortableItem({ id, children }: SortableItemProps) {
 type SortableListProps = {
   items: { id: string }[];
   onReorder: (oldIndex: number, newIndex: number) => void;
+  disabled?: boolean;
   children: (item: { id: string }, index: number) => ReactNode;
 };
 
-export function SortableList({ items, onReorder, children }: SortableListProps) {
+export function SortableList({ items, onReorder, disabled, children }: SortableListProps) {
   const ids = items.map((item) => item.id);
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -67,7 +71,7 @@ export function SortableList({ items, onReorder, children }: SortableListProps) 
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         {items.map((item, index) => (
-          <SortableItem key={item.id} id={item.id}>
+          <SortableItem key={item.id} id={item.id} disabled={disabled}>
             {children(item, index)}
           </SortableItem>
         ))}

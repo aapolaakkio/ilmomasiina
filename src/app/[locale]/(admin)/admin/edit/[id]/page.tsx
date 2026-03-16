@@ -7,7 +7,9 @@ import { requireAdmin } from "@/auth/adminAuth";
 import { getLocalizedEvent } from "@/lib/localizedEvent";
 import type { EventID } from "@/models";
 import { getCategories } from "@/services/events/getCategories";
-import { getEventByIdForAdmin } from "@/services/events/getEventDetails";
+import { getEventByIdForAdmin, getEventByIdForViewer } from "@/services/events/getEventDetails";
+import { getEventEditors } from "@/services/admin/events/eventEditors";
+import { hasEventAccess } from "@/auth/eventAccess";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -24,19 +26,24 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const { id } = await params;
 
   // "new" means create a new event
   if (id === "new") {
     const categories = await getCategories();
-    return <EventEditor event={null} isNew categories={categories} />;
+    return <EventEditor event={null} isNew categories={categories} editors={[]} />;
   }
 
   try {
-    const [event, categories] = await Promise.all([getEventByIdForAdmin(id as EventID), getCategories()]);
-    return <EventEditor event={event} isNew={false} categories={categories} />;
+    const canEdit = await hasEventAccess(session, id as EventID);
+    const [event, categories, editors] = await Promise.all([
+      canEdit ? getEventByIdForAdmin(id as EventID) : getEventByIdForViewer(id as EventID),
+      getCategories(),
+      getEventEditors(id as EventID),
+    ]);
+    return <EventEditor event={event} isNew={false} categories={categories} editors={editors} readOnly={!canEdit} />;
   } catch {
     notFound();
   }

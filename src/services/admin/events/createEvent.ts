@@ -1,9 +1,17 @@
-import type { AdminEventResponse, EventCreateBody, EventID } from "@/models";
+import type { AdminEventResponse, EventCreateBody, EventID, UserID } from "@/models";
 import { AuditEvent } from "@/models";
 
 import type { AuditLogger } from "../../../auditlog";
 import { db } from "../../../db";
-import { eventLanguages, events, questionLanguages, questions, quotaLanguages, quotas } from "../../../db/schema";
+import {
+  eventEditors,
+  eventLanguages,
+  events,
+  questionLanguages,
+  questions,
+  quotaLanguages,
+  quotas,
+} from "../../../db/schema";
 import { validateEventDates } from "../../../db/validators";
 import { getEventByIdForAdmin } from "../../events/getEventDetails";
 import { toDate } from "../../utils";
@@ -11,7 +19,11 @@ import { normalizeQuestionOptions } from "./normalizeQuestionOptions";
 
 /** Create a new event with quotas and questions. */
 // eslint-disable-next-line import/prefer-default-export
-export async function createEvent(body: EventCreateBody, auditLogger: AuditLogger): Promise<AdminEventResponse> {
+export async function createEvent(
+  body: EventCreateBody,
+  auditLogger: AuditLogger,
+  userId: UserID,
+): Promise<AdminEventResponse> {
   const { questions: _questions, quotas: _quotas, languages: bodyLanguages, ...baseBody } = body;
 
   const eventData = {
@@ -133,6 +145,9 @@ export async function createEvent(body: EventCreateBody, auditLogger: AuditLogge
         }
       })(),
     ]);
+
+    // Add creator as event editor
+    await tx.insert(eventEditors).values({ eventId: created.id, userId });
 
     await auditLogger(AuditEvent.CREATE_EVENT, { event: { id: created.id, title: body.title }, tx });
     return created.id;

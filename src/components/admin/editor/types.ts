@@ -56,6 +56,7 @@ export type EditorTabProps = {
   updateField: <K extends keyof EditorFormState>(key: K, value: EditorFormState[K]) => void;
   fieldErrors: Record<string, string>;
   selectedLanguage: string;
+  readOnly?: boolean;
 };
 
 /** Fields that exist in both the top-level event and language versions. */

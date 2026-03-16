@@ -4,15 +4,19 @@ export const userID = z.int().brand<"UserID">();
 
 const userEmail = z.email().min(1).max(255);
 
+const userRole = z.enum(["admin", "user"]);
+
 /** Request body for inviting an admin user (adding to allowlist). */
 export const userInviteSchema = z.object({
   email: userEmail,
+  role: userRole.default("user"),
 });
 
 /** Schema for a user. */
 export const userSchema = z.object({
   id: userID,
   email: userEmail,
+  role: userRole,
 });
 
 /** Response schema for fetching a list of users. */
