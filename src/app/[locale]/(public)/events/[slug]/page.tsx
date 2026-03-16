@@ -258,9 +258,9 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
                           {localizedEvent.quotas.length > 1 && quota.type !== SignupStatus.IN_QUOTA && (
                             <td className="px-3 py-2">{signup.quota?.title}</td>
                           )}
-                          <td className="group px-3 py-2">
+                          <td className="group relative px-3 py-2 whitespace-nowrap">
                             {formatSignupTime(signup.createdAt, locale)}
-                            <span className="hidden group-hover:inline text-gray-400">
+                            <span className="invisible group-hover:visible text-gray-400">
                               .{String(new Date(signup.createdAt).getMilliseconds()).padStart(3, "0")}
                             </span>
                           </td>
