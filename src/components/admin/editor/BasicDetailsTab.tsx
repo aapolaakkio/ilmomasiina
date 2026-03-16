@@ -104,7 +104,7 @@ export default function BasicDetailsTab({
 
   const handleTitleChange = useCallback(
     (value: string) => {
-      setLocalized("title", value);
+      setLocalizedValue(form, updateField, "title", value, selectedLanguage);
       if (!slugManuallyEdited && isDefaultLang) {
         const slug = generateSlug(value);
         updateField("slug", slug);
@@ -115,7 +115,7 @@ export default function BasicDetailsTab({
         }
       }
     },
-    [slugManuallyEdited, isDefaultLang, setLocalized, updateField, checkSlug],
+    [form, slugManuallyEdited, isDefaultLang, selectedLanguage, updateField, checkSlug],
   );
 
   useEffect(() => {

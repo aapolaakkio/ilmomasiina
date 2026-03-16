@@ -172,7 +172,7 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
                     <div className="flex justify-between text-sm">
                       <span>{title}</span>
                       <span className="text-gray-600">
-                        {quota.signupCount} / {max === Infinity ? t("unlimited") : max}
+                        {quota.signupCount} / {max === Infinity ? "\u221E" : max}
                       </span>
                     </div>
                     {max !== Infinity && (
