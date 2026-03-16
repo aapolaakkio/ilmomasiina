@@ -169,27 +169,27 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
                 const max = quota.size ?? Infinity;
                 return (
                   <div key={quota.id ?? quota.type} className="mb-3">
-                    <div className="flex justify-between text-sm">
-                      <span>{title}</span>
-                      <span className="text-gray-600">
-                        {quota.signupCount} / {max === Infinity ? "\u221E" : max}
-                      </span>
-                    </div>
-                    {max !== Infinity && (
-                      <div
-                        className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-200"
-                        role="progressbar"
-                        aria-valuenow={quota.signupCount}
-                        aria-valuemin={0}
-                        aria-valuemax={max}
-                        aria-label={`${title} signup progress`}
-                      >
+                    <p className="mb-1 text-sm">{title}</p>
+                    <div
+                      className="relative h-6 w-full overflow-hidden rounded bg-gray-200"
+                      role="progressbar"
+                      aria-valuenow={quota.signupCount}
+                      aria-valuemin={0}
+                      aria-valuemax={max === Infinity ? undefined : max}
+                      aria-label={`${title} signup progress`}
+                    >
+                      {max !== Infinity && (
                         <div
-                          className="h-full rounded-full bg-brand-500 transition-all"
+                          className="h-full rounded bg-brand-500 transition-all"
                           style={{ width: `${Math.min(100, (quota.signupCount / max) * 100)}%` }}
                         />
-                      </div>
-                    )}
+                      )}
+                      <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-800">
+                        {quota.signupCount}
+                        &ensp;/&ensp;
+                        {max === Infinity ? <span title={t("unlimited")}>{"\u221E"}</span> : max}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
