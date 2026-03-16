@@ -416,6 +416,7 @@ const fi = {
         manualPaymentPaid: "Maksettu",
         manualPaymentRefunded: "Palautettu",
         sendEmail: "Lähetä vahvistusviesti",
+        keepEditing: "Jatka ilmoittautumisten luontia tallennuksen jälkeen",
         save: "Tallenna",
         cancel: "Peruuta",
         saveFailed: "Ilmoittautumisen tallentaminen epäonnistui.",

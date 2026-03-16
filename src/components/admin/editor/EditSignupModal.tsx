@@ -47,6 +47,7 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
   });
   const [manualPaymentStatus, setManualPaymentStatus] = useState<string>(signup?.manualPaymentStatus ?? "none");
   const [sendEmail, setSendEmail] = useState(true);
+  const [keepEditing, setKeepEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -119,6 +120,21 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
         }
       }
       await onSave();
+      if (isCreate && keepEditing) {
+        // Reset form for next signup
+        setFirstName("");
+        setLastName("");
+        setEmail("");
+        setAnswers(() => {
+          const map: Record<string, string | string[]> = {};
+          for (const q of event.questions) {
+            map[q.id] = q.type === QuestionType.CHECKBOX ? [] : "";
+          }
+          return map;
+        });
+        setSaving(false);
+        return;
+      }
       onClose();
     } catch {
       setError(t("saveFailed"));
@@ -297,6 +313,20 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
             {t("sendEmail")}
           </label>
         </Field.Root>
+
+        {isCreate && (
+          <Field.Root>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                checked={keepEditing}
+                onChange={(e) => setKeepEditing(e.target.checked)}
+              />
+              {t("keepEditing")}
+            </label>
+          </Field.Root>
+        )}
 
         <div className="mt-4 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>

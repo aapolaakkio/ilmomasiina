@@ -553,6 +553,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
             selectedLanguage={selectedLanguage}
             categories={categories}
             eventId={savedEvent?.id}
+            isNew={effectiveIsNew}
           />
         </Tabs.Panel>
         <Tabs.Panel value="quotas">

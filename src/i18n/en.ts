@@ -414,6 +414,7 @@ const en = {
         manualPaymentPaid: "Paid",
         manualPaymentRefunded: "Refunded",
         sendEmail: "Send confirmation email",
+        keepEditing: "Continue creating signups after saving",
         save: "Save",
         cancel: "Cancel",
         saveFailed: "Failed to save signup.",

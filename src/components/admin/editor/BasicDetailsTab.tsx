@@ -12,6 +12,16 @@ import LocalizedIndicator from "./LocalizedIndicator";
 import type { EditorTabProps, LocalizableFields } from "./types";
 import { getLocalizedValue, setLocalizedValue } from "./types";
 
+/** Generate a URL slug from a title. */
+function generateSlug(title: string): string {
+  return title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 /** Convert an ISO string to a local datetime-local input value (YYYY-MM-DDTHH:mm). */
 function isoToLocal(iso: string): string {
   if (!iso) return "";
@@ -30,6 +40,7 @@ function localToIso(value: string): string {
 type Props = EditorTabProps & {
   categories: string[];
   eventId?: string;
+  isNew?: boolean;
 };
 
 export default function BasicDetailsTab({
@@ -39,9 +50,11 @@ export default function BasicDetailsTab({
   selectedLanguage,
   categories,
   eventId,
+  isNew,
 }: Props) {
   const t = useTranslations("editor");
   const isDefaultLang = selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage];
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(!isNew || !!form.slug);
 
   const getLocalized = (field: keyof LocalizableFields) => getLocalizedValue(form, field, selectedLanguage);
   const setLocalized = (field: keyof LocalizableFields, value: string) =>
@@ -78,6 +91,7 @@ export default function BasicDetailsTab({
 
   const handleSlugChange = useCallback(
     (value: string) => {
+      setSlugManuallyEdited(true);
       updateField("slug", value);
       setSlugStatus("idle");
       if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
@@ -86,6 +100,22 @@ export default function BasicDetailsTab({
       }
     },
     [updateField, checkSlug],
+  );
+
+  const handleTitleChange = useCallback(
+    (value: string) => {
+      setLocalized("title", value);
+      if (!slugManuallyEdited && isDefaultLang) {
+        const slug = generateSlug(value);
+        updateField("slug", slug);
+        setSlugStatus("idle");
+        if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
+        if (slug && /^[A-Za-z0-9_-]+$/.test(slug)) {
+          slugTimerRef.current = setTimeout(() => checkSlug(slug), 500);
+        }
+      }
+    },
+    [slugManuallyEdited, isDefaultLang, setLocalized, updateField, checkSlug],
   );
 
   useEffect(() => {
@@ -106,7 +136,7 @@ export default function BasicDetailsTab({
           type="text"
           className={inputClassName}
           value={getLocalized("title")}
-          onChange={(e) => setLocalized("title", e.target.value)}
+          onChange={(e) => handleTitleChange(e.target.value)}
           placeholder={!isDefaultLang ? form.title : undefined}
         />
         <FieldError error={fieldErrors.title} />
