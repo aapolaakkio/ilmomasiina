@@ -13,13 +13,13 @@ const questionOptions = z.nullable(z.array(z.string().max(255)).max(MAX_OPTIONS_
 /** Schema for a question language version. */
 export const questionLanguage = z.object({
   // No minLength to allow for fallback.
-  question: z.string().max(255),
+  question: z.string().max(1024),
   options: questionOptions,
 });
 
 /** Schema for creating a question. */
 export const questionCreate = z.object({
-  question: z.string().min(1).max(255),
+  question: z.string().min(1).max(1024),
   type: z.enum(QuestionType),
   options: questionOptions,
   prices: z.nullable(z.array(z.int().min(0)).max(64)),

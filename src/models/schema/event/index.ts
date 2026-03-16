@@ -43,9 +43,8 @@ const adminOnlyEventAttributes = z.object({
 const publicCommonAttributes = z.object({
   description: z.nullable(z.string()),
   price: z.nullable(z.string().max(255)),
-  location: z.nullable(z.string().max(255)),
-  webpageUrl: z.nullable(z.string().max(255)),
-  facebookUrl: z.nullable(z.string().max(255)),
+  location: z.nullable(z.string()),
+  webpageUrl: z.nullable(z.string().max(2048)),
 });
 
 /** Attributes shared between events/languages that are only for admins, only in event details. */

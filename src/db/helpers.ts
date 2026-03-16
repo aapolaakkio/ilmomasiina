@@ -15,7 +15,6 @@ interface EventDefaultFields {
   price: string | null;
   location: string | null;
   webpageUrl: string | null;
-  facebookUrl: string | null;
   verificationEmail: string | null;
 }
 
@@ -36,7 +35,6 @@ export function reconstructEventLanguages(
   price: string | null;
   location: string | null;
   webpageUrl: string | null;
-  facebookUrl: string | null;
   verificationEmail?: string | null;
   languages: Record<string, AdminEventLanguage>;
 } {
@@ -59,7 +57,6 @@ export function reconstructEventLanguages(
       price: langRow.price ?? null,
       location: langRow.location ?? null,
       webpageUrl: langRow.webpageUrl ?? null,
-      facebookUrl: langRow.facebookUrl ?? null,
       verificationEmail: includeAdmin ? (langRow.verificationEmail ?? null) : null,
       quotas: langQuotas,
       questions: langQuestions,
@@ -73,7 +70,6 @@ export function reconstructEventLanguages(
     price: eventDefaults.price,
     location: eventDefaults.location,
     webpageUrl: eventDefaults.webpageUrl,
-    facebookUrl: eventDefaults.facebookUrl,
     languages,
     ...(includeAdmin ? { verificationEmail: eventDefaults.verificationEmail } : {}),
   };

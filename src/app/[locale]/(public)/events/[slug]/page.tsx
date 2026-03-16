@@ -121,14 +121,6 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
                 </a>
               </p>
             )}
-            {localizedEvent.facebookUrl && (
-              <p>
-                <span className="font-semibold">{t("facebookEvent")}</span>{" "}
-                <a href={localizedEvent.facebookUrl} className="text-brand-600 hover:underline">
-                  {localizedEvent.facebookUrl}
-                </a>
-              </p>
-            )}
           </div>
           {localizedEvent.description && <Markdown>{localizedEvent.description}</Markdown>}
           {env.NEXT_PUBLIC_BRANDING_CANCELLATION_LINK && (

@@ -121,7 +121,6 @@ export async function updateEvent(
         price: event.price ?? null,
         location: event.location ?? null,
         webpageUrl: event.webpageUrl ?? null,
-        facebookUrl: event.facebookUrl ?? null,
         verificationEmail: event.verificationEmail ?? null,
       });
 
@@ -135,7 +134,6 @@ export async function updateEvent(
         updateData.price = body.price ?? newDefaultLang.price;
         updateData.location = body.location ?? newDefaultLang.location;
         updateData.webpageUrl = body.webpageUrl ?? newDefaultLang.webpageUrl;
-        updateData.facebookUrl = body.facebookUrl ?? newDefaultLang.facebookUrl;
         updateData.verificationEmail = body.verificationEmail ?? newDefaultLang.verificationEmail;
         await tx
           .delete(eventLanguages)
@@ -164,7 +162,6 @@ export async function updateEvent(
           price: langData.price ?? null,
           location: langData.location ?? null,
           webpageUrl: langData.webpageUrl ?? null,
-          facebookUrl: langData.facebookUrl ?? null,
           verificationEmail: langData.verificationEmail ?? null,
         });
       }

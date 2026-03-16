@@ -49,7 +49,6 @@ export default function LanguageManager({ form, updateField, selectedLanguage, o
       price: form.price || null,
       location: form.location || null,
       webpageUrl: form.webpageUrl || null,
-      facebookUrl: form.facebookUrl || null,
       verificationEmail: form.verificationEmail || null,
       quotas: form.quotas.map((q) => ({ title: q.title })),
       questions: form.questions.map((q) => ({
@@ -74,7 +73,6 @@ export default function LanguageManager({ form, updateField, selectedLanguage, o
     updateField("price", (newDefaultVersion.price ?? form.price) || "");
     updateField("location", (newDefaultVersion.location ?? form.location) || "");
     updateField("webpageUrl", (newDefaultVersion.webpageUrl ?? form.webpageUrl) || "");
-    updateField("facebookUrl", (newDefaultVersion.facebookUrl ?? form.facebookUrl) || "");
     updateField("verificationEmail", (newDefaultVersion.verificationEmail ?? form.verificationEmail) || "");
 
     // Update quota/question titles from the new default language

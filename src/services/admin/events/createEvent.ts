@@ -51,7 +51,6 @@ export async function createEvent(body: EventCreateBody, auditLogger: AuditLogge
         price: langData.price ?? null,
         location: langData.location ?? null,
         webpageUrl: langData.webpageUrl ?? null,
-        facebookUrl: langData.facebookUrl ?? null,
         verificationEmail: langData.verificationEmail ?? null,
       });
     }

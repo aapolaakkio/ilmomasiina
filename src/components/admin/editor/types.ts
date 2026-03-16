@@ -40,7 +40,6 @@ export type EditorFormState = {
   price: string;
   location: string;
   webpageUrl: string;
-  facebookUrl: string;
   signupsPublic: boolean;
   nameQuestion: boolean;
   emailQuestion: boolean;
@@ -66,7 +65,6 @@ export type LocalizableFields = {
   price: string | null;
   location: string | null;
   webpageUrl: string | null;
-  facebookUrl: string | null;
   verificationEmail: string | null;
 };
 
@@ -107,7 +105,6 @@ export function createEmptyLanguageVersion(form: EditorFormState): AdminEventLan
     price: null,
     location: null,
     webpageUrl: null,
-    facebookUrl: null,
     verificationEmail: null,
     quotas: form.quotas.map(() => ({ title: "" })),
     questions: form.questions.map((q) => ({
