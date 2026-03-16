@@ -50,25 +50,24 @@ export default async function deleteUnconfirmedSignups() {
   console.info(`Deleting unconfirmed signups: ${signupIds.join(", ")}`);
   try {
     // Snapshot per event before deleting
-    const snapshots = new Map<
-      string,
-      {
-        signups: { id: string; quotaId: string }[];
-        quotas: { id: string; size: number | null }[];
-        openQuotaSize: number;
-      }
-    >();
-    for (const eventId of uniqueEventIds) {
-      // eslint-disable-next-line no-await-in-loop
-      const prevSignups = await fetchActiveSignupsForEvent(eventId);
-      // eslint-disable-next-line no-await-in-loop
-      const prevQuotas = await fetchActiveQuotasForEvent(eventId);
-      snapshots.set(eventId, {
-        signups: prevSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
-        quotas: prevQuotas,
-        openQuotaSize: eventMap.get(eventId) ?? 0,
-      });
-    }
+    // Snapshot all events in parallel before deleting
+    const snapshotEntries = await Promise.all(
+      uniqueEventIds.map(async (eventId) => {
+        const [prevSignups, prevQuotas] = await Promise.all([
+          fetchActiveSignupsForEvent(eventId),
+          fetchActiveQuotasForEvent(eventId),
+        ]);
+        return [
+          eventId,
+          {
+            signups: prevSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
+            quotas: prevQuotas,
+            openQuotaSize: eventMap.get(eventId) ?? 0,
+          },
+        ] as const;
+      }),
+    );
+    const snapshots = new Map(snapshotEntries);
 
     await db.delete(signups).where(inArray(signups.id, signupIds));
 

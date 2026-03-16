@@ -35,25 +35,24 @@ export async function updateEvent(
     const [event] = await tx.select().from(events).where(eq(events.id, eventId)).for("update");
     if (!event) throw new Error("No event found with id");
 
-    // Snapshot current state for position side effects (before any modifications)
-    const previousSignups = (await fetchActiveSignupsForEvent(eventId, tx)).map((s) => ({
-      id: s.id,
-      quotaId: s.quotaId,
-    }));
-    const previousQuotas = await fetchActiveQuotasForEvent(eventId, tx);
     const previousOpenQuotaSize = event.openQuotaSize;
 
-    // Lock quotas and questions
-    const existingQuotas = await tx
-      .select({ id: quotas.id })
-      .from(quotas)
-      .where(and(eq(quotas.eventId, eventId), isNull(quotas.deletedAt)))
-      .for("update");
-    const existingQuestions = await tx
-      .select({ id: questions.id })
-      .from(questions)
-      .where(and(eq(questions.eventId, eventId), isNull(questions.deletedAt)))
-      .for("update");
+    // Snapshot state and lock quotas/questions in parallel
+    const [previousSignupsRaw, previousQuotas, existingQuotas, existingQuestions] = await Promise.all([
+      fetchActiveSignupsForEvent(eventId, tx),
+      fetchActiveQuotasForEvent(eventId, tx),
+      tx
+        .select({ id: quotas.id })
+        .from(quotas)
+        .where(and(eq(quotas.eventId, eventId), isNull(quotas.deletedAt)))
+        .for("update"),
+      tx
+        .select({ id: questions.id })
+        .from(questions)
+        .where(and(eq(questions.eventId, eventId), isNull(questions.deletedAt)))
+        .for("update"),
+    ]);
+    const previousSignups = previousSignupsRaw.map((s) => ({ id: s.id, quotaId: s.quotaId }));
 
     const updatedQuestions = body.questions?.map((question, order) => ({
       ...question,

@@ -54,14 +54,14 @@ export default async function anonymizeOldSignups() {
   console.info(`Redacting older signups: ${ids.join(", ")}`);
 
   try {
-    await db
-      .update(signups)
-      .set({ firstName: redactedName, lastName: redactedName, email: redactedEmail, updatedAt: new Date() })
-      .where(inArray(signups.id, ids));
-    await db
-      .update(answers)
-      .set({ answer: redactedAnswer, updatedAt: new Date() })
-      .where(inArray(answers.signupId, ids));
+    const now = new Date();
+    await Promise.all([
+      db
+        .update(signups)
+        .set({ firstName: redactedName, lastName: redactedName, email: redactedEmail, updatedAt: now })
+        .where(inArray(signups.id, ids)),
+      db.update(answers).set({ answer: redactedAnswer, updatedAt: now }).where(inArray(answers.signupId, ids)),
+    ]);
     debugLog("Signups anonymized");
   } catch (error) {
     console.error(error);

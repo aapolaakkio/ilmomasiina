@@ -6,7 +6,7 @@ import { AuditEvent } from "@/models";
 import type { AuditLogger } from "../../auditlog";
 import { db } from "../../db";
 import { activeSignupCutoff } from "../../db/filters";
-import { signups } from "../../db/schema";
+import { events, quotas, signups } from "../../db/schema";
 import { checkForConflictingPaymentsForSignupUpdate, expireExistingPaymentsForSignupUpdate } from "../payment/stripe";
 import {
   fetchActiveQuotasForEvent,
@@ -24,16 +24,22 @@ export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin
   const cutoff = activeSignupCutoff();
 
   await db.transaction(async (tx) => {
-    // Lock the signup (FOR UPDATE stays as db.select)
-    const [signup] = await tx
+    // Lock the signup and fetch event data in a single JOIN query
+    const [row] = await tx
       .select({
         id: signups.id,
         createdAt: signups.createdAt,
         confirmedAt: signups.confirmedAt,
         firstName: signups.firstName,
         lastName: signups.lastName,
+        eventId: events.id,
+        registrationStartDate: events.registrationStartDate,
+        registrationEndDate: events.registrationEndDate,
+        openQuotaSize: events.openQuotaSize,
       })
       .from(signups)
+      .innerJoin(quotas, eq(signups.quotaId, quotas.id))
+      .innerJoin(events, eq(quotas.eventId, events.id))
       .where(
         and(
           eq(signups.id, id),
@@ -43,33 +49,23 @@ export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin
       )
       .for("update");
 
-    if (!signup) throw new NoSuchSignup("No signup found with id");
+    if (!row) throw new NoSuchSignup("No signup found with id");
+
+    const signup = {
+      id: row.id,
+      createdAt: row.createdAt,
+      confirmedAt: row.confirmedAt,
+      firstName: row.firstName,
+      lastName: row.lastName,
+    };
+    const event = {
+      id: row.eventId,
+      registrationStartDate: row.registrationStartDate,
+      registrationEndDate: row.registrationEndDate,
+      openQuotaSize: row.openQuotaSize,
+    };
 
     await checkForConflictingPaymentsForSignupUpdate(id, tx, admin);
-
-    // Get quota and event via relational query
-    const signupWithEvent = await tx.query.signups.findFirst({
-      where: { id },
-      columns: {},
-      with: {
-        quota: {
-          columns: { id: true },
-          with: {
-            event: {
-              columns: {
-                id: true,
-                registrationStartDate: true,
-                registrationEndDate: true,
-                openQuotaSize: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!signupWithEvent?.quota?.event) throw new NoSuchSignup("Signup expired or already deleted");
-    const event = signupWithEvent.quota.event;
 
     if (
       !admin &&
@@ -81,9 +77,11 @@ export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin
       throw new SignupsClosed("Signups closed for this event.");
     }
 
-    // Snapshot current state before delete
-    const previousSignups = await fetchActiveSignupsForEvent(event.id, tx);
-    const previousQuotas = await fetchActiveQuotasForEvent(event.id, tx);
+    // Snapshot current state before delete (parallel)
+    const [previousSignups, previousQuotas] = await Promise.all([
+      fetchActiveSignupsForEvent(event.id, tx),
+      fetchActiveQuotasForEvent(event.id, tx),
+    ]);
 
     // Soft delete
     await tx.update(signups).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(signups.id, id));
