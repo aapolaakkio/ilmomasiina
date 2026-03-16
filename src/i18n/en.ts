@@ -194,6 +194,7 @@ const en = {
     statusHidden: "Hidden",
     statusPublished: "Published",
     edit: "Edit",
+    view: "View",
     copy: "Copy",
     delete: "Delete",
     deleteConfirm: "Are you sure you want to delete this event? This cannot be undone.",

@@ -105,20 +105,42 @@ export async function getEventsListForUser(
   return res as unknown as UserEventListResponse;
 }
 
-/** Get the admin events list. */
-export async function getEventsListForAdmin(query: EventListQuery): Promise<AdminEventListResponse> {
+/** Get the admin events list, optionally including editor user IDs per event. */
+export async function getEventsListForAdmin(
+  query: EventListQuery,
+  options?: { includeEditors?: boolean },
+): Promise<{ events: AdminEventListResponse; editorsByEvent?: Map<string, number[]> }> {
   const eventRows = await db.query.events.findMany({
     where: {
       deletedAt: { isNull: true },
       ...(query.category ? { category: query.category } : {}),
     },
-    with: eventListWith,
+    with: {
+      ...eventListWith,
+      ...(options?.includeEditors ? { editors: { columns: { userId: true } } } : {}),
+    },
   });
 
-  if (eventRows.length === 0) return [] as AdminEventListResponse;
+  if (eventRows.length === 0)
+    return { events: [] as AdminEventListResponse, ...(options?.includeEditors ? { editorsByEvent: new Map() } : {}) };
 
   const allQuotaIds = eventRows.flatMap((e) => e.quotas.map((q) => q.id));
   const signupCountMap = await fetchSignupCounts(allQuotaIds);
+
+  // Extract editor mappings before stripping them from the response
+  let editorsByEvent: Map<string, number[]> | undefined;
+  if (options?.includeEditors) {
+    editorsByEvent = new Map();
+    for (const event of eventRows) {
+      const editors = (event as typeof event & { editors?: { userId: number }[] }).editors;
+      if (editors) {
+        editorsByEvent.set(
+          event.id,
+          editors.map((e) => e.userId),
+        );
+      }
+    }
+  }
 
   const enrichedEvents = eventRows.map((event) => {
     const langFields = reconstructEventLanguages(event, event.languages, event.quotas, event.questions, true);
@@ -133,5 +155,5 @@ export async function getEventsListForAdmin(query: EventListQuery): Promise<Admi
     })),
   }));
 
-  return res as unknown as AdminEventListResponse;
+  return { events: res as unknown as AdminEventListResponse, editorsByEvent };
 }

@@ -49,9 +49,10 @@ function getEventStatus(event: AdminEventListResponse[number], t: (key: string) 
 type Props = {
   events: AdminEventListResponse;
   role: "admin" | "user";
+  editableEventIds: string[] | null;
 };
 
-export default function AdminEventsClient({ events, role }: Props) {
+export default function AdminEventsClient({ events, role, editableEventIds }: Props) {
   const router = useRouter();
   const t = useTranslations("adminEvents");
   const [showPast, setShowPast] = useState(false);
@@ -153,26 +154,35 @@ export default function AdminEventsClient({ events, role }: Props) {
                   </td>
                   <td className="py-3 pr-4 text-gray-600">{totalSignups(event)}</td>
                   <td className="py-3">
-                    <div className="flex gap-1">
-                      <Link href={`/admin/edit/${event.id}`}>
-                        <Button variant="outline" size="small">
-                          {t("edit")}
-                        </Button>
-                      </Link>
-                      <Link href={`/admin/copy/${event.id}`}>
-                        <Button variant="outline" size="small">
-                          {t("copy")}
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="danger"
-                        size="small"
-                        disabled={deleting === event.id}
-                        onClick={() => handleDelete(event.id)}
-                      >
-                        {t("delete")}
-                      </Button>
-                    </div>
+                    {(() => {
+                      const canEdit = editableEventIds === null || editableEventIds.includes(event.id);
+                      return (
+                        <div className="flex gap-1">
+                          <Link href={`/admin/edit/${event.id}`}>
+                            <Button variant="outline" size="small">
+                              {canEdit ? t("edit") : t("view")}
+                            </Button>
+                          </Link>
+                          {canEdit && (
+                            <>
+                              <Link href={`/admin/copy/${event.id}`}>
+                                <Button variant="outline" size="small">
+                                  {t("copy")}
+                                </Button>
+                              </Link>
+                              <Button
+                                variant="danger"
+                                size="small"
+                                disabled={deleting === event.id}
+                                onClick={() => handleDelete(event.id)}
+                              >
+                                {t("delete")}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

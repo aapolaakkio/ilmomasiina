@@ -195,6 +195,7 @@ const fi = {
     statusHidden: "Piilotettu",
     statusPublished: "Julkaistu",
     edit: "Muokkaa",
+    view: "Näytä",
     copy: "Kopioi",
     delete: "Poista",
     deleteConfirm: "Haluatko varmasti poistaa tämän tapahtuman? Tätä toimintoa ei voi perua.",

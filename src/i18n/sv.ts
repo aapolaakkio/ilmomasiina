@@ -194,6 +194,7 @@ const sv = {
     statusHidden: "Gömd",
     statusPublished: "Publicerad",
     edit: "Editera",
+    view: "Visa",
     copy: "Kopiera",
     delete: "Ta bort",
     deleteConfirm: "Är du säker på att du vill ta bort evenemanget? Detta kan inte ångras.",
