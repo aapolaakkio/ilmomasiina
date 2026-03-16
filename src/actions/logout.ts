@@ -1,8 +1,7 @@
 "use server";
 
-import { clearAdminCookie } from "@/auth/jwt";
-import { actionClient } from "@/auth/safe-action";
+import { signOut } from "@/auth";
 
-export const logoutAction = actionClient.action(async () => {
-  await clearAdminCookie();
-});
+export async function logoutAction() {
+  await signOut({ redirectTo: "/login" });
+}

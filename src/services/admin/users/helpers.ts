@@ -3,7 +3,6 @@
 import { AuditEvent, ErrorCode } from "@/models";
 
 import type { AuditLogger } from "../../../auditlog";
-import AdminPasswordAuth from "../../../auth/adminPasswordAuth";
 import type { DrizzleDb } from "../../../db";
 import { users } from "../../../db/schema";
 import CustomError from "../../../util/customError";
@@ -27,9 +26,9 @@ export async function isInitialSetupDone(db: DrizzleDb): Promise<boolean> {
   return result != null;
 }
 
-/** Create a new user and save it to the database. */
+/** Add a user email to the allowlist. */
 export async function createUser(
-  params: { email: string; password: string },
+  params: { email: string },
   auditLogger: AuditLogger,
   tx: DrizzleDb,
 ): Promise<{ id: number; email: string }> {
@@ -40,13 +39,7 @@ export async function createUser(
 
   if (existing) throw new Error("User with given email already exists");
 
-  const [user] = await tx
-    .insert(users)
-    .values({
-      email: params.email,
-      password: AdminPasswordAuth.createHash(params.password),
-    })
-    .returning({ id: users.id, email: users.email });
+  const [user] = await tx.insert(users).values({ email: params.email }).returning({ id: users.id, email: users.email });
 
   await auditLogger(AuditEvent.CREATE_USER, {
     extra: { id: user.id, email: user.email },

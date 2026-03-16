@@ -84,34 +84,9 @@ export default class EmailService {
           footerText: env.BRANDING_MAIL_FOOTER_TEXT,
           footerLink: env.BRANDING_MAIL_FOOTER_LINK,
         },
-        data: {
-          ...params,
-          siteUrl: `${env.BASE_URL}/admin`,
-        },
+        data: params,
       });
       const subject = t("emails.newUserSubject", { lng });
-      await EmailService.send(to, subject, html);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  static async sendResetPasswordMail(to: string, language: string | null, params: NewUserMailParams) {
-    try {
-      const { html, lng } = await renderMailTemplate({
-        template: "resetPassword",
-        language,
-        defaultLanguage: env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
-        branding: {
-          footerText: env.BRANDING_MAIL_FOOTER_TEXT,
-          footerLink: env.BRANDING_MAIL_FOOTER_LINK,
-        },
-        data: {
-          ...params,
-          siteUrl: `${env.BASE_URL}/admin`,
-        },
-      });
-      const subject = t("emails.resetPasswordSubject", { lng });
       await EmailService.send(to, subject, html);
     } catch (error) {
       console.error(error);

@@ -26,8 +26,6 @@ const AUDIT_EVENT_KEYS: { value: AuditEvent; labelKey: string }[] = [
   { value: AuditEvent.PROMOTE_SIGNUP, labelKey: "actions.promoteSignup" },
   { value: AuditEvent.CREATE_USER, labelKey: "actions.createUser" },
   { value: AuditEvent.DELETE_USER, labelKey: "actions.deleteUser" },
-  { value: AuditEvent.RESET_PASSWORD, labelKey: "actions.resetPassword" },
-  { value: AuditEvent.CHANGE_PASSWORD, labelKey: "actions.changeOwnPassword" },
 ];
 
 function formatActionDescription(
@@ -61,10 +59,6 @@ function formatActionDescription(
       return t("description.createdUser", { user: extra?.email ?? "?" });
     case AuditEvent.DELETE_USER:
       return t("description.deletedUser", { user: extra?.email ?? "?" });
-    case AuditEvent.RESET_PASSWORD:
-      return t("description.resetPassword", { user: extra?.email ?? "?" });
-    case AuditEvent.CHANGE_PASSWORD:
-      return t("description.changedOwnPassword");
     default:
       return t("description.unknown", { action: item.action });
   }

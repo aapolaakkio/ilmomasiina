@@ -49,11 +49,6 @@ export interface PaymentMailParams {
   cancelLink: string;
 }
 
-export interface NewUserMailParams {
-  email: string;
-  password: string;
-}
-
 export interface PromotedFromQueueMailParams {
   event: MailEventData;
   date: string | null;
@@ -61,8 +56,9 @@ export interface PromotedFromQueueMailParams {
   cancelLink: string;
 }
 
-interface NewUserTemplateParams extends NewUserMailParams {
-  siteUrl: string;
+export interface NewUserMailParams {
+  email: string;
+  loginUrl: string;
 }
 
 interface BrandingData {
@@ -70,14 +66,13 @@ interface BrandingData {
   footerLink?: string | null;
 }
 
-type MailTemplateName = "confirmation" | "payment" | "newUser" | "resetPassword" | "queueMail";
+type MailTemplateName = "confirmation" | "payment" | "newUser" | "queueMail";
 type ResolvedLanguage = "en" | "fi";
 
 type MailTemplateDataMap = {
   confirmation: ConfirmationMailParams;
   payment: PaymentMailParams;
-  newUser: NewUserTemplateParams;
-  resetPassword: NewUserTemplateParams;
+  newUser: NewUserMailParams;
   queueMail: PromotedFromQueueMailParams;
 };
 
@@ -294,32 +289,18 @@ function NewUserTemplate({
   lang,
   branding,
   params,
-  resetPassword,
 }: {
   lang: ResolvedLanguage;
   branding: BrandingData;
-  params: NewUserTemplateParams;
-  resetPassword: boolean;
+  params: NewUserMailParams;
 }) {
   const e = getEmailTranslations(lang);
   const n = e.newUser;
-  const intro = resetPassword ? n.introReset : n.intro;
-  const passwordLabel = resetPassword ? n.newPasswordLabel : n.passwordLabel;
-  const preview = resetPassword ? n.previewReset : n.previewNew;
-
   return (
-    <BaseTemplate lang={lang} branding={branding} preview={preview}>
-      <Text style={styles.text}>{intro}</Text>
-      <ul style={styles.list}>
-        <li style={styles.listItem}>
-          <strong>{n.emailLabel}</strong> {params.email}
-        </li>
-        <li style={styles.listItem}>
-          <strong>{passwordLabel}</strong> {params.password}
-        </li>
-      </ul>
+    <BaseTemplate lang={lang} branding={branding} preview={n.preview}>
+      <Text style={styles.text}>{n.intro}</Text>
       <Text style={styles.text}>
-        {n.loginPrefix} <Link href={params.siteUrl}>{params.siteUrl}</Link>.
+        {n.loginPrefix} <Link href={params.loginUrl}>{params.loginUrl}</Link>.
       </Text>
     </BaseTemplate>
   );
@@ -389,14 +370,7 @@ export async function renderMailTemplate<T extends MailTemplateName>({
       templateNode = <PaymentTemplate lang={lng} branding={branding} params={data as PaymentMailParams} />;
       break;
     case "newUser":
-      templateNode = (
-        <NewUserTemplate lang={lng} branding={branding} params={data as NewUserTemplateParams} resetPassword={false} />
-      );
-      break;
-    case "resetPassword":
-      templateNode = (
-        <NewUserTemplate lang={lng} branding={branding} params={data as NewUserTemplateParams} resetPassword />
-      );
+      templateNode = <NewUserTemplate lang={lng} branding={branding} params={data as NewUserMailParams} />;
       break;
     case "queueMail":
       templateNode = <QueueMailTemplate lang={lng} branding={branding} params={data as PromotedFromQueueMailParams} />;

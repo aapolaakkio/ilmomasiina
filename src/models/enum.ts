@@ -71,15 +71,12 @@ export enum AuditEvent {
   EDIT_SIGNUP = "signup.edit",
   CREATE_USER = "user.create",
   DELETE_USER = "user.delete",
-  RESET_PASSWORD = "user.resetpassword",
-  CHANGE_PASSWORD = "user.changepassword",
 }
 
 export enum ErrorCode {
   BAD_SESSION = "BadSession",
   EDIT_CONFLICT = "EditConflict",
   WOULD_MOVE_SIGNUPS_TO_QUEUE = "WouldMoveSignupsToQueue",
-  WRONG_OLD_PASSWORD = "WrongOldPassword",
   SIGNUPS_CLOSED = "SignupsClosed",
   NO_SUCH_QUOTA = "NoSuchQuota",
   NO_SUCH_SIGNUP = "NoSuchSignup",

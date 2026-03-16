@@ -80,45 +80,47 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
           const quota = form.quotas[i];
           return (
             <Card>
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <Field.Root className="mb-0">
-                    <Field.Label htmlFor={`quota-title-${i}`}>
-                      {t("quotas.quotaName")}
-                      <LocalizedIndicator />
-                    </Field.Label>
-                    <input
-                      id={`quota-title-${i}`}
-                      type="text"
-                      className={inputClassName}
-                      value={getQuotaTitle(i)}
-                      onChange={(e) => setQuotaTitle(i, e.target.value)}
-                      placeholder={!isDefaultLang ? quota.title : undefined}
-                    />
-                    <FieldError error={fieldErrors[`quotas[${i}].title`]} />
-                  </Field.Root>
-                </div>
-                <div className="w-[120px]">
-                  <Field.Root className="mb-0">
-                    <Field.Label htmlFor={`quota-size-${i}`}>{t("quotas.quotaSize")}</Field.Label>
-                    <input
-                      id={`quota-size-${i}`}
-                      type="number"
-                      className={inputClassName}
-                      value={quota.size ?? ""}
-                      placeholder={t("quotas.quotaSizeUnlimited")}
-                      onChange={(e) => {
-                        const quotas = [...form.quotas];
-                        quotas[i] = { ...quota, size: e.target.value ? Number(e.target.value) : null };
-                        updateField("quotas", quotas);
-                      }}
-                    />
-                  </Field.Root>
+              <div className="flex items-start gap-2">
+                <div className="flex flex-1 items-end gap-2">
+                  <div className="flex-1">
+                    <Field.Root className="mb-0">
+                      <Field.Label htmlFor={`quota-title-${i}`}>
+                        {t("quotas.quotaName")}
+                        <LocalizedIndicator />
+                      </Field.Label>
+                      <input
+                        id={`quota-title-${i}`}
+                        type="text"
+                        className={inputClassName}
+                        value={getQuotaTitle(i)}
+                        onChange={(e) => setQuotaTitle(i, e.target.value)}
+                        placeholder={!isDefaultLang ? quota.title : undefined}
+                      />
+                      <FieldError error={fieldErrors[`quotas[${i}].title`]} />
+                    </Field.Root>
+                  </div>
+                  <div className="w-[120px]">
+                    <Field.Root className="mb-0">
+                      <Field.Label htmlFor={`quota-size-${i}`}>{t("quotas.quotaSize")}</Field.Label>
+                      <input
+                        id={`quota-size-${i}`}
+                        type="number"
+                        className={inputClassName}
+                        value={quota.size ?? ""}
+                        placeholder={t("quotas.quotaSizeUnlimited")}
+                        onChange={(e) => {
+                          const quotas = [...form.quotas];
+                          quotas[i] = { ...quota, size: e.target.value ? Number(e.target.value) : null };
+                          updateField("quotas", quotas);
+                        }}
+                      />
+                    </Field.Root>
+                  </div>
                 </div>
                 {form.quotas.length > 1 && (
                   <Button
                     variant="danger"
-                    size="small"
+                    className="mt-6 shrink-0"
                     onClick={() =>
                       updateField(
                         "quotas",

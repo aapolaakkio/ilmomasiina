@@ -1,16 +1,20 @@
 import { headers } from "next/headers";
 import { getLocale } from "next-intl/server";
 
+import { getAdminSession } from "@/auth";
 import { redirect } from "@/i18n/navigation";
 import type { AuditLogger } from "@/auditlog";
 import { createAuditLogger } from "@/auditlog";
+import type { UserID } from "@/models";
 
-import type { AdminTokenData } from "./jwt";
-import { verifyAdminSession } from "./jwt";
+export interface AdminTokenData {
+  user: UserID;
+  email: string;
+}
 
 /** Require admin authentication. Redirects to /login if not authenticated. */
 export async function requireAdmin(): Promise<AdminTokenData> {
-  const session = await verifyAdminSession();
+  const session = await getAdminSession();
   if (!session) {
     const locale = await getLocale();
     redirect({ href: "/login", locale });

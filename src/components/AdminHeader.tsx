@@ -1,20 +1,13 @@
 "use client";
 
-import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 
 import { logoutAction } from "@/actions/logout";
 import { env } from "@/env";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 
 export default function AdminHeader() {
   const t = useTranslations("header");
-  const router = useRouter();
-
-  const handleLogout = useCallback(async () => {
-    await logoutAction();
-    router.push("/login");
-  }, [router]);
 
   return (
     <header className="border-b-2 border-accent bg-surface text-white">
@@ -31,13 +24,14 @@ export default function AdminHeader() {
           >
             {t("eventList")}
           </Link>
-          <button
-            type="button"
-            className="text-xs font-medium uppercase tracking-wider text-gray-300 transition-colors hover:text-accent"
-            onClick={handleLogout}
-          >
-            {t("logout")}
-          </button>
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="text-xs font-medium uppercase tracking-wider text-gray-300 transition-colors hover:text-accent"
+            >
+              {t("logout")}
+            </button>
+          </form>
         </div>
       </div>
     </header>

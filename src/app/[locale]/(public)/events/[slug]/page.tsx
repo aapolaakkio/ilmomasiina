@@ -6,7 +6,7 @@ import Markdown from "@/components/Markdown";
 import SignupButton from "@/components/SignupButton";
 import { env } from "@/env";
 import { Link } from "@/i18n/navigation";
-import { verifyAdminSession } from "@/auth/jwt";
+import { getAdminSession } from "@/auth";
 import { getLocalizedEvent } from "@/lib/localizedEvent";
 import { getSignupsByQuota, stringifyAnswer } from "@/lib/signupUtils";
 import { Button } from "@/components/ui/Button";
@@ -67,7 +67,7 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
   const signupsByQuota = getSignupsByQuota(localizedEvent);
   const locale = language === "en" ? "en-FI" : "fi-FI";
   const publicQuestions = localizedEvent.questions.filter((q) => q.public);
-  const adminSession = await verifyAdminSession();
+  const adminSession = await getAdminSession();
 
   return (
     <>

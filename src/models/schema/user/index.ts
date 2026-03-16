@@ -3,23 +3,10 @@ import { z } from "zod/v4";
 export const userID = z.int().brand<"UserID">();
 
 const userEmail = z.email().min(1).max(255);
-const password = z.string().min(1).max(255);
 
-/** Request body for creating an admin user. */
-export const userCreateSchema = z.object({
-  email: userEmail,
-  password,
-});
-
-/** Request body for inviting an admin user. */
+/** Request body for inviting an admin user (adding to allowlist). */
 export const userInviteSchema = z.object({
   email: userEmail,
-});
-
-/** Request body for changing the user's own password. */
-export const userChangePasswordSchema = z.object({
-  oldPassword: password,
-  newPassword: password,
 });
 
 /** Schema for a user. */
@@ -39,12 +26,8 @@ export const userPathParams = z.object({
 /** User ID type. */
 export type UserID = z.infer<typeof userID>;
 
-/** Request body for creating an admin user. */
-export type UserCreateSchema = z.infer<typeof userCreateSchema>;
-/** Request body for inviting an admin user. */
+/** Request body for inviting an admin user (adding to allowlist). */
 export type UserInviteSchema = z.infer<typeof userInviteSchema>;
-/** Request body for changing the user's own password. */
-export type UserChangePasswordSchema = z.infer<typeof userChangePasswordSchema>;
 
 /** Path parameters necessary to fetch and manipulate users. */
 export type UserPathParams = z.infer<typeof userPathParams>;

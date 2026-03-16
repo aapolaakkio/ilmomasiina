@@ -5,11 +5,6 @@ import { z, ZodType } from "zod";
 // Must be kept in sync with i18n/routing.ts locales
 const knownLanguages = ["fi", "en", "sv"];
 
-// Vite/Vitest sets BASE_URL, which conflicts with our app config.
-if (process.env.VITEST) {
-  process.env.BASE_URL = "http://localhost:3000/";
-}
-
 const booleanFromEnv = z.preprocess((value) => {
   if (value === "true" || value === "1" || value === true) return true;
   if (value === "false" || value === "0" || value === false) return false;
@@ -106,7 +101,10 @@ export const env = createEnv({
     THIS_IS_A_TEST_DB_AND_CAN_BE_WIPED: booleanFromEnv.default(false),
     EDIT_TOKEN_SALT: nullableString,
     NEW_EDIT_TOKEN_SECRET: z.string(),
-    FEATHERS_AUTH_SECRET: z.string(),
+    AUTH_SECRET: z.string(),
+    AUTH_GOOGLE_ID: z.string(),
+    AUTH_GOOGLE_SECRET: z.string(),
+    SESSION_TTL: integerFromEnv.default(10800),
     MAIL_FROM: z.string(),
     BRANDING_MAIL_FOOTER_TEXT: z.string(),
     BRANDING_MAIL_FOOTER_LINK: z.string(),
@@ -138,7 +136,6 @@ export const env = createEnv({
     NEXT_PUBLIC_BRANDING_FOOTER_GDPR_LINK: nullableString,
     NEXT_PUBLIC_BRANDING_FOOTER_HOME_TEXT: nullableString,
     NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK: nullableString,
-    NEXT_PUBLIC_BRANDING_LOGIN_PLACEHOLDER_EMAIL: z.string().default("admin@example.com"),
     NEXT_PUBLIC_BRANDING_CANCELLATION_LINK: nullableString,
     NEXT_PUBLIC_DEFAULT_LANGUAGE: z
       .string()
@@ -161,7 +158,10 @@ export const env = createEnv({
     THIS_IS_A_TEST_DB_AND_CAN_BE_WIPED: process.env.THIS_IS_A_TEST_DB_AND_CAN_BE_WIPED,
     EDIT_TOKEN_SALT: process.env.EDIT_TOKEN_SALT,
     NEW_EDIT_TOKEN_SECRET: process.env.NEW_EDIT_TOKEN_SECRET,
-    FEATHERS_AUTH_SECRET: process.env.FEATHERS_AUTH_SECRET,
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
+    AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
+    SESSION_TTL: process.env.SESSION_TTL,
     MAIL_FROM: process.env.MAIL_FROM,
     BRANDING_MAIL_FOOTER_TEXT: process.env.BRANDING_MAIL_FOOTER_TEXT,
     BRANDING_MAIL_FOOTER_LINK: process.env.BRANDING_MAIL_FOOTER_LINK,
@@ -191,7 +191,6 @@ export const env = createEnv({
     NEXT_PUBLIC_BRANDING_FOOTER_GDPR_LINK: process.env.NEXT_PUBLIC_BRANDING_FOOTER_GDPR_LINK,
     NEXT_PUBLIC_BRANDING_FOOTER_HOME_TEXT: process.env.NEXT_PUBLIC_BRANDING_FOOTER_HOME_TEXT,
     NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK: process.env.NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK,
-    NEXT_PUBLIC_BRANDING_LOGIN_PLACEHOLDER_EMAIL: process.env.NEXT_PUBLIC_BRANDING_LOGIN_PLACEHOLDER_EMAIL,
     NEXT_PUBLIC_BRANDING_CANCELLATION_LINK: process.env.NEXT_PUBLIC_BRANDING_CANCELLATION_LINK,
     NEXT_PUBLIC_DEFAULT_LANGUAGE: process.env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
   },
