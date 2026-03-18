@@ -3,7 +3,8 @@
 import { z } from "zod/v4";
 
 import { ActionError, actionClient } from "@/auth/safe-action";
-import { signupUpdateBody, signupID, editToken } from "@/models/schema/signup";
+import { signupID, editToken } from "@/db/schema";
+import { signupUpdateBody } from "@/db/zod";
 import { internalAuditLogger } from "@/auditlog";
 import { updateSignupAsUser } from "@/services/signups/updateSignup";
 

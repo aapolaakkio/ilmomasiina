@@ -8,8 +8,8 @@ import { deleteSignupAction } from "@/actions/deleteSignup";
 import { startPaymentAction } from "@/actions/startPayment";
 import { updateSignupAction } from "@/actions/updateSignup";
 import { Link, useRouter } from "@/i18n/navigation";
-import type { SignupForEditResponse, SignupUpdateBody } from "@/models";
-import { SignupPaymentStatus, SignupStatus } from "@/models";
+import { SignupPaymentStatus, SignupStatus } from "@/db/schema";
+import type { SignupForEditResponse, SignupUpdateBody } from "@/db/zod";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -64,28 +64,13 @@ function buildSignupSchema(event: SignupForEditResponse["event"]) {
   }
   for (const q of event.questions) {
     const fieldName = `answer_${q.id}`;
-    const type = q.type;
-    if (type === "checkbox") {
-      // Array of strings
+    if (q.type === "checkbox") {
       shape[fieldName] = q.required ? z.array(z.string().max(255)).min(1) : z.array(z.string().max(255));
-    } else if (type === "number") {
-      // String that should be a valid number (when required)
-      if (q.required) {
-        shape[fieldName] = z
-          .string()
-          .min(1)
-          .max(255)
-          .refine((v) => !Number.isNaN(Number(v)), { message: "notANumber" });
-      } else {
-        shape[fieldName] = z
-          .string()
-          .max(255)
-          .refine((v) => v === "" || !Number.isNaN(Number(v)), { message: "notANumber" });
-      }
-    } else if (type === "select") {
-      shape[fieldName] = q.required ? z.string().min(1).max(255) : z.string().max(255);
+    } else if (q.type === "number") {
+      const base = q.required ? z.string().min(1).max(255) : z.string().max(255);
+      shape[fieldName] = base.refine((v) => v === "" || !Number.isNaN(Number(v)), { message: "notANumber" });
     } else {
-      // text, textarea
+      // text, textarea, select
       shape[fieldName] = q.required ? z.string().min(1).max(255) : z.string().max(255);
     }
   }
@@ -222,7 +207,11 @@ export default function EditSignupForm({ data, editToken }: Props) {
       setSubmitting(true);
       try {
         const update = formValuesToUpdate(values, event);
-        const result = await updateSignupAction({ signupId: signup.id, editToken, body: update });
+        const result = await updateSignupAction({
+          signupId: signup.id,
+          editToken,
+          body: update,
+        });
         if (result?.serverError) {
           setError(result.serverError);
         } else if (isNew && !showPayment) {
@@ -255,7 +244,10 @@ export default function EditSignupForm({ data, editToken }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await deleteSignupAction({ signupId: signup.id, editToken });
+      const result = await deleteSignupAction({
+        signupId: signup.id,
+        editToken,
+      });
       if (result?.serverError) {
         setError(result.serverError);
         setSubmitting(false);
@@ -271,7 +263,10 @@ export default function EditSignupForm({ data, editToken }: Props) {
   const handlePay = useCallback(async () => {
     setSubmitting(true);
     try {
-      const result = await startPaymentAction({ signupId: signup.id, editToken });
+      const result = await startPaymentAction({
+        signupId: signup.id,
+        editToken,
+      });
       if (result?.data?.paymentUrl) {
         window.location.href = result.data.paymentUrl;
       } else {
@@ -287,7 +282,10 @@ export default function EditSignupForm({ data, editToken }: Props) {
   // Position display
   const positionText = useMemo(() => {
     if (signup.status === SignupStatus.IN_QUOTA) {
-      return t("position.quota", { quota: signup.quota?.title ?? "", position: signup.position ?? 0 });
+      return t("position.quota", {
+        quota: signup.quota?.title ?? "",
+        position: signup.position ?? 0,
+      });
     }
     if (signup.status === SignupStatus.IN_OPEN_QUOTA) {
       return t("position.openQuota", { position: signup.position ?? 0 });
@@ -389,7 +387,10 @@ export default function EditSignupForm({ data, editToken }: Props) {
         {event.nameQuestion && (
           <>
             <Field.Root>
-              <Field.Label htmlFor="signup-firstName">{t("fields.firstName")}</Field.Label>
+              <Field.Label htmlFor="signup-firstName">
+                {t("fields.firstName")}
+                <span className="text-red-600"> *</span>
+              </Field.Label>
               <input
                 id="signup-firstName"
                 type="text"
@@ -401,7 +402,10 @@ export default function EditSignupForm({ data, editToken }: Props) {
               <FieldError error={fieldErrors.firstName} />
             </Field.Root>
             <Field.Root>
-              <Field.Label htmlFor="signup-lastName">{t("fields.lastName")}</Field.Label>
+              <Field.Label htmlFor="signup-lastName">
+                {t("fields.lastName")}
+                <span className="text-red-600"> *</span>
+              </Field.Label>
               <input
                 id="signup-lastName"
                 type="text"
@@ -431,7 +435,10 @@ export default function EditSignupForm({ data, editToken }: Props) {
         {/* Email */}
         {event.emailQuestion && (
           <Field.Root>
-            <Field.Label htmlFor="signup-email">{t("fields.email")}</Field.Label>
+            <Field.Label htmlFor="signup-email">
+              {t("fields.email")}
+              <span className="text-red-600"> *</span>
+            </Field.Label>
             <input
               id="signup-email"
               type="email"

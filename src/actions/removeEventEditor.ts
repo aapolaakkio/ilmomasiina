@@ -2,8 +2,14 @@
 
 import { requireEventAccess } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { removeEventEditorSchema } from "@/models/schema/eventEditor";
+import { eventID, userID } from "@/db/schema";
 import { removeEventEditor } from "@/services/admin/events/eventEditors";
+import { z } from "zod/v4";
+
+const removeEventEditorSchema = z.object({
+  eventId: eventID,
+  userId: userID,
+});
 
 export const removeEventEditorAction = actionClient
   .use(isAuthorizedMiddleware)

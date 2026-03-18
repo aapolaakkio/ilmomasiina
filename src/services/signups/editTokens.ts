@@ -1,6 +1,6 @@
 import { createHash, createHmac } from "crypto";
 
-import type { SignupID } from "@/models";
+import type { SignupID } from "@/db/schema";
 
 import { env } from "@/env";
 

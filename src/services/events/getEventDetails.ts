@@ -1,4 +1,5 @@
-import type { AdminEventResponse, AdminSignupSchema, EventID, EventSlug, UserEventResponse } from "@/models";
+import type { EventID, SignupStatus } from "@/db/schema";
+import type { AdminEventResponse, AdminSignupSchema, EventSlug, UserEventResponse } from "@/db/zod";
 
 import { env } from "@/env";
 import { db } from "../../db";
@@ -6,7 +7,7 @@ import { getEffectiveEndDate, getEffectivePaymentStatus, isConfirmed } from "../
 import { activeSignupCutoff } from "../../db/filters";
 import { reconstructEventLanguages } from "../../db/helpers";
 import { answers, signups } from "../../db/schema";
-import { assignSignupPositions } from "../signups/assignSignupPositions";
+import { assignSignupPositions, computePositionsFromEvent } from "../signups/assignSignupPositions";
 
 async function getEventDetailsForUser(eventSlug: EventSlug) {
   const hideBeforeDate = new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000);
@@ -50,7 +51,10 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
 
   if (!fullEvent) throw new Error("No event found with slug");
 
-  const event = { ...fullEvent, effectiveEndDate: getEffectiveEndDate(fullEvent) };
+  const event = {
+    ...fullEvent,
+    effectiveEndDate: getEffectiveEndDate(fullEvent),
+  };
   const publicQuestions = fullEvent.questions.filter((q) => q.public).map((q) => q.id);
 
   // For very old events, strip signups to avoid serving stale data
@@ -64,23 +68,8 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
     false,
   );
 
-  // Flatten signups across quotas for position computation
-  const allSignups: (typeof signups.$inferSelect & { answers: (typeof answers.$inferSelect)[] })[] = [];
-  if (!isOld) {
-    for (const quota of fullEvent.quotas) {
-      for (const s of quota.signups) {
-        allSignups.push(s);
-      }
-    }
-  }
-  // Sort by (createdAt, id) for position computation
-  allSignups.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
-
-  const positionMap = assignSignupPositions(
-    allSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
-    fullEvent.quotas.map((q) => ({ id: q.id, size: q.size })),
-    fullEvent.openQuotaSize,
-  );
+  // Compute positions on-the-fly (empty for old events since signups are stripped)
+  const positionMap = isOld ? new Map() : computePositionsFromEvent(fullEvent);
 
   // Build quota rows with titles, signups, and counts
   const quotaRows = fullEvent.quotas.map((quota) => {
@@ -140,12 +129,15 @@ export async function eventDetailsForUser(eventSlug: EventSlug): Promise<UserEve
   }
 
   const res = { ...event, millisTillOpening, registrationClosed };
-  return res as unknown as UserEventResponse;
+  return res;
 }
 
 /** Converts a signup with answers to JSON for the admin API. */
 export function formatSignupForAdmin(
-  signup: typeof signups.$inferSelect & { status?: string | null; position?: number | null },
+  signup: typeof signups.$inferSelect & {
+    status: SignupStatus | null;
+    position: number | null;
+  },
   signupAnswers: (typeof answers.$inferSelect)[],
   signupPayments: { status: string }[],
 ): AdminSignupSchema {
@@ -154,12 +146,12 @@ export function formatSignupForAdmin(
     confirmed: isConfirmed(signup),
     answers: signupAnswers,
     paymentStatus: getEffectivePaymentStatus(signup, signupPayments),
-  } as unknown as AdminSignupSchema;
+  };
 }
 
 export async function eventDetailsForAdmin(eventID: EventID): Promise<AdminEventResponse> {
   const event = await db.query.events.findFirst({
-    where: { id: eventID },
+    where: { id: { eq: eventID } },
     with: {
       languages: true,
       questions: {
@@ -198,22 +190,12 @@ export async function eventDetailsForAdmin(eventID: EventID): Promise<AdminEvent
   // Reconstruct language fields
   const langFields = reconstructEventLanguages(event, event.languages, event.quotas, event.questions, true);
 
-  // Flatten active signups for position computation (exclude deleted)
-  const activeSignups: { id: string; quotaId: string; createdAt: Date }[] = [];
-  for (const quota of event.quotas) {
-    for (const s of quota.signups) {
-      if (!s.deletedAt) {
-        activeSignups.push({ id: s.id, quotaId: s.quotaId, createdAt: s.createdAt });
-      }
-    }
-  }
-  activeSignups.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
+  // Compute positions from active signups only (exclude deleted)
+  const activeSignups = event.quotas
+    .flatMap((q) => q.signups.filter((s) => !s.deletedAt))
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
 
-  const positionMap = assignSignupPositions(
-    activeSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
-    event.quotas.map((q) => ({ id: q.id, size: q.size })),
-    event.openQuotaSize,
-  );
+  const positionMap = assignSignupPositions(activeSignups, event.quotas, event.openQuotaSize);
 
   const res = {
     ...event,
@@ -230,7 +212,11 @@ export async function eventDetailsForAdmin(eventID: EventID): Promise<AdminEvent
         signups: filteredSignups.map((signup) => {
           const pos = positionMap.get(signup.id);
           return formatSignupForAdmin(
-            { ...signup, status: pos?.status ?? null, position: pos?.position ?? null },
+            {
+              ...signup,
+              status: pos?.status ?? null,
+              position: pos?.position ?? null,
+            },
             signup.answers,
             signup.payments,
           );
@@ -240,7 +226,7 @@ export async function eventDetailsForAdmin(eventID: EventID): Promise<AdminEvent
     }),
   };
 
-  return res as unknown as AdminEventResponse;
+  return res;
 }
 
 export async function getEventBySlug(slug: EventSlug): Promise<UserEventResponse> {
@@ -254,7 +240,7 @@ export async function getEventByIdForAdmin(eventId: EventID): Promise<AdminEvent
 /** Get event details without signups (for users who can view but not edit). */
 export async function getEventByIdForViewer(eventId: EventID): Promise<AdminEventResponse> {
   const event = await db.query.events.findFirst({
-    where: { id: eventId },
+    where: { id: { eq: eventId } },
     with: {
       languages: true,
       questions: {
@@ -284,6 +270,5 @@ export async function getEventByIdForViewer(eventId: EventID): Promise<AdminEven
     })),
   };
 
-  // Same branded-type cast as eventDetailsForAdmin above
-  return res as unknown as AdminEventResponse;
+  return res;
 }

@@ -1,5 +1,6 @@
-import type { AdminEventResponse, EventCreateBody, EventID, UserID } from "@/models";
-import { AuditEvent } from "@/models";
+import { buildEventLanguageRows, buildQuestionLanguageRows, buildQuotaLanguageRows } from "@/db/helpers";
+import { AuditEvent, type UserID } from "@/db/schema";
+import type { AdminEventResponse, EventCreateBody } from "@/db/zod";
 
 import type { AuditLogger } from "../../../auditlog";
 import { db } from "../../../db";
@@ -18,7 +19,6 @@ import { toDate } from "../../utils";
 import { normalizeQuestionOptions } from "./normalizeQuestionOptions";
 
 /** Create a new event with quotas and questions. */
-// eslint-disable-next-line import/prefer-default-export
 export async function createEvent(
   body: EventCreateBody,
   auditLogger: AuditLogger,
@@ -34,14 +34,7 @@ export async function createEvent(
     registrationEndDate: toDate(body.registrationEndDate),
   };
 
-  validateEventDates(
-    eventData as {
-      date: Date | null;
-      endDate: Date | null;
-      registrationStartDate: Date | null;
-      registrationEndDate: Date | null;
-    },
-  );
+  validateEventDates(eventData);
 
   const questionsToCreate = body.questions.map((question) => ({
     ...question,
@@ -53,21 +46,9 @@ export async function createEvent(
     const [created] = await tx.insert(events).values(eventData).returning({ id: events.id });
 
     // Insert non-default language rows only (default language content is on the event row)
-    const allEventLangs: (typeof eventLanguages.$inferInsert)[] = [];
-    for (const [lang, langData] of Object.entries(bodyLanguages ?? {})) {
-      allEventLangs.push({
-        eventId: created.id,
-        language: lang,
-        title: langData.title,
-        description: langData.description ?? null,
-        price: langData.price ?? null,
-        location: langData.location ?? null,
-        webpageUrl: langData.webpageUrl ?? null,
-        verificationEmail: langData.verificationEmail ?? null,
-      });
-    }
-    if (allEventLangs.length > 0) {
-      await tx.insert(eventLanguages).values(allEventLangs);
+    const eventLangRows = buildEventLanguageRows(created.id, bodyLanguages);
+    if (eventLangRows.length > 0) {
+      await tx.insert(eventLanguages).values(eventLangRows);
     }
 
     // Insert questions and quotas in parallel (both depend only on the event ID)
@@ -91,23 +72,12 @@ export async function createEvent(
           )
           .returning({ id: questions.id });
 
-        const allQuestionLangs: (typeof questionLanguages.$inferInsert)[] = [];
-        for (let i = 0; i < questionRows.length; i++) {
-          const qId = questionRows[i].id;
-          for (const [lang, langData] of Object.entries(bodyLanguages ?? {})) {
-            const langQuestion = langData.questions?.[i];
-            if (langQuestion) {
-              allQuestionLangs.push({
-                questionId: qId,
-                language: lang,
-                question: langQuestion.question,
-                options: langQuestion.options ?? null,
-              });
-            }
-          }
-        }
-        if (allQuestionLangs.length > 0) {
-          await tx.insert(questionLanguages).values(allQuestionLangs);
+        const questionLangRows = buildQuestionLanguageRows(
+          questionRows.map((q) => q.id),
+          bodyLanguages,
+        );
+        if (questionLangRows.length > 0) {
+          await tx.insert(questionLanguages).values(questionLangRows);
         }
       })(),
       // Insert quotas and their language rows
@@ -126,22 +96,12 @@ export async function createEvent(
           )
           .returning({ id: quotas.id });
 
-        const allQuotaLangs: (typeof quotaLanguages.$inferInsert)[] = [];
-        for (let i = 0; i < quotaRows.length; i++) {
-          const qId = quotaRows[i].id;
-          for (const [lang, langData] of Object.entries(bodyLanguages ?? {})) {
-            const langQuota = langData.quotas?.[i];
-            if (langQuota) {
-              allQuotaLangs.push({
-                quotaId: qId,
-                language: lang,
-                title: langQuota.title,
-              });
-            }
-          }
-        }
-        if (allQuotaLangs.length > 0) {
-          await tx.insert(quotaLanguages).values(allQuotaLangs);
+        const quotaLangRows = buildQuotaLanguageRows(
+          quotaRows.map((q) => q.id),
+          bodyLanguages,
+        );
+        if (quotaLangRows.length > 0) {
+          await tx.insert(quotaLanguages).values(quotaLangRows);
         }
       })(),
     ]);
@@ -149,9 +109,12 @@ export async function createEvent(
     // Add creator as event editor
     await tx.insert(eventEditors).values({ eventId: created.id, userId });
 
-    await auditLogger(AuditEvent.CREATE_EVENT, { event: { id: created.id, title: body.title }, tx });
+    await auditLogger(AuditEvent.CREATE_EVENT, {
+      event: { id: created.id, title: body.title },
+      tx,
+    });
     return created.id;
   });
 
-  return getEventByIdForAdmin(eventId as EventID);
+  return getEventByIdForAdmin(eventId);
 }

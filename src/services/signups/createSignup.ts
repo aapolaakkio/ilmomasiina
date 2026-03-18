@@ -1,5 +1,5 @@
-import type { SignupCreateBody, SignupCreateResponse, SignupID } from "@/models";
-import { AuditEvent } from "@/models";
+import { AuditEvent } from "@/db/schema";
+import type { SignupCreateBody, SignupCreateResponse } from "@/db/zod";
 
 import type { AuditLogger } from "../../auditlog";
 import { env } from "@/env";
@@ -26,12 +26,11 @@ function isUserVisibleEvent(event: {
 }
 
 /** Create a new signup for a quota. Returns the signup ID and edit token. */
-// eslint-disable-next-line import/prefer-default-export
 export async function createSignup(body: SignupCreateBody, auditLogger: AuditLogger): Promise<SignupCreateResponse> {
   const { newSignup } = await db.transaction(async (tx) => {
     // Find the quota with its event
     const quotaData = await tx.query.quotas.findFirst({
-      where: { id: body.quotaId, deletedAt: { isNull: true } },
+      where: { id: { eq: body.quotaId }, deletedAt: { isNull: true } },
       with: { event: true },
     });
 
@@ -60,6 +59,6 @@ export async function createSignup(body: SignupCreateBody, auditLogger: AuditLog
     return { newSignup: signup };
   });
 
-  const editToken = generateToken(newSignup.id as SignupID);
-  return { id: newSignup.id as SignupID, editToken };
+  const editToken = generateToken(newSignup.id);
+  return { id: newSignup.id, editToken };
 }

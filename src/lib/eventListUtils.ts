@@ -1,19 +1,10 @@
-import type { EventID, EventSlug, QuotaID, UserEventListItem, UserEventListResponse } from "@/models";
+import type { EventID, QuotaID } from "@/db/schema";
+import type { EventSlug, UserEventListItem, UserEventListResponse } from "@/db/zod";
 
 import { SignupState, signupState, type SignupStateInfo } from "./signupState";
 
-function sumBy<T>(items: T[], getValue: ((item: T) => number) | keyof T): number {
-  return items.reduce((sum, item) => {
-    if (typeof getValue === "function") {
-      return sum + getValue(item);
-    }
-    const value = item[getValue];
-    return sum + (typeof value === "number" ? value : 0);
-  }, 0);
-}
-
-function everyHasNumber<T>(items: T[], key: keyof T): boolean {
-  return items.every((item) => typeof item[key] === "number");
+function sumBy<T>(items: T[], getValue: (item: T) => number): number {
+  return items.reduce((sum, item) => sum + getValue(item), 0);
 }
 
 export interface EventTableOptions {
@@ -51,15 +42,15 @@ export function eventToRows(event: UserEventListItem, { compact }: EventTableOpt
   const rows: TableRow[] = [
     {
       type: "event",
-      id: id as EventID,
+      id: id,
       signupState: state,
       slug,
       title,
       date: date ? new Date(date) : null,
-      signupCount: quotas.length < 2 ? sumBy(quotas, "signupCount") : undefined,
+      signupCount: quotas.length < 2 ? sumBy(quotas, (q) => q.signupCount) : undefined,
       quotaSize: quotas.length === 1 ? quotas[0].size : undefined,
-      totalSignupCount: sumBy(quotas, "signupCount") ?? 0,
-      totalQuotaSize: everyHasNumber(quotas, "size") ? sumBy(quotas, "size") : null,
+      totalSignupCount: sumBy(quotas, (q) => q.signupCount),
+      totalQuotaSize: quotas.every((q) => typeof q.size === "number") ? sumBy(quotas, (q) => q.size ?? 0) : null,
     },
   ];
 

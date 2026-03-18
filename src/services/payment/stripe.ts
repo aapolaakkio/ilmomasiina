@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import Stripe from "stripe";
 
-import { PaymentStatus, SignupID } from "@/models";
+import { PaymentID, PaymentStatus, type ProductSchema, SignupID } from "@/db/schema";
 
 import { env } from "@/env";
 import { type DrizzleDb, db } from "../../db";
@@ -23,15 +23,15 @@ export function getStripe(): Stripe {
 }
 
 interface CheckoutSignup {
-  id: string;
+  id: SignupID;
   email: string | null;
   language: string | null;
 }
 
 interface CheckoutPayment {
-  id: number;
-  signupId: string;
-  products: unknown[];
+  id: PaymentID;
+  signupId: SignupID;
+  products: ProductSchema[];
   currency: string;
   expiresAt: Date;
 }
@@ -41,16 +41,10 @@ export async function createCheckoutSession(
   payment: CheckoutPayment,
 ): Promise<Stripe.Checkout.Session> {
   const stripe = getStripe();
-  const editToken = generateToken(signup.id as SignupID);
+  const editToken = generateToken(signup.id);
   const returnUrl = `${env.BASE_URL}/payment/${signup.id}/${editToken}`;
 
-  const lineItems = (
-    payment.products as Array<{
-      name: string;
-      unitPrice: number;
-      amount: number;
-    }>
-  ).map((product) => ({
+  const lineItems = payment.products.map((product) => ({
     price_data: {
       currency: payment.currency.toLowerCase(),
       product_data: { name: product.name },
@@ -132,8 +126,8 @@ export async function refreshCheckoutSession(payment: {
 }
 
 export async function expirePaymentForSignupUpdate(payment: {
-  id: number;
-  status: string;
+  id: PaymentID;
+  status: PaymentStatus;
   stripeCheckoutSessionId: string | null;
 }): Promise<void> {
   const stripe = getStripe();
@@ -190,8 +184,10 @@ export async function expirePaymentForSignupUpdate(payment: {
 export async function expireExistingPaymentsForSignupUpdate(signupId: SignupID): Promise<void> {
   const activePayments = await db.query.payments.findMany({
     where: {
-      signupId,
-      status: { in: [PaymentStatus.CREATING, PaymentStatus.PENDING, PaymentStatus.PAID] },
+      signupId: { eq: signupId },
+      status: {
+        in: [PaymentStatus.CREATING, PaymentStatus.PENDING, PaymentStatus.PAID],
+      },
     },
     columns: { id: true, status: true, stripeCheckoutSessionId: true },
   });
@@ -200,14 +196,16 @@ export async function expireExistingPaymentsForSignupUpdate(signupId: SignupID):
 }
 
 export async function checkForConflictingPaymentsForSignupUpdate(
-  signupId: string,
+  signupId: SignupID,
   tx: DrizzleDb,
   ignorePaid = false,
 ): Promise<void> {
   const conflicting = await tx.query.payments.findFirst({
     where: {
-      signupId,
-      status: { in: [PaymentStatus.CREATING, PaymentStatus.PENDING, PaymentStatus.PAID] },
+      signupId: { eq: signupId },
+      status: {
+        in: [PaymentStatus.CREATING, PaymentStatus.PENDING, PaymentStatus.PAID],
+      },
     },
     columns: { id: true, status: true },
   });

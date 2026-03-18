@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import type { AdminEventLanguage } from "@/models";
+import type { AdminEventLanguage } from "@/db/zod";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 

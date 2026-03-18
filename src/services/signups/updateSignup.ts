@@ -1,14 +1,13 @@
 import { and, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
 
+import { AuditEvent, type SignupID } from "@/db/schema";
 import type {
   AdminSignupCreateBody,
   AdminSignupSchema,
   AdminSignupUpdateBody,
-  SignupID,
   SignupUpdateBody,
   SignupUpdateResponse,
-} from "@/models";
-import { AuditEvent } from "@/models";
+} from "@/db/zod";
 
 import type { AuditLogger } from "../../auditlog";
 import { type DrizzleDb, db } from "../../db";
@@ -18,7 +17,7 @@ import { signups } from "../../db/schema";
 import { sendSignupConfirmationMail } from "../../mail/signups";
 import { formatSignupForAdmin } from "../events/getEventDetails";
 import { expireExistingPaymentsForSignupUpdate } from "../payment/stripe";
-import { assignSignupPositions } from "./assignSignupPositions";
+import { computePositionsFromEvent } from "./assignSignupPositions";
 import { NoSuchQuota, NoSuchSignup, SignupsClosed } from "./errors";
 import { signupEditable } from "./helpers";
 import { updateExistingSignup } from "./updateSignupLogic";
@@ -41,7 +40,7 @@ async function getSignupAndEventForUpdate(id: SignupID, tx: DrizzleDb) {
 
   // Fetch quota + event + questions + languages
   const quotaData = await tx.query.quotas.findFirst({
-    where: { id: signup.quotaId },
+    where: { id: { eq: signup.quotaId } },
     with: {
       event: {
         with: {
@@ -71,9 +70,9 @@ async function getSignupAndEventForUpdate(id: SignupID, tx: DrizzleDb) {
 }
 
 /** Re-fetch a signup with answers, payments, and compute its position from all event signups. */
-async function refetchSignupWithPosition(signupId: string) {
+async function refetchSignupWithPosition(signupId: SignupID) {
   const signup = await db.query.signups.findFirst({
-    where: { id: signupId },
+    where: { id: { eq: signupId } },
     with: {
       answers: true,
       payments: { columns: { status: true } },
@@ -107,15 +106,7 @@ async function refetchSignupWithPosition(signupId: string) {
   if (!signup?.quota?.event) throw new NoSuchSignup("Signup not found after update");
 
   const event = signup.quota.event;
-  const allSignups = event.quotas
-    .flatMap((q) => q.signups)
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
-
-  const positionMap = assignSignupPositions(
-    allSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
-    event.quotas.map((q) => ({ id: q.id, size: q.size })),
-    event.openQuotaSize,
-  );
+  const positionMap = computePositionsFromEvent(event);
   const pos = positionMap.get(signupId);
 
   return {
@@ -143,7 +134,11 @@ export async function updateSignupAsUser(
     const confirmed = isConfirmed(signup);
     await updateExistingSignup(signup, event, quota, questionLangRows, body, tx, false);
     await auditLogger(AuditEvent.EDIT_SIGNUP, {
-      signup: { id: signup.id, firstName: signup.firstName, lastName: signup.lastName },
+      signup: {
+        id: signup.id,
+        firstName: signup.firstName,
+        lastName: signup.lastName,
+      },
       event: { id: event.id, title: event.title },
       tx,
     });
@@ -161,7 +156,7 @@ export async function updateSignupAsUser(
     answers: updated.answers,
     paymentStatus: getEffectivePaymentStatus(updated, updated.payments),
   };
-  return response as unknown as SignupUpdateResponse;
+  return response;
 }
 
 /** Update a signup as an admin. */
@@ -177,7 +172,11 @@ export async function updateSignupAsAdmin(
     const { signup, quota, event, questionLangRows } = await getSignupAndEventForUpdate(signupId, tx);
     await updateExistingSignup(signup, event, quota, questionLangRows, body, tx, true);
     await auditLogger(AuditEvent.EDIT_SIGNUP, {
-      signup: { id: signup.id, firstName: signup.firstName, lastName: signup.lastName },
+      signup: {
+        id: signup.id,
+        firstName: signup.firstName,
+        lastName: signup.lastName,
+      },
       event: { id: event.id, title: event.title },
       tx,
     });
@@ -201,7 +200,7 @@ export async function createSignupAsAdmin(
   const signupId = await db.transaction(async (tx) => {
     // Single relational query for quota + event + questions + languages
     const quotaData = await tx.query.quotas.findFirst({
-      where: { id: body.quotaId },
+      where: { id: { eq: body.quotaId } },
       with: {
         event: {
           with: {
@@ -215,7 +214,7 @@ export async function createSignupAsAdmin(
       },
     });
 
-    if (!quotaData?.event) throw new NoSuchQuota("Quota doesn't exist.");
+    if (!quotaData || !quotaData.event) throw new NoSuchQuota("Quota doesn't exist.");
 
     const { event } = quotaData;
     const questionLangRows = event.questions.flatMap((q) => q.languages);

@@ -1,7 +1,7 @@
 "use server";
 
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { auditLoqQuery } from "@/models/schema/auditLog";
+import { auditLoqQuery } from "@/db/zod";
 import { getAuditLogItems } from "@/services/admin/auditlog/getAuditLogs";
 
 export const getAuditLogAction = actionClient

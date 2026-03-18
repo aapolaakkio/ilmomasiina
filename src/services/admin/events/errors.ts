@@ -1,17 +1,17 @@
 /* eslint-disable max-classes-per-file */
-import { EditConflictError, ErrorCode, QuestionID, QuotaID, WouldMoveSignupsToQueueError } from "@/models";
+import { ErrorCode, type QuestionID, type QuotaID } from "@/db/schema";
+import type { EditConflictError, WouldMoveSignupsToQueueError } from "@/db/zod";
 
 import CustomError from "../../../util/customError";
 
 export class EditConflict extends CustomError implements EditConflictError {
-  public readonly updatedAt: string;
+  public readonly updatedAt: Date;
   public readonly deletedQuotas: QuotaID[];
   public readonly deletedQuestions: QuestionID[];
 
   constructor(updatedAt: Date, deletedQuotas: QuotaID[], deletedQuestions: QuestionID[]) {
-    const updatedAtStr = updatedAt.toISOString();
-    super(409, ErrorCode.EDIT_CONFLICT, `the event was updated separately at ${updatedAtStr}`);
-    this.updatedAt = updatedAtStr;
+    super(409, ErrorCode.EDIT_CONFLICT, `the event was updated separately at ${updatedAt.toISOString()}`);
+    this.updatedAt = updatedAt;
     this.deletedQuotas = deletedQuotas;
     this.deletedQuestions = deletedQuestions;
   }

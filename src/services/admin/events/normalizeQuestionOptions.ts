@@ -1,4 +1,4 @@
-import { QuestionType } from "@/models";
+import { QuestionType } from "@/db/schema";
 
 export function normalizeQuestionOptions(attrs: {
   type?: string;

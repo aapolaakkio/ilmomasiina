@@ -1,6 +1,7 @@
 import { and, count, gt, inArray, isNotNull, isNull, or } from "drizzle-orm";
 
-import type { AdminEventListResponse, EventListQuery, UserEventListResponse } from "@/models";
+import type { QuotaID } from "@/db/schema";
+import type { AdminEventListResponse, EventListQuery, UserEventListResponse } from "@/db/zod";
 
 import { db } from "../../db";
 import { activeSignupCutoff } from "../../db/filters";
@@ -11,7 +12,7 @@ import { InitialSetupNeeded, isInitialSetupDone } from "../admin/users/helpers";
 const DEFAULT_MAX_AGE_DAYS = 7;
 
 /** Fetch signup counts per quota for the given quota IDs in a single aggregation query. */
-async function fetchSignupCounts(quotaIds: string[]): Promise<Map<string, number>> {
+async function fetchSignupCounts(quotaIds: QuotaID[]): Promise<Map<QuotaID, number>> {
   if (quotaIds.length === 0) return new Map();
   const rows = await db
     .select({ quotaId: signups.quotaId, count: count() })
@@ -28,9 +29,13 @@ async function fetchSignupCounts(quotaIds: string[]): Promise<Map<string, number
 }
 
 /** Sort events by date, then registration end date, then title. */
-function sortEvents<T extends { date: Date | null; registrationEndDate?: Date | null; title: string }>(
-  events: T[],
-): T[] {
+function sortEvents<
+  T extends {
+    date: Date | null;
+    registrationEndDate?: Date | null;
+    title: string;
+  },
+>(events: T[]): T[] {
   return events.sort((a, b) => {
     if (a.date === null && b.date !== null) return -1;
     if (a.date !== null && b.date === null) return 1;
@@ -84,7 +89,7 @@ export async function getEventsListForUser(
     with: eventListWith,
   });
 
-  if (eventRows.length === 0) return [] as unknown as UserEventListResponse;
+  if (eventRows.length === 0) return [];
 
   const allQuotaIds = eventRows.flatMap((e) => e.quotas.map((q) => q.id));
   const signupCountMap = await fetchSignupCounts(allQuotaIds);
@@ -102,45 +107,22 @@ export async function getEventsListForUser(
     })),
   }));
 
-  return res as unknown as UserEventListResponse;
+  return res;
 }
 
-/** Get the admin events list, optionally including editor user IDs per event. */
-export async function getEventsListForAdmin(
-  query: EventListQuery,
-  options?: { includeEditors?: boolean },
-): Promise<{ events: AdminEventListResponse; editorsByEvent?: Map<string, number[]> }> {
+/** Get the admin events list with editor user IDs per event. */
+export async function getEventsListForAdmin(): Promise<AdminEventListResponse> {
   const eventRows = await db.query.events.findMany({
     where: {
       deletedAt: { isNull: true },
-      ...(query.category ? { category: query.category } : {}),
     },
-    with: {
-      ...eventListWith,
-      ...(options?.includeEditors ? { editors: { columns: { userId: true } } } : {}),
-    },
+    with: { ...eventListWith, editors: { columns: { userId: true } } },
   });
 
-  if (eventRows.length === 0)
-    return { events: [] as AdminEventListResponse, ...(options?.includeEditors ? { editorsByEvent: new Map() } : {}) };
+  if (eventRows.length === 0) return [];
 
   const allQuotaIds = eventRows.flatMap((e) => e.quotas.map((q) => q.id));
   const signupCountMap = await fetchSignupCounts(allQuotaIds);
-
-  // Extract editor mappings before stripping them from the response
-  let editorsByEvent: Map<string, number[]> | undefined;
-  if (options?.includeEditors) {
-    editorsByEvent = new Map();
-    for (const event of eventRows) {
-      const editors = (event as typeof event & { editors?: { userId: number }[] }).editors;
-      if (editors) {
-        editorsByEvent.set(
-          event.id,
-          editors.map((e) => e.userId),
-        );
-      }
-    }
-  }
 
   const enrichedEvents = eventRows.map((event) => {
     const langFields = reconstructEventLanguages(event, event.languages, event.quotas, event.questions, true);
@@ -155,5 +137,5 @@ export async function getEventsListForAdmin(
     })),
   }));
 
-  return { events: res as unknown as AdminEventListResponse, editorsByEvent };
+  return res;
 }

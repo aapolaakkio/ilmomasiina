@@ -3,7 +3,7 @@
 import { z } from "zod/v4";
 
 import { actionClient, isAdminMiddleware, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { userID } from "@/models/schema/user";
+import { userID } from "@/db/schema";
 import { deleteUser } from "@/services/admin/users/deleteUser";
 
 const schema = z.object({

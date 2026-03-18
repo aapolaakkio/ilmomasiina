@@ -5,7 +5,7 @@ import { z } from "zod/v4";
 
 import { requireEventAccess } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { eventID } from "@/models/schema/event";
+import { eventID } from "@/db/schema";
 import { deleteEvent } from "@/services/admin/events/deleteEvent";
 
 const schema = z.object({

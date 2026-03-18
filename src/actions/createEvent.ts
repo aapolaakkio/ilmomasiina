@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { eventCreateBody } from "@/models/schema/event";
+import { eventCreateBody } from "@/db/zod";
 import { createEvent } from "@/services/admin/events/createEvent";
 
 export const createEventAction = actionClient

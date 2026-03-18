@@ -12,20 +12,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AdminEventsListPage() {
   const session = await requireAdmin();
-  const isAdmin = session.role === "admin";
 
-  const { events, editorsByEvent } = await getEventsListForAdmin({}, { includeEditors: !isAdmin });
+  const events = await getEventsListForAdmin();
 
-  // For non-admin users, derive editable event IDs from the editors relation
-  let editableEventIds: string[] | null = null;
-  if (!isAdmin && editorsByEvent) {
-    editableEventIds = [];
-    for (const [eventId, userIds] of editorsByEvent) {
-      if (userIds.includes(session.user)) {
-        editableEventIds.push(eventId);
-      }
-    }
-  }
-
-  return <AdminEventsClient events={events} role={session.role} editableEventIds={editableEventIds} />;
+  return <AdminEventsClient events={events} role={session.role} userId={session.user} />;
 }

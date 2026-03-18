@@ -25,7 +25,7 @@ function getNestedValue(obj: Record<string, unknown>, keyPath: string): string |
 export function t(key: string, options?: { lng?: string; [key: string]: string | number | undefined }): string {
   const lng = (options?.lng ?? "fi") as KnownLanguage;
   const translations = resources[lng] ?? resources.fi;
-  let value = getNestedValue(translations as unknown as Record<string, unknown>, key) ?? key;
+  let value = getNestedValue(translations, key) ?? key;
   if (options) {
     for (const [k, v] of Object.entries(options)) {
       if (k !== "lng" && v !== undefined) {

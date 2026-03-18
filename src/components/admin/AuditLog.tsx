@@ -6,8 +6,8 @@ import { useTranslations } from "next-intl";
 
 import { getAuditLogAction } from "@/actions/getAuditLog";
 import { Link } from "@/i18n/navigation";
-import type { AuditLogResponse, AuditLoqQuery } from "@/models";
-import { AuditEvent } from "@/models";
+import { AuditEvent } from "@/db/schema";
+import type { AuditLogResponse, AuditLoqQuery } from "@/db/zod";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { inputClassName, selectClassName } from "@/components/ui/Field";
@@ -28,48 +28,55 @@ const AUDIT_EVENT_KEYS: { value: AuditEvent; labelKey: string }[] = [
   { value: AuditEvent.DELETE_USER, labelKey: "actions.deleteUser" },
 ];
 
+/** Maps audit actions to their description translation key and required variables. */
+const ACTION_DESCRIPTIONS: Record<AuditEvent, { key: string; vars: "event" | "signup" | "user" }> = {
+  [AuditEvent.CREATE_EVENT]: { key: "description.createdEvent", vars: "event" },
+  [AuditEvent.EDIT_EVENT]: { key: "description.editedEvent", vars: "event" },
+  [AuditEvent.PUBLISH_EVENT]: { key: "description.publishedEvent", vars: "event" },
+  [AuditEvent.UNPUBLISH_EVENT]: { key: "description.unpublishedEvent", vars: "event" },
+  [AuditEvent.DELETE_EVENT]: { key: "description.deletedEvent", vars: "event" },
+  [AuditEvent.CREATE_SIGNUP]: { key: "description.createdSignup", vars: "signup" },
+  [AuditEvent.EDIT_SIGNUP]: { key: "description.editedSignup", vars: "signup" },
+  [AuditEvent.DELETE_SIGNUP]: { key: "description.deletedSignup", vars: "signup" },
+  [AuditEvent.PROMOTE_SIGNUP]: { key: "description.promotedSignup", vars: "signup" },
+  [AuditEvent.CREATE_USER]: { key: "description.createdUser", vars: "user" },
+  [AuditEvent.DELETE_USER]: { key: "description.deletedUser", vars: "user" },
+};
+
 function formatActionDescription(
   item: AuditLogResponse["rows"][number],
-  t: (key: string, values?: Record<string, string>) => string,
+  t: (key: string, values?: Record<string, string | AuditEvent>) => string,
 ): string {
-  const extra = item.extra ? JSON.parse(item.extra) : null;
+  const desc = ACTION_DESCRIPTIONS[item.action as AuditEvent];
+  if (!desc) return t("description.unknown", { action: item.action });
+
   const event = item.eventName ?? item.eventId ?? "?";
   const signup = item.signupName ?? item.signupId ?? "?";
-
-  switch (item.action) {
-    case AuditEvent.CREATE_EVENT:
-      return t("description.createdEvent", { event });
-    case AuditEvent.EDIT_EVENT:
-      return t("description.editedEvent", { event });
-    case AuditEvent.PUBLISH_EVENT:
-      return t("description.publishedEvent", { event });
-    case AuditEvent.UNPUBLISH_EVENT:
-      return t("description.unpublishedEvent", { event });
-    case AuditEvent.DELETE_EVENT:
-      return t("description.deletedEvent", { event });
-    case AuditEvent.CREATE_SIGNUP:
-      return t("description.createdSignup", { signup, event });
-    case AuditEvent.EDIT_SIGNUP:
-      return t("description.editedSignup", { signup, event });
-    case AuditEvent.DELETE_SIGNUP:
-      return t("description.deletedSignup", { signup, event });
-    case AuditEvent.PROMOTE_SIGNUP:
-      return t("description.promotedSignup", { signup, event });
-    case AuditEvent.CREATE_USER:
-      return t("description.createdUser", { user: extra?.email ?? "?" });
-    case AuditEvent.DELETE_USER:
-      return t("description.deletedUser", { user: extra?.email ?? "?" });
-    default:
-      return t("description.unknown", { action: item.action });
-  }
+  if (desc.vars === "event") return t(desc.key, { event });
+  if (desc.vars === "signup") return t(desc.key, { signup, event });
+  const extra = item.extra ? JSON.parse(item.extra) : null;
+  return t(desc.key, { user: extra?.email ?? "?" });
 }
+
+const auditDateFormat = new Intl.DateTimeFormat("fi-FI", {
+  day: "numeric",
+  month: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  second: "numeric",
+  hour12: false,
+});
 
 export default function AuditLogClient() {
   const t = useTranslations("auditLog");
   const [logs, setLogs] = useState<AuditLogResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState<AuditLoqQuery>({ limit: LOGS_PER_PAGE, offset: 0 });
+  const [query, setQuery] = useState<AuditLoqQuery>({
+    limit: LOGS_PER_PAGE,
+    offset: 0,
+  });
 
   const fetchLogs = useCallback(async (q: AuditLoqQuery) => {
     setLoading(true);
@@ -169,7 +176,11 @@ export default function AuditLogClient() {
             {"\u00AB " + t("pagination.previous")}
           </Button>
           <span className="text-sm text-gray-600">
-            {t("pagination.rows", { first: offset + 1, last: lastRow, total: logs.count })}
+            {t("pagination.rows", {
+              first: offset + 1,
+              last: lastRow,
+              total: logs.count,
+            })}
           </span>
           <Button
             variant="outline"
@@ -198,17 +209,7 @@ export default function AuditLogClient() {
             <tbody>
               {logs.rows.map((item) => (
                 <tr key={`${item.createdAt}-${item.action}-${item.signupId}`} className="border-b border-gray-100">
-                  <td className="py-2 pr-4 text-gray-600">
-                    {new Intl.DateTimeFormat("fi-FI", {
-                      day: "numeric",
-                      month: "numeric",
-                      year: "numeric",
-                      hour: "numeric",
-                      minute: "numeric",
-                      second: "numeric",
-                      hour12: false,
-                    }).format(new Date(item.createdAt))}
-                  </td>
+                  <td className="py-2 pr-4 text-gray-600">{auditDateFormat.format(new Date(item.createdAt))}</td>
                   <td className="py-2 pr-4">{item.user ?? "-"}</td>
                   <td className="py-2 pr-4 text-gray-600">{item.ipAddress ?? "-"}</td>
                   <td className="py-2">{formatActionDescription(item, t)}</td>

@@ -1,23 +1,13 @@
-/* eslint-disable max-classes-per-file */
-
-import { AuditEvent, ErrorCode } from "@/models";
+import { AuditEvent, ErrorCode, UserRole } from "@/db/schema";
+import type { UserSchema } from "@/db/zod";
 
 import type { AuditLogger } from "../../../auditlog";
 import type { DrizzleDb } from "../../../db";
 import { users } from "../../../db/schema";
-import CustomError from "../../../util/customError";
+import { errorClass } from "../../../util/customError";
 
-export class InitialSetupNeeded extends CustomError {
-  constructor(message: string) {
-    super(418, ErrorCode.INITIAL_SETUP_NEEDED, message);
-  }
-}
-
-export class InitialSetupAlreadyDone extends CustomError {
-  constructor(message: string) {
-    super(409, ErrorCode.INITIAL_SETUP_ALREADY_DONE, message);
-  }
-}
+export const InitialSetupNeeded = errorClass(418, ErrorCode.INITIAL_SETUP_NEEDED);
+export const InitialSetupAlreadyDone = errorClass(409, ErrorCode.INITIAL_SETUP_ALREADY_DONE);
 
 export async function isInitialSetupDone(db: DrizzleDb): Promise<boolean> {
   const result = await db.query.users.findFirst({
@@ -28,10 +18,10 @@ export async function isInitialSetupDone(db: DrizzleDb): Promise<boolean> {
 
 /** Add a user email to the allowlist. */
 export async function createUser(
-  params: { email: string; role?: "admin" | "user" },
+  params: { email: string; role?: UserRole },
   auditLogger: AuditLogger,
   tx: DrizzleDb,
-): Promise<{ id: number; email: string; role: "admin" | "user" }> {
+): Promise<UserSchema> {
   const existing = await tx.query.users.findFirst({
     where: { email: params.email },
     columns: { id: true },
@@ -41,7 +31,10 @@ export async function createUser(
 
   const [user] = await tx
     .insert(users)
-    .values({ email: params.email, ...(params.role ? { role: params.role } : {}) })
+    .values({
+      email: params.email,
+      role: params.role ?? UserRole.USER,
+    })
     .returning({ id: users.id, email: users.email, role: users.role });
 
   await auditLogger(AuditEvent.CREATE_USER, {

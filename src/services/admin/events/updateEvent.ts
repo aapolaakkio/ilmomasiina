@@ -1,13 +1,8 @@
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 
-import type {
-  AdminEventResponse,
-  EditConflictError,
-  EventID,
-  EventUpdateBody,
-  WouldMoveSignupsToQueueError,
-} from "@/models";
-import { AuditEvent } from "@/models";
+import { buildEventLanguageRows, buildQuestionLanguageRows, buildQuotaLanguageRows } from "@/db/helpers";
+import { AuditEvent, type EventID, type QuestionID, type QuotaID } from "@/db/schema";
+import type { AdminEventResponse, EditConflictError, EventUpdateBody, WouldMoveSignupsToQueueError } from "@/db/zod";
 
 import type { AuditLogger } from "../../../auditlog";
 import { db } from "../../../db";
@@ -24,7 +19,6 @@ import { EditConflict } from "./errors";
 import { normalizeQuestionOptions } from "./normalizeQuestionOptions";
 
 /** Update an event including its quotas and questions. */
-// eslint-disable-next-line import/prefer-default-export
 export async function updateEvent(
   eventId: EventID,
   body: EventUpdateBody,
@@ -52,7 +46,10 @@ export async function updateEvent(
         .where(and(eq(questions.eventId, eventId), isNull(questions.deletedAt)))
         .for("update"),
     ]);
-    const previousSignups = previousSignupsRaw.map((s) => ({ id: s.id, quotaId: s.quotaId }));
+    const previousSignups = previousSignupsRaw.map((s) => ({
+      id: s.id,
+      quotaId: s.quotaId,
+    }));
 
     const updatedQuestions = body.questions?.map((question, order) => ({
       ...question,
@@ -75,33 +72,27 @@ export async function updateEvent(
       throw new EditConflict(event.updatedAt, deletedQuotas, deletedQuestions);
     }
 
-    const { languages: bodyLanguages, ...rest } = body;
+    const {
+      languages: bodyLanguages,
+      questions: _q,
+      quotas: _qt,
+      moveSignupsToQueue: _m,
+      updatedAt: _u,
+      ...eventFields
+    } = body;
 
     // Build update data (includes localizable fields on the main table now)
     const updateData: Record<string, unknown> = {
-      ...rest,
+      ...eventFields,
       registrationEndDate: toDate(body.registrationEndDate),
       registrationStartDate: toDate(body.registrationStartDate),
       date: toDate(body.date),
       endDate: toDate(body.endDate),
-      updatedAt: new Date(),
     };
-    // Remove relation fields from update
-    delete updateData.questions;
-    delete updateData.quotas;
-    delete updateData.updatedAt;
-    delete updateData.moveSignupsToQueue;
 
     // Validate dates
     const mergedEvent = { ...event, ...updateData };
-    validateEventDates(
-      mergedEvent as {
-        date: Date | null;
-        endDate: Date | null;
-        registrationStartDate: Date | null;
-        registrationEndDate: Date | null;
-      },
-    );
+    validateEventDates(mergedEvent);
 
     updateData.updatedAt = new Date();
     await tx.update(events).set(updateData).where(eq(events.id, eventId));
@@ -126,7 +117,7 @@ export async function updateEvent(
 
       // Find new default's language row and copy to main table, then delete it
       const newDefaultLang = await tx.query.eventLanguages.findFirst({
-        where: { eventId, language: body.defaultLanguage },
+        where: { eventId: { eq: eventId }, language: body.defaultLanguage },
       });
       if (newDefaultLang) {
         updateData.title = body.title ?? newDefaultLang.title;
@@ -152,47 +143,29 @@ export async function updateEvent(
         ),
       );
 
-      const allEventLangs: (typeof eventLanguages.$inferInsert)[] = [];
-      for (const [lang, langData] of Object.entries(bodyLanguages)) {
-        allEventLangs.push({
-          eventId,
-          language: lang,
-          title: langData.title,
-          description: langData.description ?? null,
-          price: langData.price ?? null,
-          location: langData.location ?? null,
-          webpageUrl: langData.webpageUrl ?? null,
-          verificationEmail: langData.verificationEmail ?? null,
-        });
-      }
-      if (allEventLangs.length > 0) {
-        await tx.insert(eventLanguages).values(allEventLangs);
+      const eventLangRows = buildEventLanguageRows(eventId, bodyLanguages);
+      if (eventLangRows.length > 0) {
+        await tx.insert(eventLanguages).values(eventLangRows);
       }
     }
 
     // Update questions
     if (updatedQuestions !== undefined) {
-      const reuseIds = updatedQuestions.map((q) => q.existingId).filter(Boolean) as string[];
+      const reuseIds = updatedQuestions.map((q) => q.existingId).filter((q) => q !== undefined);
 
       // Soft-delete removed questions
-      if (reuseIds.length > 0) {
-        await tx
-          .update(questions)
-          .set({ deletedAt: new Date(), updatedAt: new Date() })
-          .where(and(eq(questions.eventId, eventId), notInArray(questions.id, reuseIds), isNull(questions.deletedAt)));
-      } else {
-        await tx
-          .update(questions)
-          .set({ deletedAt: new Date(), updatedAt: new Date() })
-          .where(and(eq(questions.eventId, eventId), isNull(questions.deletedAt)));
-      }
+      const questionDeleteConditions = [eq(questions.eventId, eventId), isNull(questions.deletedAt)];
+      if (reuseIds.length > 0) questionDeleteConditions.push(notInArray(questions.id, reuseIds));
+      await tx
+        .update(questions)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(...questionDeleteConditions));
 
       // Track new question IDs for language row insertion
-      const questionIdMap: string[] = [];
+      const questionIdMap: QuestionID[] = [];
 
       for (const question of updatedQuestions) {
         if (question.existingId) {
-          // eslint-disable-next-line no-await-in-loop
           await tx
             .update(questions)
             .set({
@@ -208,7 +181,6 @@ export async function updateEvent(
             .where(eq(questions.id, question.existingId));
           questionIdMap.push(question.existingId);
         } else {
-          // eslint-disable-next-line no-await-in-loop
           const [created] = await tx
             .insert(questions)
             .values({
@@ -230,49 +202,29 @@ export async function updateEvent(
       if (questionIdMap.length > 0) {
         await tx.delete(questionLanguages).where(inArray(questionLanguages.questionId, questionIdMap));
 
-        const allQuestionLangs: (typeof questionLanguages.$inferInsert)[] = [];
-        for (let i = 0; i < updatedQuestions.length; i++) {
-          const qId = questionIdMap[i];
-          for (const [lang, langData] of Object.entries(bodyLanguages ?? {})) {
-            const langQuestion = langData.questions?.[i];
-            if (langQuestion) {
-              allQuestionLangs.push({
-                questionId: qId,
-                language: lang,
-                question: langQuestion.question,
-                options: langQuestion.options ?? null,
-              });
-            }
-          }
-        }
-        if (allQuestionLangs.length > 0) {
-          await tx.insert(questionLanguages).values(allQuestionLangs);
+        const questionLangRows = buildQuestionLanguageRows(questionIdMap, bodyLanguages);
+        if (questionLangRows.length > 0) {
+          await tx.insert(questionLanguages).values(questionLangRows);
         }
       }
     }
 
     // Update quotas
     if (updatedQuotas !== undefined) {
-      const reuseIds = updatedQuotas.map((q) => q.existingId).filter(Boolean) as string[];
+      const reuseIds = updatedQuotas.map((q) => q.existingId).filter((q) => q !== undefined);
 
-      if (reuseIds.length > 0) {
-        await tx
-          .update(quotas)
-          .set({ deletedAt: new Date(), updatedAt: new Date() })
-          .where(and(eq(quotas.eventId, eventId), notInArray(quotas.id, reuseIds), isNull(quotas.deletedAt)));
-      } else {
-        await tx
-          .update(quotas)
-          .set({ deletedAt: new Date(), updatedAt: new Date() })
-          .where(and(eq(quotas.eventId, eventId), isNull(quotas.deletedAt)));
-      }
+      const quotaDeleteConditions = [eq(quotas.eventId, eventId), isNull(quotas.deletedAt)];
+      if (reuseIds.length > 0) quotaDeleteConditions.push(notInArray(quotas.id, reuseIds));
+      await tx
+        .update(quotas)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(...quotaDeleteConditions));
 
       // Track new quota IDs for language row insertion
-      const quotaIdMap: string[] = [];
+      const quotaIdMap: QuotaID[] = [];
 
       for (const quota of updatedQuotas) {
         if (quota.existingId) {
-          // eslint-disable-next-line no-await-in-loop
           await tx
             .update(quotas)
             .set({
@@ -285,7 +237,6 @@ export async function updateEvent(
             .where(eq(quotas.id, quota.existingId));
           quotaIdMap.push(quota.existingId);
         } else {
-          // eslint-disable-next-line no-await-in-loop
           const [created] = await tx
             .insert(quotas)
             .values({
@@ -304,22 +255,9 @@ export async function updateEvent(
       if (quotaIdMap.length > 0) {
         await tx.delete(quotaLanguages).where(inArray(quotaLanguages.quotaId, quotaIdMap));
 
-        const allQuotaLangs: (typeof quotaLanguages.$inferInsert)[] = [];
-        for (let i = 0; i < updatedQuotas.length; i++) {
-          const qId = quotaIdMap[i];
-          for (const [lang, langData] of Object.entries(bodyLanguages ?? {})) {
-            const langQuota = langData.quotas?.[i];
-            if (langQuota) {
-              allQuotaLangs.push({
-                quotaId: qId,
-                language: lang,
-                title: langQuota.title,
-              });
-            }
-          }
-        }
-        if (allQuotaLangs.length > 0) {
-          await tx.insert(quotaLanguages).values(allQuotaLangs);
+        const quotaLangRows = buildQuotaLanguageRows(quotaIdMap, bodyLanguages);
+        if (quotaLangRows.length > 0) {
+          await tx.insert(quotaLanguages).values(quotaLangRows);
         }
       }
     }
@@ -337,7 +275,10 @@ export async function updateEvent(
     if (isPublic === wasPublic) action = AuditEvent.EDIT_EVENT;
     else action = isPublic ? AuditEvent.PUBLISH_EVENT : AuditEvent.UNPUBLISH_EVENT;
 
-    await auditLogger(action, { event: { id: eventId, title: auditTitle }, tx });
+    await auditLogger(action, {
+      event: { id: eventId, title: auditTitle },
+      tx,
+    });
   });
 
   return getEventByIdForAdmin(eventId);

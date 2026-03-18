@@ -5,19 +5,19 @@ import { getLocale, getTranslations } from "next-intl/server";
 import EventEditor from "@/components/admin/EventEditor";
 import { requireAdmin } from "@/auth/adminAuth";
 import { getLocalizedEvent } from "@/lib/localizedEvent";
-import type { EventID } from "@/models";
+import type { EventID } from "@/db/schema";
 import { getCategories } from "@/services/events/getCategories";
 import { getEventByIdForAdmin, getEventByIdForViewer } from "@/services/events/getEventDetails";
 import { getEventEditors } from "@/services/admin/events/eventEditors";
 import { hasEventAccess } from "@/auth/eventAccess";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: EventID }> }): Promise<Metadata> {
   const { id } = await params;
   const t = await getTranslations("editor");
   if (id === "new") return { title: t("titleNew") };
   const locale = await getLocale();
   try {
-    const event = await getEventByIdForAdmin(id as EventID);
+    const event = await getEventByIdForAdmin(id);
     const localized = getLocalizedEvent(event, locale);
     return { title: `${t("titleEdit")} – ${localized.title}` };
   } catch {
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
-export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditEventPage({ params }: { params: Promise<{ id: EventID }> }) {
   const session = await requireAdmin();
 
   const { id } = await params;
@@ -37,11 +37,11 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
   }
 
   try {
-    const canEdit = await hasEventAccess(session, id as EventID);
+    const canEdit = await hasEventAccess(session, id);
     const [event, categories, editors] = await Promise.all([
-      canEdit ? getEventByIdForAdmin(id as EventID) : getEventByIdForViewer(id as EventID),
+      canEdit ? getEventByIdForAdmin(id) : getEventByIdForViewer(id),
       getCategories(),
-      getEventEditors(id as EventID),
+      getEventEditors(id),
     ]);
     return <EventEditor event={event} isNew={false} categories={categories} editors={editors} readOnly={!canEdit} />;
   } catch {

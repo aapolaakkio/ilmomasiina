@@ -5,7 +5,7 @@ import { getAdminSession } from "@/auth";
 import { redirect } from "@/i18n/navigation";
 import type { AuditLogger } from "@/auditlog";
 import { createAuditLogger } from "@/auditlog";
-import type { UserID } from "@/models";
+import type { UserID } from "@/db/schema";
 
 export interface AdminTokenData {
   user: UserID;
@@ -28,5 +28,5 @@ export async function requireAdmin(): Promise<AdminTokenData> {
 export async function createAdminAuditLogger(session: AdminTokenData): Promise<AuditLogger> {
   const headerStore = await headers();
   const ipAddress = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  return createAuditLogger(ipAddress, () => session.email || null);
+  return createAuditLogger(ipAddress, session.email);
 }

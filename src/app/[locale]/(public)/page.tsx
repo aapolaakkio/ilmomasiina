@@ -4,40 +4,33 @@ import { getTranslations } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { getLocalizedEventListItem } from "@/lib/localizedEvent";
 import { eventsToRows } from "@/lib/eventListUtils";
-import { SignupState } from "@/lib/signupState";
-import { ErrorCode } from "@/models";
+import { SignupState, type SignupStateInfo } from "@/lib/signupState";
+import { ErrorCode } from "@/db/schema";
+import { env } from "@/env";
 import { getEventsListForUser } from "@/services/events/getEventsList";
 import CustomError from "@/util/customError";
 
+const dateFormatBase: Intl.DateTimeFormatOptions = {
+  day: "numeric",
+  month: "numeric",
+  year: "numeric",
+  hour12: false,
+  timeZone: env.APP_TIMEZONE,
+};
+
 function formatDate(date: Date | null, locale: string): string {
   if (!date) return "";
-  return new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-    hour12: false,
-    timeZone: process.env.APP_TIMEZONE ?? "Europe/Helsinki",
-  }).format(date);
+  return new Intl.DateTimeFormat(locale, dateFormatBase).format(date);
 }
 
 function formatDateTime(date: Date, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
+    ...dateFormatBase,
     weekday: "short",
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
     hour: "numeric",
     minute: "numeric",
-    hour12: false,
-    timeZone: process.env.APP_TIMEZONE ?? "Europe/Helsinki",
   }).format(date);
 }
-
-type SignupStateInfo =
-  | { state: typeof SignupState.disabled }
-  | { state: typeof SignupState.not_opened; opens: Date }
-  | { state: typeof SignupState.open; closes: Date }
-  | { state: typeof SignupState.closed; closed: Date };
 
 function getSignupStateText(
   state: SignupStateInfo,

@@ -1,8 +1,9 @@
-import type { AdminEventLanguage, PaymentMode, QuestionType } from "@/models";
+import type { PaymentMode, QuestionID, QuestionType, QuotaID } from "@/db/schema";
+import type { AdminEventLanguage } from "@/db/zod";
 
 export type EditorQuota = {
   key: string;
-  id?: string;
+  id?: QuotaID;
   title: string;
   size: number | null;
   price: number;
@@ -10,7 +11,7 @@ export type EditorQuota = {
 
 export type EditorQuestion = {
   key: string;
-  id?: string;
+  id?: QuestionID;
   question: string;
   type: QuestionType;
   required: boolean;
@@ -93,7 +94,10 @@ export function setLocalizedValue<K extends keyof LocalizableFields>(
   if (selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage]) {
     updateField(field, value as EditorFormState[K]);
   } else {
-    const lang = { ...form.languages[selectedLanguage], [field]: value || null };
+    const lang = {
+      ...form.languages[selectedLanguage],
+      [field]: value || null,
+    };
     updateField("languages", { ...form.languages, [selectedLanguage]: lang });
   }
 }

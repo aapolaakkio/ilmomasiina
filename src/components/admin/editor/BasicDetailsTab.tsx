@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { checkSlugAction } from "@/actions/checkSlug";
-import { PaymentMode } from "@/models";
+import { PaymentMode } from "@/db/schema";
 import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
 import { FieldError } from "@/components/ui/FieldError";
 

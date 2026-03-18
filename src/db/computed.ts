@@ -1,5 +1,4 @@
-import type { ProductSchema } from "@/models";
-import { ManualPaymentStatus, PaymentMode, PaymentStatus, SignupPaymentStatus } from "@/models";
+import { ManualPaymentStatus, PaymentMode, PaymentStatus, SignupPaymentStatus } from "@/db/schema";
 
 import { env } from "@/env";
 
@@ -35,7 +34,7 @@ export function getEditableAtLeastUntil(signup: Pick<SignupRow, "createdAt">): D
 }
 
 /** Whether the signup has a price greater than 0. */
-export function hasPrice(signup: Pick<SignupRow, "price">): boolean {
+function hasPrice(signup: Pick<SignupRow, "price">): boolean {
   return signup.price != null && signup.price > 0;
 }
 
@@ -80,18 +79,4 @@ export function getEffectivePaymentStatus(
   if (!hasPrice(signup)) return null;
   // If the signup has a price but no payment, it's pending
   return SignupPaymentStatus.PENDING;
-}
-
-/**
- * Gets the effective default language for an event, falling back to config.
- */
-export function getDefaultLanguage(event: { defaultLanguage: string | null }): string {
-  return event.defaultLanguage ?? env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
-}
-
-/**
- * Computes total price from product lines.
- */
-export function computeTotalPrice(products: ProductSchema[]): number {
-  return products.reduce((sum, p) => sum + p.amount * p.unitPrice, 0);
 }

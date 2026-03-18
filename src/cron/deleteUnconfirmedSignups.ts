@@ -3,7 +3,7 @@ import { inArray } from "drizzle-orm";
 
 import { db } from "../db";
 import { activeSignupCutoff } from "../db/filters";
-import { signups } from "../db/schema";
+import { EventID, signups } from "../db/schema";
 import {
   fetchActiveQuotasForEvent,
   fetchActiveSignupsForEvent,
@@ -38,7 +38,7 @@ export default async function deleteUnconfirmedSignups() {
   }
 
   // Extract event info, filtering out signups with missing relations
-  const eventMap = new Map<string, number>();
+  const eventMap = new Map<EventID, number>();
   for (const s of unconfirmed) {
     const event = s.quota?.event;
     if (event) eventMap.set(event.id, event.openQuotaSize);

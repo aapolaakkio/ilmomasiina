@@ -4,7 +4,8 @@ import { z } from "zod/v4";
 
 import { requireEventAccessBySignup } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { adminSignupUpdateBody, signupID } from "@/models/schema/signup";
+import { signupID } from "@/db/schema";
+import { adminSignupUpdateBody } from "@/db/zod";
 import { updateSignupAsAdmin } from "@/services/signups/updateSignup";
 
 const schema = z.object({

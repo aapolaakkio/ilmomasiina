@@ -13,13 +13,152 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { ManualPaymentStatus, PaymentMode, PaymentStatus, QuestionType } from "../models";
+import { z } from "zod";
 
 import { generateRandomId, RANDOM_ID_LENGTH } from "./randomId";
 
-// --- Enums (names match Sequelize-generated enum type names) ---
+// --- Enums ---
 
-export const userRoleEnum = pgEnum("enum_user_role", ["admin", "user"]);
+/** User roles. */
+export enum UserRole {
+  ADMIN = "admin",
+  USER = "user",
+}
+
+/** Possible statuses for a signup. */
+export enum SignupStatus {
+  IN_QUOTA = "in-quota",
+  IN_OPEN_QUOTA = "in-open",
+  IN_QUEUE = "in-queue",
+}
+
+/** Possible payment statuses. */
+export enum PaymentStatus {
+  CREATING = "creating",
+  PENDING = "pending",
+  PAID = "paid",
+  EXPIRED = "expired",
+  CREATION_FAILED = "creation_failed",
+  REFUNDED = "refunded",
+}
+
+/** Possible effective payment statuses for signups. */
+export enum SignupPaymentStatus {
+  PENDING = "pending",
+  PAID = "paid",
+  REFUNDED = "refunded",
+}
+
+/** Possible manual (admin-managed) payment statuses for signups. */
+export enum ManualPaymentStatus {
+  NONE = "none",
+  PAID = "paid",
+  REFUNDED = "refunded",
+}
+
+/** Possible question types. */
+export enum QuestionType {
+  TEXT = "text",
+  TEXT_AREA = "textarea",
+  NUMBER = "number",
+  SELECT = "select",
+  CHECKBOX = "checkbox",
+}
+
+/** Payment modes for events. */
+export enum PaymentMode {
+  DISABLED = "disabled",
+  MANUAL = "manual",
+  ONLINE = "online",
+}
+
+/** Event types that can be audit logged. */
+export enum AuditEvent {
+  CREATE_EVENT = "event.create",
+  DELETE_EVENT = "event.delete",
+  PUBLISH_EVENT = "event.publish",
+  UNPUBLISH_EVENT = "event.unpublish",
+  EDIT_EVENT = "event.edit",
+  PROMOTE_SIGNUP = "signup.queuePromote",
+  CREATE_SIGNUP = "signup.create",
+  DELETE_SIGNUP = "signup.delete",
+  EDIT_SIGNUP = "signup.edit",
+  CREATE_USER = "user.create",
+  DELETE_USER = "user.delete",
+}
+
+export enum ErrorCode {
+  BAD_SESSION = "BadSession",
+  EDIT_CONFLICT = "EditConflict",
+  WOULD_MOVE_SIGNUPS_TO_QUEUE = "WouldMoveSignupsToQueue",
+  SIGNUPS_CLOSED = "SignupsClosed",
+  NO_SUCH_QUOTA = "NoSuchQuota",
+  NO_SUCH_SIGNUP = "NoSuchSignup",
+  BAD_EDIT_TOKEN = "BadEditToken",
+  CANNOT_DELETE_SELF = "CannotDeleteSelf",
+  INITIAL_SETUP_NEEDED = "InitialSetupNeeded",
+  INITIAL_SETUP_ALREADY_DONE = "InitialSetupAlreadyDone",
+  SIGNUP_VALIDATION_ERROR = "SignupValidationError",
+  EVENT_VALIDATION_ERROR = "EventValidationError",
+  VALIDATION_ERROR = "FST_ERR_VALIDATION",
+  ONLINE_PAYMENTS_DISABLED = "OnlinePaymentsDisabled",
+  SIGNUP_NOT_CONFIRMED = "SignupNotConfirmed",
+  SIGNUP_IN_QUEUE = "SignupInQueue",
+  SIGNUP_ALREADY_PAID = "SignupAlreadyPaid",
+  PAYMENT_NOT_REQUIRED = "PaymentNotRequired",
+  PAYMENT_IN_PROGRESS = "PaymentInProgress",
+  PAYMENT_NOT_FOUND = "PaymentNotFound",
+  PAYMENT_NOT_COMPLETE = "PaymentNotComplete",
+  PAYMENT_RATE_LIMITED = "PaymentRateLimited",
+}
+
+export enum SignupFieldError {
+  MISSING = "missing",
+  WRONG_TYPE = "wrongType",
+  TOO_LONG = "tooLong",
+  INVALID_EMAIL = "invalidEmail",
+  NOT_A_NUMBER = "notANumber",
+  NOT_AN_OPTION = "notAnOption",
+  DUPLICATE_OPTION = "duplicateOption",
+}
+
+// --- Branded ID types ---
+
+export const eventID = z.string().min(1).max(32).brand<"EventID">();
+export const signupID = z.string().min(1).max(32).brand<"SignupID">();
+export const quotaID = z.string().brand<"QuotaID">();
+export const questionID = z.string().brand<"QuestionID">();
+export const answerID = z.number().int().brand<"AnswerID">();
+export const userID = z.int().brand<"UserID">();
+export const paymentID = z.number().int().brand<"PaymentID">();
+export const auditLogID = z.number().int().brand<"AuditLogID">();
+
+export type EventID = z.infer<typeof eventID>;
+export type SignupID = z.infer<typeof signupID>;
+export type QuotaID = z.infer<typeof quotaID>;
+export type QuestionID = z.infer<typeof questionID>;
+export type AnswerID = z.infer<typeof answerID>;
+export type UserID = z.infer<typeof userID>;
+export type PaymentID = z.infer<typeof paymentID>;
+export type AuditLogID = z.infer<typeof auditLogID>;
+
+// --- Shared Zod schemas ---
+
+export const editToken = z.string();
+
+/** Schema for a product line used to compute signup prices. */
+export const productSchema = z.object({
+  name: z.string().min(1),
+  amount: z.int(),
+  unitPrice: z.int(),
+});
+
+/** Schema for a product line used to compute signup prices. */
+export type ProductSchema = z.infer<typeof productSchema>;
+
+// --- Database Enums (names match Sequelize-generated enum type names) ---
+
+export const userRoleEnum = pgEnum("enum_user_role", [UserRole.ADMIN, UserRole.USER]);
 
 export const paymentModeEnum = pgEnum("enum_event_payments", [
   PaymentMode.DISABLED,
@@ -28,6 +167,7 @@ export const paymentModeEnum = pgEnum("enum_event_payments", [
 ]);
 
 export const manualPaymentStatusEnum = pgEnum("enum_signup_manualPaymentStatus", [
+  ManualPaymentStatus.NONE,
   ManualPaymentStatus.PAID,
   ManualPaymentStatus.REFUNDED,
 ]);
@@ -49,10 +189,26 @@ export const paymentStatusEnum = pgEnum("enum_payment_status", [
   PaymentStatus.REFUNDED,
 ]);
 
+export const auditEventEnum = pgEnum("enum_audit_event", [
+  AuditEvent.CREATE_EVENT,
+  AuditEvent.DELETE_EVENT,
+  AuditEvent.PUBLISH_EVENT,
+  AuditEvent.UNPUBLISH_EVENT,
+  AuditEvent.EDIT_EVENT,
+  AuditEvent.PROMOTE_SIGNUP,
+  AuditEvent.CREATE_SIGNUP,
+  AuditEvent.DELETE_SIGNUP,
+  AuditEvent.EDIT_SIGNUP,
+  AuditEvent.CREATE_USER,
+  AuditEvent.DELETE_USER,
+]);
 // --- Tables ---
 
 export const events = pgTable("event", {
-  id: char("id", { length: RANDOM_ID_LENGTH }).$defaultFn(generateRandomId).primaryKey(),
+  id: char("id", { length: RANDOM_ID_LENGTH })
+    .$defaultFn(() => generateRandomId())
+    .$type<EventID>()
+    .primaryKey(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
   title: varchar("title", { length: 255 }).notNull().default(""),
   description: text("description"),
@@ -84,7 +240,7 @@ export const events = pgTable("event", {
 export const eventLanguages = pgTable(
   "event_language",
   {
-    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).notNull(),
+    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>().notNull(),
     language: varchar("language", { length: 8 }).notNull(),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
@@ -99,8 +255,11 @@ export const eventLanguages = pgTable(
 export const quotas = pgTable(
   "quota",
   {
-    id: char("id", { length: RANDOM_ID_LENGTH }).$defaultFn(generateRandomId).primaryKey(),
-    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).notNull(),
+    id: char("id", { length: RANDOM_ID_LENGTH })
+      .$defaultFn(() => generateRandomId())
+      .$type<QuotaID>()
+      .primaryKey(),
+    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>().notNull(),
     title: varchar("title", { length: 255 }).notNull().default(""),
     order: integer("order").notNull(),
     size: integer("size"),
@@ -116,7 +275,7 @@ export const quotas = pgTable(
 export const quotaLanguages = pgTable(
   "quota_language",
   {
-    quotaId: char("quotaId", { length: RANDOM_ID_LENGTH }).notNull(),
+    quotaId: char("quotaId", { length: RANDOM_ID_LENGTH }).$type<QuotaID>().notNull(),
     language: varchar("language", { length: 8 }).notNull(),
     title: varchar("title", { length: 255 }).notNull(),
   },
@@ -126,8 +285,11 @@ export const quotaLanguages = pgTable(
 export const signups = pgTable(
   "signup",
   {
-    id: char("id", { length: RANDOM_ID_LENGTH }).$defaultFn(generateRandomId).primaryKey(),
-    quotaId: char("quotaId", { length: RANDOM_ID_LENGTH }).notNull(),
+    id: char("id", { length: RANDOM_ID_LENGTH })
+      .$defaultFn(() => generateRandomId())
+      .$type<SignupID>()
+      .primaryKey(),
+    quotaId: char("quotaId", { length: RANDOM_ID_LENGTH }).$type<QuotaID>().notNull(),
     firstName: varchar("firstName", { length: 255 }),
     lastName: varchar("lastName", { length: 255 }),
     namePublic: boolean("namePublic").notNull().default(false),
@@ -136,7 +298,7 @@ export const signups = pgTable(
     confirmedAt: timestamp("confirmedAt", { precision: 3, withTimezone: true }),
     price: integer("price"),
     currency: varchar("currency", { length: 8 }),
-    products: json("products").$type<unknown[] | null>(),
+    products: json("products").$type<ProductSchema[] | null>(),
     manualPaymentStatus: manualPaymentStatusEnum("manualPaymentStatus"),
 
     // createdAt with millisecond precision, matching Sequelize's DATE(3)
@@ -152,8 +314,11 @@ export const signups = pgTable(
 export const questions = pgTable(
   "question",
   {
-    id: char("id", { length: RANDOM_ID_LENGTH }).$defaultFn(generateRandomId).primaryKey(),
-    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).notNull(),
+    id: char("id", { length: RANDOM_ID_LENGTH })
+      .$defaultFn(() => generateRandomId())
+      .$type<QuestionID>()
+      .primaryKey(),
+    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>().notNull(),
     question: varchar("question", { length: 1024 }).notNull().default(""),
     options: json("options").$type<string[] | null>(),
     order: integer("order").notNull(),
@@ -172,7 +337,7 @@ export const questions = pgTable(
 export const questionLanguages = pgTable(
   "question_language",
   {
-    questionId: char("questionId", { length: RANDOM_ID_LENGTH }).notNull(),
+    questionId: char("questionId", { length: RANDOM_ID_LENGTH }).$type<QuestionID>().notNull(),
     language: varchar("language", { length: 8 }).notNull(),
     question: varchar("question", { length: 1024 }).notNull(),
     options: json("options").$type<string[] | null>(),
@@ -183,9 +348,9 @@ export const questionLanguages = pgTable(
 export const answers = pgTable(
   "answer",
   {
-    id: serial("id").primaryKey(),
-    questionId: char("questionId", { length: RANDOM_ID_LENGTH }).notNull(),
-    signupId: char("signupId", { length: RANDOM_ID_LENGTH }).notNull(),
+    id: serial("id").$type<AnswerID>().primaryKey(),
+    questionId: char("questionId", { length: RANDOM_ID_LENGTH }).$type<QuestionID>().notNull(),
+    signupId: char("signupId", { length: RANDOM_ID_LENGTH }).$type<SignupID>().notNull(),
     answer: json("answer").notNull().$type<string | string[]>(),
 
     createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
@@ -198,15 +363,15 @@ export const answers = pgTable(
 export const payments = pgTable(
   "payment",
   {
-    id: serial("id").primaryKey(),
-    signupId: varchar("signupId", { length: 255 }).notNull(),
+    id: serial("id").$type<PaymentID>().primaryKey(),
+    signupId: varchar("signupId", { length: 255 }).$type<SignupID>().notNull(),
     stripeCheckoutSessionId: varchar("stripeCheckoutSessionId", {
       length: 255,
     }).unique(),
     status: paymentStatusEnum("status").notNull().default(PaymentStatus.CREATING),
     amount: integer("amount").notNull(),
     currency: varchar("currency", { length: 8 }).notNull(),
-    products: json("products").notNull().$type<unknown[]>(),
+    products: json("products").notNull().$type<ProductSchema[]>(),
     expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
     completedAt: timestamp("completedAt", { withTimezone: true }),
 
@@ -216,33 +381,37 @@ export const payments = pgTable(
   (t) => [index("idx_payment_signupId").on(t.signupId)],
 );
 
-export const users = pgTable("user", {
-  id: serial("id").primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  role: userRoleEnum("role").notNull().default("user"),
+export const users = pgTable(
+  "user",
+  {
+    id: serial("id").$type<UserID>().primaryKey(),
+    email: varchar("email", { length: 255 }).notNull().unique(),
+    role: userRoleEnum("role").notNull().default(UserRole.USER),
 
-  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
-});
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_user_email").on(t.email)],
+);
 
 export const eventEditors = pgTable(
   "event_editor",
   {
-    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).notNull(),
-    userId: integer("userId").notNull(),
+    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>().notNull(),
+    userId: integer("userId").$type<UserID>().notNull(),
     createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.eventId, t.userId] }), index("idx_event_editor_userId").on(t.userId)],
 );
 
 export const auditlogs = pgTable("auditlog", {
-  id: serial("id").primaryKey(),
+  id: serial("id").$type<AuditLogID>().primaryKey(),
   user: varchar("user", { length: 255 }),
   ipAddress: varchar("ipAddress", { length: 64 }).notNull(),
-  action: varchar("action", { length: 32 }).notNull(),
-  eventId: char("eventId", { length: RANDOM_ID_LENGTH }),
+  action: auditEventEnum("action").notNull(),
+  eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>(),
   eventName: varchar("eventName", { length: 255 }),
-  signupId: char("signupId", { length: RANDOM_ID_LENGTH }),
+  signupId: char("signupId", { length: RANDOM_ID_LENGTH }).$type<SignupID>(),
   signupName: varchar("signupName", { length: 255 }),
   extra: text("extra"),
 

@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
 
-import { AuditEvent, SignupStatus } from "@/models";
+import { AuditEvent, EventID, QuotaID, SignupID, SignupStatus } from "@/db/schema";
 
 import { internalAuditLogger } from "../../auditlog";
 import { type DrizzleDb, db } from "../../db";
@@ -11,8 +11,8 @@ import { WouldMoveSignupsToQueue } from "../admin/events/errors";
 import { type QuotaForPositioning, type SignupForPositioning, assignSignupPositions } from "./assignSignupPositions";
 
 interface ActiveSignupRow {
-  id: string;
-  quotaId: string;
+  id: SignupID;
+  quotaId: QuotaID;
   firstName: string | null;
   lastName: string | null;
   email: string | null;
@@ -20,7 +20,7 @@ interface ActiveSignupRow {
 }
 
 /** Fetches active signups for an event, ordered by (createdAt, id). */
-export async function fetchActiveSignupsForEvent(eventId: string, txOrDb: DrizzleDb = db): Promise<ActiveSignupRow[]> {
+export async function fetchActiveSignupsForEvent(eventId: EventID, txOrDb: DrizzleDb = db): Promise<ActiveSignupRow[]> {
   const cutoff = activeSignupCutoff();
   return txOrDb
     .select({
@@ -45,7 +45,7 @@ export async function fetchActiveSignupsForEvent(eventId: string, txOrDb: Drizzl
 
 /** Fetches active quotas for an event. */
 export async function fetchActiveQuotasForEvent(
-  eventId: string,
+  eventId: EventID,
   txOrDb: DrizzleDb = db,
 ): Promise<QuotaForPositioning[]> {
   return txOrDb
@@ -59,7 +59,7 @@ export async function fetchActiveQuotasForEvent(
  * Does NOT write status/position to DB.
  */
 export async function handlePositionSideEffects(
-  eventId: string,
+  eventId: EventID,
   tx: DrizzleDb,
   options: {
     moveSignupsToQueue?: boolean;
@@ -79,7 +79,7 @@ export async function handlePositionSideEffects(
   const currentSignups = await fetchActiveSignupsForEvent(eventId, tx);
   const currentQuotas = await fetchActiveQuotasForEvent(eventId, tx);
   const event = await tx.query.events.findFirst({
-    where: { id: eventId },
+    where: { id: { eq: eventId } },
     columns: { openQuotaSize: true, title: true },
   });
   if (!event) throw new Error("event missing from DB");
@@ -112,9 +112,17 @@ export async function handlePositionSideEffects(
     await Promise.all(
       promoted.map(async (signup) => {
         const pos = newPositions.get(signup.id)!;
-        await sendPromotedFromQueueMail({ ...signup, status: pos.status, position: pos.position });
+        await sendPromotedFromQueueMail({
+          ...signup,
+          status: pos.status,
+          position: pos.position,
+        });
         await internalAuditLogger(AuditEvent.PROMOTE_SIGNUP, {
-          signup: { id: signup.id, firstName: signup.firstName, lastName: signup.lastName },
+          signup: {
+            id: signup.id,
+            firstName: signup.firstName,
+            lastName: signup.lastName,
+          },
           event: { id: eventId, title: event.title },
           tx,
         });

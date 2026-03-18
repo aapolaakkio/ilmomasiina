@@ -5,7 +5,14 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { env } from "@/env";
 
-import type { UserID } from "./models";
+import type { UserID, UserRole } from "@/db/schema";
+
+declare module "next-auth" {
+  interface Session {
+    dbUserId?: UserID;
+    dbUserRole?: UserRole;
+  }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
@@ -20,7 +27,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!email) return false;
 
       // If no users exist, auto-accept and create the first admin
-      const firstUser = await db.query.users.findFirst({ columns: { id: true } });
+      const firstUser = await db.query.users.findFirst({
+        columns: { id: true },
+      });
       if (!firstUser) {
         await db.insert(users).values({ email });
         return true;
@@ -38,27 +47,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token.email) {
         const dbUser = await db.query.users.findFirst({
           where: { email: token.email },
-          columns: { id: true },
+          columns: { id: true, role: true },
         });
         if (dbUser) {
           token.dbUserId = dbUser.id;
+          token.dbUserRole = dbUser.role;
         }
       }
       return token;
+    },
+
+    session({ session, token }) {
+      session.dbUserId = token.dbUserId as UserID;
+      session.dbUserRole = token.dbUserRole as UserRole;
+      return session;
     },
   },
 });
 
 /** Get admin user info from the current Auth.js session. Returns null if not authenticated. */
-export async function getAdminSession(): Promise<{ user: UserID; email: string; role: "admin" | "user" } | null> {
+export async function getAdminSession(): Promise<{
+  user: UserID;
+  email: string;
+  role: UserRole;
+} | null> {
   const session = await auth();
   if (!session?.user?.email) return null;
 
+  // Read from JWT-populated session fields (avoids extra DB query)
+  if (session.dbUserId != null && session.dbUserRole) {
+    return {
+      user: session.dbUserId,
+      email: session.user.email,
+      role: session.dbUserRole,
+    };
+  }
+
+  // Fallback: fetch from DB if session doesn't have the data yet
   const dbUser = await db.query.users.findFirst({
     where: { email: session.user.email },
     columns: { id: true, role: true },
   });
   if (!dbUser) return null;
 
-  return { user: dbUser.id as UserID, email: session.user.email, role: dbUser.role };
+  return {
+    user: dbUser.id,
+    email: session.user.email,
+    role: dbUser.role,
+  };
 }

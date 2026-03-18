@@ -5,7 +5,8 @@ import { z } from "zod/v4";
 
 import { requireEventAccess } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { eventID, eventUpdateBody } from "@/models/schema/event";
+import { eventID } from "@/db/schema";
+import { eventUpdateBody } from "@/db/zod";
 import { updateEvent } from "@/services/admin/events/updateEvent";
 import { EditConflict, WouldMoveSignupsToQueue } from "@/services/admin/events/errors";
 

@@ -8,7 +8,8 @@ import { z } from "zod/v4";
 import { deleteUserAction } from "@/actions/deleteUser";
 import { inviteUserAction } from "@/actions/inviteUser";
 import { Link, useRouter } from "@/i18n/navigation";
-import type { UserID, UserListResponse } from "@/models";
+import { UserID, UserRole } from "@/db/schema";
+import type { UserListResponse } from "@/db/zod";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -28,7 +29,7 @@ export default function AdminUsersClient({ users }: Props) {
 
   // Invite form
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "user">("user");
+  const [inviteRole, setInviteRole] = useState<UserRole>(UserRole.USER);
   const inviteValidation = useFormValidation();
 
   const inviteSchema = useMemo(() => z.object({ email: z.email().min(1).max(255) }), []);
@@ -46,7 +47,7 @@ export default function AdminUsersClient({ users }: Props) {
   });
 
   const handleInvite = useCallback(
-    (e: React.FormEvent) => {
+    (e: React.SubmitEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (invitePending) return;
       setError(null);
@@ -64,13 +65,13 @@ export default function AdminUsersClient({ users }: Props) {
   );
 
   const handleDelete = useCallback(
-    async (userId: number, email: string) => {
+    async (userId: UserID, email: string) => {
       // eslint-disable-next-line no-alert
       if (!window.confirm(t("deleteConfirm", { user: email }))) return;
       setProcessing(true);
       setError(null);
       setSuccess(null);
-      const result = await deleteUserAction({ userId: userId as UserID });
+      const result = await deleteUserAction({ userId });
       if (result?.serverError) {
         setError(result.serverError);
       } else {
@@ -156,7 +157,7 @@ export default function AdminUsersClient({ users }: Props) {
           <select
             className={inputClassName}
             value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value as "admin" | "user")}
+            onChange={(e) => setInviteRole(e.target.value as UserRole)}
           >
             <option value="user">{t("role_user")}</option>
             <option value="admin">{t("role_admin")}</option>

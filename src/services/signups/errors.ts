@@ -1,25 +1,12 @@
 /* eslint-disable max-classes-per-file */
-import { ErrorCode, SignupValidationErrors } from "@/models";
+import { ErrorCode } from "@/db/schema";
+import type { SignupValidationErrors } from "@/db/zod";
 
-import CustomError from "../../util/customError";
+import CustomError, { errorClass } from "../../util/customError";
 
-export class SignupsClosed extends CustomError {
-  constructor(message: string) {
-    super(403, ErrorCode.SIGNUPS_CLOSED, message);
-  }
-}
-
-export class NoSuchQuota extends CustomError {
-  constructor(message: string) {
-    super(404, ErrorCode.NO_SUCH_QUOTA, message);
-  }
-}
-
-export class NoSuchSignup extends CustomError {
-  constructor(message: string) {
-    super(404, ErrorCode.NO_SUCH_SIGNUP, message);
-  }
-}
+export const SignupsClosed = errorClass(403, ErrorCode.SIGNUPS_CLOSED);
+export const NoSuchQuota = errorClass(404, ErrorCode.NO_SUCH_QUOTA);
+export const NoSuchSignup = errorClass(404, ErrorCode.NO_SUCH_SIGNUP);
 
 export class SignupValidationError extends CustomError {
   public readonly errors: SignupValidationErrors;

@@ -1,4 +1,4 @@
-import type { SignupForEdit, SignupForEditResponse, UserEventListItem, UserEventResponse } from "@/models";
+import type { SignupForEdit, SignupForEditResponse, UserEventListItem, UserEventResponse } from "@/db/zod";
 
 type EventForEditSignup = SignupForEditResponse["event"];
 

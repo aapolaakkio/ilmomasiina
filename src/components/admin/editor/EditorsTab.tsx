@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { addEventEditorAction } from "@/actions/addEventEditor";
 import { removeEventEditorAction } from "@/actions/removeEventEditor";
-import type { EventID, UserID } from "@/models";
+import type { EventID, UserID } from "@/db/schema";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { inputClassName } from "@/components/ui/Field";
@@ -34,11 +34,15 @@ export default function EditorsTab({ eventId, initialEditors, readOnly }: Props)
       setSuccess(null);
       setProcessing(true);
       try {
-        const result = await addEventEditorAction({ eventId, email: email.trim() });
+        const result = await addEventEditorAction({
+          eventId,
+          email: email.trim(),
+        });
         if (result?.serverError) {
           setError(result.serverError);
         } else if (result?.data) {
-          setEditors((prev) => [...prev, result.data as Editor]);
+          const data = result.data;
+          setEditors((prev) => [...prev, data]);
           setEmail("");
           setSuccess(t("addSuccess", { email: email.trim() }));
         }

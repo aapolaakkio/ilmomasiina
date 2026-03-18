@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
 import { FieldError } from "@/components/ui/FieldError";
 import { SortableList } from "@/components/ui/Sortable";
-import { QuestionType } from "@/models";
+import { QuestionType } from "@/db/schema";
 
 import LocalizedIndicator from "./LocalizedIndicator";
 import { type EditorTabProps, generateKey } from "./types";

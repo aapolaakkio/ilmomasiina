@@ -1,7 +1,6 @@
 import { and, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
 
-import type { SignupID } from "@/models";
-import { AuditEvent } from "@/models";
+import { AuditEvent, type SignupID } from "@/db/schema";
 
 import type { AuditLogger } from "../../auditlog";
 import { db } from "../../db";

@@ -1,6 +1,6 @@
 import CustomError from "../util/customError";
 
-import { ErrorCode } from "@/models";
+import { ErrorCode } from "@/db/schema";
 
 export class EventValidationError extends CustomError {
   constructor(message: string, statusCode = 400) {

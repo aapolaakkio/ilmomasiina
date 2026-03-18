@@ -5,23 +5,15 @@ import { useTranslations } from "next-intl";
 
 import { deleteEventAction } from "@/actions/deleteEvent";
 import { Link, useRouter } from "@/i18n/navigation";
-import type { AdminEventListResponse, EventID } from "@/models";
+import type { EventID, UserID } from "@/db/schema";
+import type { AdminEventListResponse } from "@/db/zod";
+import { getEffectiveEndDate } from "@/db/computed";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 
 function isEventInPast(event: AdminEventListResponse[number]): boolean {
-  if (!event.date && !event.registrationEndDate) return false;
-  const now = new Date();
-  let endDate: Date | null = null;
-  if (event.endDate) {
-    endDate = new Date(event.endDate);
-  } else if (event.date) {
-    endDate = new Date(event.date);
-  }
-  const regEnd = event.registrationEndDate ? new Date(event.registrationEndDate) : null;
-  const dates = [endDate, regEnd].filter((d): d is Date => d !== null);
-  const latest = dates.sort((a, b) => b.getTime() - a.getTime())[0] as Date | undefined;
-  return latest ? latest < now : false;
+  const endDate = getEffectiveEndDate(event);
+  return endDate != null && endDate < Date.now();
 }
 
 function formatDate(date: string | null, locale: string): string {
@@ -49,14 +41,14 @@ function getEventStatus(event: AdminEventListResponse[number], t: (key: string) 
 type Props = {
   events: AdminEventListResponse;
   role: "admin" | "user";
-  editableEventIds: string[] | null;
+  userId: UserID;
 };
 
-export default function AdminEventsClient({ events, role, editableEventIds }: Props) {
+export default function AdminEventsClient({ events, role, userId }: Props) {
   const router = useRouter();
   const t = useTranslations("adminEvents");
   const [showPast, setShowPast] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<EventID | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const filteredEvents = useMemo(() => {
@@ -64,19 +56,17 @@ export default function AdminEventsClient({ events, role, editableEventIds }: Pr
     return showPast ? filtered.reverse() : filtered;
   }, [events, showPast]);
 
-  const totalSignups = useCallback(
-    (event: AdminEventListResponse[number]) => event.quotas.reduce((sum, q) => sum + q.signupCount, 0),
-    [],
-  );
+  const totalSignups = (event: AdminEventListResponse[number]) =>
+    event.quotas.reduce((sum, q) => sum + q.signupCount, 0);
 
   const handleDelete = useCallback(
-    async (eventId: string) => {
+    async (eventId: EventID) => {
       // eslint-disable-next-line no-alert
       if (!window.confirm(t("deleteConfirm"))) return;
       setDeleting(eventId);
       setError(null);
       try {
-        await deleteEventAction({ eventId: eventId as EventID });
+        await deleteEventAction({ eventId });
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : t("deleteFailed"));
@@ -135,57 +125,55 @@ export default function AdminEventsClient({ events, role, editableEventIds }: Pr
               </tr>
             </thead>
             <tbody>
-              {filteredEvents.map((event) => (
-                <tr key={event.id} className="border-b border-gray-100">
-                  <td className="py-3 pr-4">
-                    <Link href={`/admin/edit/${event.id}`} className="text-brand-600 hover:underline">
-                      {event.title}
-                    </Link>
-                  </td>
-                  <td className="py-3 pr-4 text-gray-600">{formatDate(event.date, "fi-FI")}</td>
-                  <td className="py-3 pr-4 text-gray-600">
-                    {!event.draft && event.slug ? (
-                      <Link href={`/events/${event.slug}`} className="text-brand-600 hover:underline" target="_blank">
-                        {getEventStatus(event, t)}
+              {filteredEvents.map((event) => {
+                const canEdit = role === "admin" || (event.editors?.some((e) => e.userId === userId) ?? false);
+                return (
+                  <tr key={event.id} className="border-b border-gray-100">
+                    <td className="py-3 pr-4">
+                      <Link href={`/admin/edit/${event.id}`} className="text-brand-600 hover:underline">
+                        {event.title}
                       </Link>
-                    ) : (
-                      getEventStatus(event, t)
-                    )}
-                  </td>
-                  <td className="py-3 pr-4 text-gray-600">{totalSignups(event)}</td>
-                  <td className="py-3">
-                    {(() => {
-                      const canEdit = editableEventIds === null || editableEventIds.includes(event.id);
-                      return (
-                        <div className="flex gap-1">
-                          <Link href={`/admin/edit/${event.id}`}>
-                            <Button variant="outline" size="small">
-                              {canEdit ? t("edit") : t("view")}
-                            </Button>
-                          </Link>
-                          {canEdit && (
-                            <>
-                              <Link href={`/admin/copy/${event.id}`}>
-                                <Button variant="outline" size="small">
-                                  {t("copy")}
-                                </Button>
-                              </Link>
-                              <Button
-                                variant="danger"
-                                size="small"
-                                disabled={deleting === event.id}
-                                onClick={() => handleDelete(event.id)}
-                              >
-                                {t("delete")}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-3 pr-4 text-gray-600">
+                      {formatDate(event.date?.toISOString() ?? null, "fi-FI")}
+                    </td>
+                    <td className="py-3 pr-4 text-gray-600">
+                      {!event.draft && event.slug ? (
+                        <Link href={`/events/${event.slug}`} className="text-brand-600 hover:underline" target="_blank">
+                          {getEventStatus(event, t)}
+                        </Link>
+                      ) : (
+                        getEventStatus(event, t)
+                      )}
+                    </td>
+                    <td className="py-3 pr-4 text-gray-600">{totalSignups(event)}</td>
+                    <td className="py-3">
+                      <div className="flex gap-1">
+                        <Link href={`/admin/edit/${event.id}`}>
+                          <Button variant="outline" size="small">
+                            {canEdit ? t("edit") : t("view")}
+                          </Button>
+                        </Link>
+                        <Link href={`/admin/copy/${event.id}`}>
+                          <Button variant="outline" size="small">
+                            {t("copy")}
+                          </Button>
+                        </Link>
+                        {canEdit && (
+                          <Button
+                            variant="danger"
+                            size="small"
+                            disabled={deleting === event.id}
+                            onClick={() => handleDelete(event.id)}
+                          >
+                            {t("delete")}
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

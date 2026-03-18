@@ -1,6 +1,6 @@
-import type { AdminEventLanguage } from "@/models";
+import type { AdminEventLanguage } from "@/db/zod";
 
-import type { eventLanguages, questionLanguages, quotaLanguages } from "./schema";
+import type { EventID, QuestionID, QuotaID, eventLanguages, questionLanguages, quotaLanguages } from "./schema";
 
 // --- Language reconstruction helpers ---
 
@@ -94,4 +94,71 @@ export function getQuestionForLanguage(
 ): { question: string; options: string[] | null } {
   const row = languages.find((r) => r.language === language);
   return { question: row?.question ?? defaultQuestion, options: row?.options ?? defaultOptions };
+}
+
+// --- Language row builders for insert operations ---
+
+type BodyLanguages = Record<string, AdminEventLanguage> | undefined;
+
+/** Builds event language insert rows from body languages. */
+export function buildEventLanguageRows(
+  eventId: EventID,
+  bodyLanguages: BodyLanguages,
+): (typeof eventLanguages.$inferInsert)[] {
+  if (!bodyLanguages) return [];
+  return Object.entries(bodyLanguages).map(([lang, langData]) => ({
+    eventId,
+    language: lang,
+    title: langData.title,
+    description: langData.description ?? null,
+    price: langData.price ?? null,
+    location: langData.location ?? null,
+    webpageUrl: langData.webpageUrl ?? null,
+    verificationEmail: langData.verificationEmail ?? null,
+  }));
+}
+
+/** Builds question language insert rows from body languages, matching by index. */
+export function buildQuestionLanguageRows(
+  questionIds: QuestionID[],
+  bodyLanguages: BodyLanguages,
+): (typeof questionLanguages.$inferInsert)[] {
+  if (!bodyLanguages) return [];
+  const rows: (typeof questionLanguages.$inferInsert)[] = [];
+  for (let i = 0; i < questionIds.length; i++) {
+    for (const [lang, langData] of Object.entries(bodyLanguages)) {
+      const langQuestion = langData.questions?.[i];
+      if (langQuestion) {
+        rows.push({
+          questionId: questionIds[i],
+          language: lang,
+          question: langQuestion.question,
+          options: langQuestion.options ?? null,
+        });
+      }
+    }
+  }
+  return rows;
+}
+
+/** Builds quota language insert rows from body languages, matching by index. */
+export function buildQuotaLanguageRows(
+  quotaIds: QuotaID[],
+  bodyLanguages: BodyLanguages,
+): (typeof quotaLanguages.$inferInsert)[] {
+  if (!bodyLanguages) return [];
+  const rows: (typeof quotaLanguages.$inferInsert)[] = [];
+  for (let i = 0; i < quotaIds.length; i++) {
+    for (const [lang, langData] of Object.entries(bodyLanguages)) {
+      const langQuota = langData.quotas?.[i];
+      if (langQuota) {
+        rows.push({
+          quotaId: quotaIds[i],
+          language: lang,
+          title: langQuota.title,
+        });
+      }
+    }
+  }
+  return rows;
 }

@@ -1,4 +1,13 @@
-import { type SignupID, SignupStatus } from "@/models";
+import {
+  ManualPaymentStatus,
+  PaymentID,
+  PaymentStatus,
+  type ProductSchema,
+  QuestionID,
+  QuotaID,
+  type SignupID,
+  SignupStatus,
+} from "@/db/schema";
 
 import { env } from "@/env";
 import { db } from "../db";
@@ -19,17 +28,38 @@ function sendSynchronouslyInTest<A extends any[]>(func: (...args: A) => Promise<
   };
 }
 
+/** Resolves localized event fields for a given language, falling back to the main table defaults. */
+function localizedEventFields(
+  event: { title: string; description: string | null; location: string | null; verificationEmail?: string | null },
+  langRow:
+    | { title: string; description: string | null; location: string | null; verificationEmail?: string | null }
+    | undefined,
+) {
+  return {
+    title: langRow?.title ?? event.title,
+    description: langRow?.description ?? event.description ?? null,
+    location: langRow?.location ?? event.location ?? null,
+    verificationEmail: langRow?.verificationEmail ?? event.verificationEmail ?? null,
+  };
+}
+
+/** Generates an edit/cancel link for a signup. */
+function signupEditLink(signupId: SignupID): string {
+  const editToken = generateToken(signupId);
+  return `${env.BASE_URL}/signup/${signupId}/${editToken}`;
+}
+
 interface MailSignup {
-  id: string;
+  id: SignupID;
   email: string | null;
   firstName?: string | null;
   lastName?: string | null;
   language: string | null;
-  status: string | null;
+  status: SignupStatus | null;
   position: number | null;
-  quotaId: string;
+  quotaId: QuotaID;
   price?: number | null;
-  manualPaymentStatus?: string | null;
+  manualPaymentStatus?: ManualPaymentStatus | null;
 }
 
 /** Fetches information for a "promoted from queue" email and sends it. */
@@ -38,12 +68,12 @@ export const sendPromotedFromQueueMail = sendSynchronouslyInTest(async (signup: 
   const lang = signup.language ?? env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
 
   const signupPayments = await db.query.payments.findMany({
-    where: { signupId: signup.id },
+    where: { signupId: { eq: signup.id } },
     columns: { status: true },
   });
 
   const quotaData = await db.query.quotas.findFirst({
-    where: { id: signup.quotaId },
+    where: { id: { eq: signup.quotaId } },
     with: {
       event: {
         with: { languages: true },
@@ -54,32 +84,28 @@ export const sendPromotedFromQueueMail = sendSynchronouslyInTest(async (signup: 
   const event = quotaData.event;
   if (event.deletedAt) return;
 
-  // Language fallback: requested → default (from main table)
-  const eventLang = event.languages.find((r) => r.language === lang);
-
   const date =
     event.date && formatDateInTimezone(event.date, env.APP_TIMEZONE, t("currencyFormat.locale", { lng: lang }));
-  const editToken = generateToken(signup.id as SignupID);
-  const cancelLink = `${env.BASE_URL}/signup/${signup.id}/${editToken}`;
 
   const params: PromotedFromQueueMailParams = {
     event: {
       ...event,
-      title: eventLang?.title ?? event.title,
-      description: eventLang?.description ?? event.description ?? null,
-      location: eventLang?.location ?? event.location ?? null,
+      ...localizedEventFields(
+        event,
+        event.languages.find((r) => r.language === lang),
+      ),
     },
     date,
     paymentStatus: getEffectivePaymentStatus(signup, signupPayments),
-    cancelLink,
+    cancelLink: signupEditLink(signup.id),
   };
 
   await EmailService.sendPromotedFromQueueMail(signup.email, signup.language, params);
 });
 
 interface ConfirmationSignup extends MailSignup {
-  answers?: unknown[];
-  payments?: { status: string }[];
+  answers?: { questionId: QuestionID; answer: string | string[] }[];
+  payments?: { status: PaymentStatus }[];
 }
 
 /** Fetches information for a signup confirmation email and sends it. */
@@ -91,16 +117,16 @@ export const sendSignupConfirmationMail = sendSynchronouslyInTest(
     const signupPayments =
       signup.payments ??
       (await db.query.payments.findMany({
-        where: { signupId: signup.id },
+        where: { signupId: { eq: signup.id } },
         columns: { status: true },
       }));
 
     const signupAnswers = await db.query.answers.findMany({
-      where: { signupId: signup.id },
+      where: { signupId: { eq: signup.id } },
     });
 
     const quotaData = await db.query.quotas.findFirst({
-      where: { id: signup.quotaId },
+      where: { id: { eq: signup.quotaId } },
       with: {
         languages: true,
         event: {
@@ -119,9 +145,6 @@ export const sendSignupConfirmationMail = sendSynchronouslyInTest(
     const event = quotaData.event;
     if (event.deletedAt) return;
 
-    // Language fallback: requested → default (from main table)
-    const eventLang = event.languages.find((r) => r.language === lang);
-
     const fullName = `${signup.firstName ?? ""} ${signup.lastName ?? ""}`.trim();
 
     const questionFields = event.questions
@@ -136,17 +159,13 @@ export const sendSignupConfirmationMail = sendSynchronouslyInTest(
       })
       .filter((x): x is { label: string; answer: string } => x !== null);
 
-    const quotaTitle = getTitleForLanguage(quotaData.title, quotaData.languages, lang);
-
     const date =
       event.date && formatDateInTimezone(event.date, env.APP_TIMEZONE, t("currencyFormat.locale", { lng: lang }));
-    const editToken = generateToken(signup.id as SignupID);
-    const cancelLink = `${env.BASE_URL}/signup/${signup.id}/${editToken}`;
 
     const params: ConfirmationMailParams = {
       name: fullName,
       email: signup.email,
-      quota: quotaTitle,
+      quota: getTitleForLanguage(quotaData.title, quotaData.languages, lang),
       answers: questionFields,
       queuePosition: signup.status === SignupStatus.IN_QUEUE ? signup.position : null,
       paymentStatus: getEffectivePaymentStatus(signup, signupPayments),
@@ -155,12 +174,12 @@ export const sendSignupConfirmationMail = sendSynchronouslyInTest(
       date,
       event: {
         ...event,
-        title: eventLang?.title ?? event.title,
-        description: eventLang?.description ?? event.description ?? null,
-        location: eventLang?.location ?? event.location ?? null,
-        verificationEmail: eventLang?.verificationEmail ?? event.verificationEmail ?? null,
+        ...localizedEventFields(
+          event,
+          event.languages.find((r) => r.language === lang),
+        ),
       },
-      cancelLink,
+      cancelLink: signupEditLink(signup.id),
     };
 
     await EmailService.sendConfirmationMail(signup.email, signup.language, params);
@@ -169,16 +188,22 @@ export const sendSignupConfirmationMail = sendSynchronouslyInTest(
 
 /** Fetches information for a payment confirmation email and sends it. */
 export const sendPaymentConfirmationMail = sendSynchronouslyInTest(
-  async (payment: { id: number; signupId: string; amount: number; currency: string; products: unknown[] }) => {
+  async (payment: {
+    id: PaymentID;
+    signupId: SignupID;
+    amount: number;
+    currency: string;
+    products: ProductSchema[];
+  }) => {
     const signupRow = await db.query.signups.findFirst({
-      where: { id: payment.signupId },
+      where: { id: { eq: payment.signupId } },
     });
     if (!signupRow?.email) return;
 
     const lang = signupRow.language ?? env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
 
     const quotaData = await db.query.quotas.findFirst({
-      where: { id: signupRow.quotaId },
+      where: { id: { eq: signupRow.quotaId } },
       with: {
         event: {
           with: { languages: true },
@@ -189,12 +214,6 @@ export const sendPaymentConfirmationMail = sendSynchronouslyInTest(
     const event = quotaData.event;
     if (event.deletedAt) return;
 
-    // Language fallback: requested → default (from main table)
-    const eventLang = event.languages.find((r) => r.language === lang);
-
-    const editToken = generateToken(signupRow.id as SignupID);
-    const cancelLink = `${env.BASE_URL}/signup/${signupRow.id}/${editToken}`;
-
     const priceFormatter = new Intl.NumberFormat(t("currencyFormat.locale", { lng: lang }), {
       style: "currency",
       currency: payment.currency,
@@ -202,22 +221,22 @@ export const sendPaymentConfirmationMail = sendSynchronouslyInTest(
       maximumFractionDigits: 2,
     });
 
-    const typedProducts = payment.products as Array<{ name: string; unitPrice: number; amount: number }>;
     const params: PaymentMailParams = {
       event: {
         ...event,
-        title: eventLang?.title ?? event.title,
-        description: eventLang?.description ?? event.description ?? null,
-        location: eventLang?.location ?? event.location ?? null,
+        ...localizedEventFields(
+          event,
+          event.languages.find((r) => r.language === lang),
+        ),
       },
       totalFormatted: priceFormatter.format(payment.amount / 100),
       currency: payment.currency,
-      products: typedProducts.map((product) => ({
+      products: payment.products.map((product) => ({
         name: product.name,
         amount: product.amount,
         unitPriceFormatted: priceFormatter.format(product.unitPrice / 100),
       })),
-      cancelLink,
+      cancelLink: signupEditLink(signupRow.id),
     };
 
     await EmailService.sendPaymentConfirmationMail(signupRow.email, signupRow.language, params);

@@ -3,7 +3,7 @@
 import { z } from "zod/v4";
 
 import { ActionError, actionClient } from "@/auth/safe-action";
-import { signupID, editToken } from "@/models/schema/signup";
+import { signupID, editToken } from "@/db/schema";
 import { startPayment } from "@/services/payment/startPayment";
 
 const schema = z.object({

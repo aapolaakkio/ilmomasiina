@@ -2,8 +2,15 @@ import { and, eq, inArray } from "drizzle-orm";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 
-import type { AdminSignupUpdateBody, ProductSchema, SignupUpdateBody, SignupValidationErrors } from "@/models";
-import { QuestionType, SignupFieldError } from "@/models";
+import {
+  type ProductSchema,
+  type QuestionID,
+  type QuotaID,
+  QuestionType,
+  SignupFieldError,
+  type SignupID,
+} from "@/db/schema";
+import type { AdminSignupUpdateBody, SignupUpdateBody, SignupValidationErrors } from "@/db/zod";
 
 import { env } from "@/env";
 import type { DrizzleDb } from "../../db";
@@ -24,12 +31,12 @@ function isEmail(value: string): boolean {
 }
 
 interface SignupData {
-  id: string;
+  id: SignupID;
   confirmedAt: Date | null;
   price: number | null;
   currency: string | null;
   products: unknown[] | null;
-  quotaId: string;
+  quotaId: QuotaID;
 }
 
 interface EventData {
@@ -37,7 +44,7 @@ interface EventData {
   emailQuestion: boolean;
   payments: string;
   questions: Array<{
-    id: string;
+    id: QuestionID;
     type: string;
     options: string[] | null;
     prices: number[] | null;
@@ -51,7 +58,7 @@ interface QuotaData {
 }
 
 /** Question language row with question text and options for option validation. */
-export interface QuestionLangRow {
+interface QuestionLangRow {
   questionId: string;
   language: string;
   question: string;
@@ -107,7 +114,7 @@ function validateBasicFields(signup: SignupData, event: EventData, body: SignupU
 }
 
 /** Computes product lines for a given quota. */
-export function getQuotaProducts(quota: QuotaData, event: { payments: string }): ProductSchema[] {
+function getQuotaProducts(quota: QuotaData, event: { payments: string }): ProductSchema[] {
   if (paymentsEnabled(event) && quota.price) {
     return [{ name: quota.title, amount: 1, unitPrice: quota.price }];
   }
@@ -115,7 +122,7 @@ export function getQuotaProducts(quota: QuotaData, event: { payments: string }):
 }
 
 /** Validates answers and computes product lines. */
-export function validateAnswersAndGetProducts(
+function validateAnswersAndGetProducts(
   event: Pick<EventData, "payments" | "questions">,
   questionLangRows: QuestionLangRow[],
   rawAnswers: SignupUpdateBody["answers"] | undefined,
@@ -228,14 +235,14 @@ export function validateAnswersAndGetProducts(
       answerErrors[question.id] = error;
     }
 
-    return { questionId: question.id, answer: answer as string | string[] };
+    return { questionId: question.id, answer };
   });
 
   return { newAnswers, answerProducts, answerErrors };
 }
 
 /** Computes the final price. */
-export function computePrice(products: ProductSchema[]) {
+function computePrice(products: ProductSchema[]) {
   return {
     products,
     price: sumBy(products, (prod) => prod.unitPrice * prod.amount),

@@ -6,7 +6,8 @@ import { useAction } from "next-safe-action/hooks";
 
 import { createSignupAction } from "@/actions/createSignup";
 import { useRouter } from "@/i18n/navigation";
-import type { QuotaID, UserEventResponse } from "@/models";
+import type { QuotaID } from "@/db/schema";
+import type { UserEventResponse } from "@/db/zod";
 import { Button } from "@/components/ui/Button";
 
 type Props = {

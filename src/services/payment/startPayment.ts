@@ -1,13 +1,13 @@
 import { and, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
 
-import type { SignupID, StartPaymentResponse } from "@/models";
-import { PaymentMode, PaymentStatus, SignupStatus } from "@/models";
+import { PaymentMode, PaymentStatus, type SignupID, SignupStatus } from "@/db/schema";
+import type { StartPaymentResponse } from "@/db/zod";
 
 import { env } from "@/env";
 import { db } from "../../db";
 import { activeSignupCutoff } from "../../db/filters";
 import { payments, signups } from "../../db/schema";
-import { assignSignupPositions } from "../signups/assignSignupPositions";
+import { computePositionsFromEvent } from "../signups/assignSignupPositions";
 import { NoSuchSignup } from "../signups/errors";
 import {
   OnlinePaymentsDisabled,
@@ -55,7 +55,7 @@ async function createPayment(signupId: SignupID): Promise<string> {
 
     // Compute status under lock
     const signupWithEvent = await tx.query.signups.findFirst({
-      where: { id: signupId },
+      where: { id: { eq: signupId } },
       columns: {},
       with: {
         quota: {
@@ -85,16 +85,7 @@ async function createPayment(signupId: SignupID): Promise<string> {
       },
     });
     if (!signupWithEvent?.quota?.event) throw new NoSuchSignup("Signup not found");
-    const paymentEvent = signupWithEvent.quota.event;
-    const allActiveSignups = paymentEvent.quotas
-      .flatMap((q) => q.signups)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
-    const positionMap = assignSignupPositions(
-      allActiveSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
-      paymentEvent.quotas.map((q) => ({ id: q.id, size: q.size })),
-      paymentEvent.openQuotaSize,
-    );
-    const computedStatus = positionMap.get(signupId)?.status ?? null;
+    const computedStatus = computePositionsFromEvent(signupWithEvent.quota.event).get(signupId)?.status ?? null;
     validateSignupForPayment(freshSignup, computedStatus);
 
     const [newPayment] = await tx
@@ -125,7 +116,11 @@ async function createPayment(signupId: SignupID): Promise<string> {
   try {
     await db
       .update(payments)
-      .set({ status: PaymentStatus.PENDING, stripeCheckoutSessionId: session.id, updatedAt: new Date() })
+      .set({
+        status: PaymentStatus.PENDING,
+        stripeCheckoutSessionId: session.id,
+        updatedAt: new Date(),
+      })
       .where(eq(payments.id, payment.id));
   } catch (error: unknown) {
     if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P0001") {
@@ -157,14 +152,13 @@ async function handlePendingPayment(
 }
 
 /** Start a payment for a signup. */
-// eslint-disable-next-line import/prefer-default-export
 export async function startPayment(signupId: SignupID): Promise<StartPaymentResponse> {
   getStripe();
 
   // Use relational query to get signup with event info + all signups for position computation
   const signupRow = await db.query.signups.findFirst({
     where: {
-      id: signupId,
+      id: { eq: signupId },
       deletedAt: { isNull: true },
       OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: activeSignupCutoff() } }],
     },
@@ -202,23 +196,16 @@ export async function startPayment(signupId: SignupID): Promise<StartPaymentResp
     throw new OnlinePaymentsDisabled("Online payments are not enabled for this event");
 
   // Compute position on-the-fly
-  const outerEvent = signupRow.quota.event;
-  const allSignups = outerEvent.quotas
-    .flatMap((q) => q.signups)
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
-  const outerPositionMap = assignSignupPositions(
-    allSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
-    outerEvent.quotas.map((q) => ({ id: q.id, size: q.size })),
-    outerEvent.openQuotaSize,
-  );
-  const computedStatus = outerPositionMap.get(signupId)?.status ?? null;
+  const computedStatus = computePositionsFromEvent(signupRow.quota.event).get(signupId)?.status ?? null;
   validateSignupForPayment(signupRow, computedStatus);
 
   // Check for existing active payment
   const activePayment = await db.query.payments.findFirst({
     where: {
-      signupId,
-      status: { in: [PaymentStatus.CREATING, PaymentStatus.PENDING, PaymentStatus.PAID] },
+      signupId: { eq: signupId },
+      status: {
+        in: [PaymentStatus.CREATING, PaymentStatus.PENDING, PaymentStatus.PAID],
+      },
     },
     columns: { id: true, status: true, stripeCheckoutSessionId: true },
   });

@@ -1,7 +1,7 @@
 "use server";
 
 import { actionClient, isAdminMiddleware, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { userInviteSchema } from "@/models/schema/user";
+import { userInviteSchema } from "@/db/zod";
 import { inviteUser } from "@/services/admin/users/inviteUser";
 
 export const inviteUserAction = actionClient

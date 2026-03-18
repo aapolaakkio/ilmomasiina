@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 
 import { createSignupAsAdminAction } from "@/actions/createSignupAsAdmin";
 import { updateSignupAsAdminAction } from "@/actions/updateSignupAsAdmin";
-import type { AdminEventResponse, AdminSignupSchema, QuotaID } from "@/models";
-import { ManualPaymentStatus, QuestionType } from "@/models";
+import { type QuestionID, ManualPaymentStatus, QuestionType } from "@/db/schema";
+import type { AdminEventResponse, AdminSignupSchema } from "@/db/zod";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
@@ -25,27 +25,25 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
 
   const isCreate = !signup;
 
+  function buildEmptyAnswers(existingSignup?: AdminSignupSchema): Record<string, string | string[]> {
+    const map: Record<string, string | string[]> = {};
+    for (const q of event.questions) {
+      const existing = existingSignup?.answers?.find((a) => a.questionId === q.id);
+      map[q.id] = existing ? existing.answer : q.type === QuestionType.CHECKBOX ? [] : "";
+    }
+    return map;
+  }
+
   const [quotaId, setQuotaId] = useState<string>(event.quotas[0]?.id ?? "");
   const [firstName, setFirstName] = useState(signup?.firstName ?? "");
   const [lastName, setLastName] = useState(signup?.lastName ?? "");
   const [email, setEmail] = useState(signup?.email ?? "");
   const [language, setLanguage] = useState(event.defaultLanguage);
   const [namePublic, setNamePublic] = useState(signup?.namePublic ?? false);
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>(() => {
-    const map: Record<string, string | string[]> = {};
-    for (const q of event.questions) {
-      const existing = signup?.answers?.find((a) => a.questionId === q.id);
-      if (existing) {
-        map[q.id] = existing.answer;
-      } else if (q.type === QuestionType.CHECKBOX) {
-        map[q.id] = [];
-      } else {
-        map[q.id] = "";
-      }
-    }
-    return map;
-  });
-  const [manualPaymentStatus, setManualPaymentStatus] = useState<string>(signup?.manualPaymentStatus ?? "none");
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>(() => buildEmptyAnswers(signup));
+  const [manualPaymentStatus, setManualPaymentStatus] = useState<ManualPaymentStatus | null>(
+    signup?.manualPaymentStatus ?? null,
+  );
   const [sendEmail, setSendEmail] = useState(true);
   const [keepEditing, setKeepEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,13 +59,16 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
     }
   }
 
-  function setAnswer(questionId: string, value: string | string[]) {
+  function setAnswer(questionId: QuestionID, value: string | string[]) {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   }
 
-  function toggleCheckbox(questionId: string, option: string, checked: boolean) {
+  function toggleCheckbox(questionId: QuestionID, option: string, checked: boolean) {
     setAnswers((prev) => {
-      const current = (prev[questionId] as string[] | undefined) ?? [];
+      const current = prev[questionId] ?? [];
+      if (!Array.isArray(current)) {
+        return { ...prev, [questionId]: [] };
+      }
       return {
         ...prev,
         [questionId]: checked ? [...current, option] : current.filter((o) => o !== option),
@@ -90,48 +91,28 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
         questionId: q.id,
         answer: answers[q.id] ?? "",
       })),
-      manualPaymentStatus:
-        event.payments !== "disabled" && manualPaymentStatus !== "none"
-          ? (manualPaymentStatus as ManualPaymentStatus)
-          : null,
+      manualPaymentStatus: event.payments !== "disabled" && manualPaymentStatus !== null ? manualPaymentStatus : null,
       sendEmail,
     };
 
     try {
-      if (isCreate) {
-        const result = await createSignupAsAdminAction({
-          quotaId: quotaId as QuotaID,
-          ...body,
-        });
-        if (result?.serverError) {
-          setError(t("saveFailed"));
-          setSaving(false);
-          return;
-        }
-      } else {
-        const result = await updateSignupAsAdminAction({
-          signupId: signup.id,
-          body,
-        });
-        if (result?.serverError) {
-          setError(t("saveFailed"));
-          setSaving(false);
-          return;
-        }
+      const result = isCreate
+        ? await createSignupAsAdminAction({ quotaId, ...body })
+        : await updateSignupAsAdminAction({ signupId: signup.id, body });
+
+      if (result?.serverError) {
+        setError(t("saveFailed"));
+        setSaving(false);
+        return;
       }
+
       await onSave();
       if (isCreate && keepEditing) {
         // Reset form for next signup
         setFirstName("");
         setLastName("");
         setEmail("");
-        setAnswers(() => {
-          const map: Record<string, string | string[]> = {};
-          for (const q of event.questions) {
-            map[q.id] = q.type === QuestionType.CHECKBOX ? [] : "";
-          }
-          return map;
-        });
+        setAnswers(buildEmptyAnswers());
         setSaving(false);
         return;
       }
@@ -238,7 +219,7 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
               <input
                 type="text"
                 className={inputClassName}
-                value={(answers[question.id] as string) ?? ""}
+                value={answers[question.id] ?? ""}
                 onChange={(e) => setAnswer(question.id, e.target.value)}
               />
             )}
@@ -246,7 +227,7 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
               <input
                 type="number"
                 className={inputClassName}
-                value={(answers[question.id] as string) ?? ""}
+                value={answers[question.id] ?? ""}
                 onChange={(e) => setAnswer(question.id, e.target.value)}
               />
             )}
@@ -254,7 +235,7 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
               <textarea
                 className={inputClassName}
                 rows={3}
-                value={(answers[question.id] as string) ?? ""}
+                value={answers[question.id] ?? ""}
                 onChange={(e) => setAnswer(question.id, e.target.value)}
               />
             )}
@@ -268,7 +249,7 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
                         type="radio"
                         name={`q-${question.id}`}
                         className="h-4 w-4 border-gray-300 text-brand-600"
-                        checked={(answers[question.id] as string) === opt}
+                        checked={answers[question.id] === opt}
                         onChange={() => setAnswer(question.id, opt)}
                       />
                       {opt}
@@ -278,7 +259,7 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
               ) : (
                 <select
                   className={selectClassName}
-                  value={(answers[question.id] as string) ?? ""}
+                  value={answers[question.id] ?? ""}
                   onChange={(e) => setAnswer(question.id, e.target.value)}
                 >
                   <option value="">{tFields("selectPlaceholder")}</option>
@@ -295,7 +276,7 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
                   <input
                     type="checkbox"
                     className="h-4 w-4 rounded border-gray-300 text-brand-600"
-                    checked={((answers[question.id] as string[] | undefined) ?? []).includes(opt)}
+                    checked={Array.isArray(answers[question.id]) && answers[question.id].includes(opt)}
                     onChange={(e) => toggleCheckbox(question.id, opt, e.target.checked)}
                   />
                   <span className="text-sm text-gray-700">{opt}</span>
@@ -309,8 +290,8 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
             <Field.Label>{t("manualPaymentStatus")}</Field.Label>
             <select
               className={selectClassName}
-              value={manualPaymentStatus}
-              onChange={(e) => setManualPaymentStatus(e.target.value)}
+              value={manualPaymentStatus ?? ""}
+              onChange={(e) => setManualPaymentStatus(e.target.value as ManualPaymentStatus)}
             >
               <option value="none">{t("manualPaymentNone")}</option>
               <option value="paid">{t("manualPaymentPaid")}</option>

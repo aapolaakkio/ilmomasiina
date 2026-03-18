@@ -2,7 +2,7 @@
 
 import { requireEventAccessByQuota } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { adminSignupCreateBody } from "@/models/schema/signup";
+import { adminSignupCreateBody } from "@/db/zod";
 import { createSignupAsAdmin } from "@/services/signups/updateSignup";
 
 export const createSignupAsAdminAction = actionClient

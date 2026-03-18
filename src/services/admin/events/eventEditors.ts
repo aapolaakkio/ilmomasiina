@@ -1,20 +1,32 @@
 import { and, eq } from "drizzle-orm";
 
-import type { EventID, UserID } from "@/models";
+import type { EventID, UserID } from "@/db/schema";
 
 import type { AuditLogger } from "../../../auditlog";
 import { db } from "../../../db";
-import { eventEditors, users } from "../../../db/schema";
+import { eventEditors, UserRole } from "../../../db/schema";
 
 /** List editors of an event (excluding admins, who always have access). */
 export async function getEventEditors(eventId: EventID): Promise<{ userId: UserID; email: string }[]> {
-  const rows = await db
-    .select({ userId: eventEditors.userId, email: users.email })
-    .from(eventEditors)
-    .innerJoin(users, eq(eventEditors.userId, users.id))
-    .where(and(eq(eventEditors.eventId, eventId), eq(users.role, "user")));
+  const rows = await db.query.eventEditors.findMany({
+    where: {
+      eventId: { eq: eventId },
+      user: {
+        role: { eq: UserRole.USER },
+      },
+    },
+    columns: { userId: true },
+    with: {
+      user: {
+        columns: { email: true },
+      },
+    },
+  });
 
-  return rows.map((r) => ({ userId: r.userId as UserID, email: r.email }));
+  return rows.map((row) => ({
+    userId: row.userId,
+    email: row.user?.email ?? "",
+  }));
 }
 
 /** Add a user as an editor of an event by email. Skips if user is an admin or already an editor. */
@@ -33,7 +45,7 @@ export async function addEventEditor(
   // Upsert: ignore if already exists
   await db.insert(eventEditors).values({ eventId, userId: user.id }).onConflictDoNothing();
 
-  return { userId: user.id as UserID, email: user.email };
+  return { userId: user.id, email: user.email };
 }
 
 /** Remove a user from the editors of an event. */

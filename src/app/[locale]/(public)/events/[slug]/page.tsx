@@ -10,33 +10,25 @@ import { getAdminSession } from "@/auth";
 import { getLocalizedEvent } from "@/lib/localizedEvent";
 import { getSignupsByQuota, stringifyAnswer } from "@/lib/signupUtils";
 import { Button } from "@/components/ui/Button";
-import { SignupStatus } from "@/models";
+import { SignupStatus } from "@/db/schema";
 import { getEventBySlug } from "@/services/events/getEventDetails";
 
-function formatDateTime(date: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    weekday: "short",
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
-    timeZone: process.env.APP_TIMEZONE ?? "Europe/Helsinki",
-  }).format(new Date(date));
+const dateFormatBase: Intl.DateTimeFormatOptions = {
+  day: "numeric",
+  month: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  hour12: false,
+  timeZone: env.APP_TIMEZONE,
+};
+
+function formatDateTime(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { ...dateFormatBase, weekday: "short" }).format(date);
 }
 
-function formatSignupTime(date: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    hour12: false,
-    timeZone: process.env.APP_TIMEZONE ?? "Europe/Helsinki",
-  }).format(new Date(date));
+function formatSignupTime(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { ...dateFormatBase, second: "numeric" }).format(date);
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -173,7 +165,9 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
                       {max !== Infinity && (
                         <div
                           className="h-full rounded bg-brand-500 transition-all"
-                          style={{ width: `${Math.min(100, (quota.signupCount / max) * 100)}%` }}
+                          style={{
+                            width: `${Math.min(100, (quota.signupCount / max) * 100)}%`,
+                          }}
                         />
                       )}
                       <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-800">
@@ -227,7 +221,7 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
                     <tbody>
                       {quota.signups.map((signup, i) => (
                         <tr
-                          key={signup.createdAt}
+                          key={signup.createdAt.toISOString()}
                           className={`border-b border-gray-100 ${!signup.confirmed ? "text-gray-400" : ""}`}
                         >
                           <td className="px-3 py-2">

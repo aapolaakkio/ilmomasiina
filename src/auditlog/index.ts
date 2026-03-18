@@ -1,15 +1,15 @@
-import type { AuditEvent } from "@/models";
+import type { AuditEvent, EventID, SignupID } from "@/db/schema";
 
 import { type DrizzleDb, db as globalDb } from "../db";
 import { auditlogs } from "../db/schema";
 
 interface AuditLogEvent {
-  id: string;
+  id: EventID;
   title: string;
 }
 
 interface AuditLogSignup {
-  id: string;
+  id: SignupID;
   firstName?: string | null;
   lastName?: string | null;
   quota?: {
@@ -21,9 +21,9 @@ interface AuditLogSignup {
  * Creates an {@link AuditLogger}
  *
  * @param ipAddress related ip address
- * @param user a function returning username (email), executed when events are logged
+ * @param user user email
  */
-function eventLogger(ipAddress: string, user?: () => string | null) {
+function eventLogger(ipAddress: string, user?: string) {
   return async (
     action: AuditEvent,
     {
@@ -39,16 +39,18 @@ function eventLogger(ipAddress: string, user?: () => string | null) {
     },
   ) => {
     const db = tx ?? globalDb;
-    await db.insert(auditlogs).values({
-      user: user ? user() : null,
+    const eventId = event?.id ?? signup?.quota?.event?.id ?? null;
+    const row: typeof auditlogs.$inferInsert = {
+      user,
       action,
-      eventId: event?.id || signup?.quota?.event?.id || null,
-      eventName: event?.title || signup?.quota?.event?.title || null,
-      signupId: signup?.id || null,
+      eventId,
+      eventName: (eventId === event?.id ? event?.title : signup?.quota?.event?.title) ?? null,
+      signupId: signup?.id ?? null,
       signupName: signup?.firstName != null ? `${signup.firstName} ${signup.lastName}` : null,
       extra: extra ? JSON.stringify(extra) : null,
       ipAddress,
-    });
+    };
+    await db.insert(auditlogs).values(row);
   };
 }
 
@@ -56,7 +58,7 @@ function eventLogger(ipAddress: string, user?: () => string | null) {
 export const internalAuditLogger = eventLogger("internal");
 
 /** Creates an audit logger for a specific IP and optional user. */
-export function createAuditLogger(ipAddress: string, user?: () => string | null) {
+export function createAuditLogger(ipAddress: string, user?: string) {
   return eventLogger(ipAddress, user);
 }
 

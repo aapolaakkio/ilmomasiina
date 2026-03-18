@@ -1,4 +1,5 @@
-import type { SignupForEditResponse, SignupID } from "@/models";
+import type { SignupID } from "@/db/schema";
+import type { SignupForEditResponse } from "@/db/zod";
 
 import { db } from "../../db";
 import {
@@ -9,18 +10,17 @@ import {
 } from "../../db/computed";
 import { activeSignupCutoff } from "../../db/filters";
 import { reconstructEventLanguages } from "../../db/helpers";
-import { assignSignupPositions } from "./assignSignupPositions";
+import { computePositionsFromEvent } from "./assignSignupPositions";
 import { NoSuchSignup } from "./errors";
 
 /** Get a signup for editing by its ID. Caller must verify the edit token. */
-// eslint-disable-next-line import/prefer-default-export
 export async function getSignupForEdit(signupId: SignupID): Promise<SignupForEditResponse> {
   const cutoff = activeSignupCutoff();
 
   // Query 1: signup with answers, payments, and quota
   const signupRow = await db.query.signups.findFirst({
     where: {
-      id: signupId,
+      id: { eq: signupId },
       deletedAt: { isNull: true },
       OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: cutoff } }],
     },
@@ -35,7 +35,7 @@ export async function getSignupForEdit(signupId: SignupID): Promise<SignupForEdi
 
   // Query 2: event with languages, questions, quotas, and signups (for position computation)
   const eventRow = await db.query.events.findFirst({
-    where: { id: signupRow.quota.eventId },
+    where: { id: { eq: signupRow.quota.eventId } },
     with: {
       languages: true,
       questions: {
@@ -73,19 +73,7 @@ export async function getSignupForEdit(signupId: SignupID): Promise<SignupForEdi
   );
 
   // Compute positions on-the-fly
-  const allSignups: { id: string; quotaId: string; createdAt: Date }[] = [];
-  for (const q of eventRow.quotas) {
-    for (const s of q.signups) {
-      allSignups.push(s);
-    }
-  }
-  allSignups.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
-
-  const positionMap = assignSignupPositions(
-    allSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
-    eventRow.quotas.map((q) => ({ id: q.id, size: q.size })),
-    eventRow.openQuotaSize,
-  );
+  const positionMap = computePositionsFromEvent(eventRow);
   const signupPos = positionMap.get(signupRow.id);
 
   // The signup's own quota title (directly from main table)
@@ -122,5 +110,5 @@ export async function getSignupForEdit(signupId: SignupID): Promise<SignupForEdi
     },
   };
 
-  return response as unknown as SignupForEditResponse;
+  return response;
 }

@@ -1,12 +1,12 @@
-import { SignupStatus } from "@/models";
+import { QuotaID, SignupID, SignupStatus } from "@/db/schema";
 
 export interface SignupForPositioning {
-  id: string;
+  id: SignupID;
   quotaId: string;
 }
 
 export interface QuotaForPositioning {
-  id: string;
+  id: QuotaID;
   size: number | null;
 }
 
@@ -56,4 +56,16 @@ export function assignSignupPositions(
   }
 
   return result;
+}
+
+/** Computes positions from a nested event query result (quotas → signups). */
+export function computePositionsFromEvent(event: {
+  openQuotaSize: number;
+  quotas: { id: QuotaID; size: number | null; signups: { id: SignupID; quotaId: string; createdAt: Date }[] }[];
+}): Map<string, SignupPosition> {
+  const allSignups = event.quotas
+    .flatMap((q) => q.signups)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
+
+  return assignSignupPositions(allSignups, event.quotas, event.openQuotaSize);
 }

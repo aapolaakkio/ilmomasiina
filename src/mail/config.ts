@@ -14,7 +14,12 @@ const mailTransporter: Transporter = (() => {
         const { message } = mail;
         const envelope = message.getEnvelope();
         const messageId = message.messageId();
-        setImmediate(() => callback(null, { envelope, messageId } as unknown as SMTPTransport.SentMessageInfo));
+        setImmediate(() =>
+          callback(null, {
+            envelope,
+            messageId,
+          } as unknown as SMTPTransport.SentMessageInfo),
+        );
       },
     });
   }
@@ -31,7 +36,7 @@ const mailTransporter: Transporter = (() => {
         user: env.SMTP_USER,
         pass: env.SMTP_PASSWORD,
       },
-    } as SMTPTransport.Options);
+    });
   }
 
   console.warn("SMTP is not configured. Falling back to debug mail service.");
@@ -49,7 +54,10 @@ const mailTransporter: Transporter = (() => {
       });
       input.on("end", () => {
         console.log(data);
-        callback(null, { envelope, messageId } as unknown as SMTPTransport.SentMessageInfo);
+        callback(null, {
+          envelope,
+          messageId,
+        } as SMTPTransport.SentMessageInfo);
       });
     },
   });

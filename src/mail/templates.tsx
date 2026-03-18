@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import en from "@/i18n/en";
 import fi from "@/i18n/fi";
-import { SignupPaymentStatus } from "@/models";
+import { SignupPaymentStatus } from "@/db/schema";
 
 type DeepStringify<T> = {
   [K in keyof T]: T[K] extends object ? DeepStringify<T[K]> : string;

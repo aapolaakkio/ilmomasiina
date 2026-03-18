@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 
 import { deleteSignupAsAdminAction } from "@/actions/deleteSignupAsAdmin";
 import { getAdminEventAction } from "@/actions/getAdminEvent";
-import type { AdminEventResponse, AdminSignupSchema } from "@/models";
-import { SignupStatus } from "@/models";
+import { SignupStatus } from "@/db/schema";
+import type { AdminEventResponse, AdminSignupSchema } from "@/db/zod";
 import { stringifyAnswer } from "@/lib/signupUtils";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";

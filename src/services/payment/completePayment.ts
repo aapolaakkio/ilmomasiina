@@ -1,18 +1,19 @@
-import type { SignupForEditResponse, SignupID } from "@/models";
+import { PaymentStatus, type SignupID } from "@/db/schema";
+import type { SignupForEditResponse } from "@/db/zod";
 
 import { db } from "../../db";
 import { getSignupForEdit } from "../signups/getSignupForEdit";
 import { PaymentNotComplete, PaymentNotFound } from "./errors";
 import { refreshCheckoutSession } from "./stripe";
-import { PaymentStatus } from "@/models";
 
 /** Complete a payment and return the updated signup info. */
-// eslint-disable-next-line import/prefer-default-export
 export async function completePayment(signupId: SignupID): Promise<SignupForEditResponse> {
   const payment = await db.query.payments.findFirst({
     where: {
-      signupId,
-      status: { in: [PaymentStatus.CREATING, PaymentStatus.PENDING, PaymentStatus.PAID] },
+      signupId: { eq: signupId },
+      status: {
+        in: [PaymentStatus.CREATING, PaymentStatus.PENDING, PaymentStatus.PAID],
+      },
     },
   });
 

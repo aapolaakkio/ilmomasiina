@@ -1,5 +1,5 @@
-import type { AdminEventResponse, QuotaID, QuotaWithSignupCount, UserEventResponse } from "@/models";
-import { SignupStatus } from "@/models";
+import { type QuotaID, SignupStatus } from "@/db/schema";
+import type { AdminEventResponse, QuotaWithSignupCount, UserEventResponse } from "@/db/zod";
 
 import { SignupState, signupState } from "./signupState";
 

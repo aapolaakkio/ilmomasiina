@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslations } from "next-intl";
 import { z } from "zod/v4";
@@ -8,15 +8,15 @@ import { z } from "zod/v4";
 import { createEventAction } from "@/actions/createEvent";
 import { updateEventAction } from "@/actions/updateEvent";
 import { Link, useRouter } from "@/i18n/navigation";
-import type { AdminEventResponse } from "@/models";
-import { PaymentMode } from "@/models";
+import { type QuestionID, type QuotaID, PaymentMode } from "@/db/schema";
+import type { AdminEventResponse } from "@/db/zod";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 
-import type { UserID } from "@/models";
+import type { UserID } from "@/db/schema";
 
 import BasicDetailsTab from "./editor/BasicDetailsTab";
 import EditorsTab from "./editor/EditorsTab";
@@ -148,10 +148,10 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
       draft: src.draft ?? true,
       listed: src.listed ?? true,
       category: src.category ?? "",
-      date: src.date ?? "",
-      endDate: src.endDate ?? "",
-      registrationStartDate: src.registrationStartDate ?? "",
-      registrationEndDate: src.registrationEndDate ?? "",
+      date: src.date?.toISOString() ?? "",
+      endDate: src.endDate?.toISOString() ?? "",
+      registrationStartDate: src.registrationStartDate?.toISOString() ?? "",
+      registrationEndDate: src.registrationEndDate?.toISOString() ?? "",
       openQuotaSize: src.openQuotaSize ?? 0,
       description: src.description ?? "",
       price: src.price ?? "",
@@ -192,12 +192,17 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
   const [success, setSuccess] = useState<string | null>(null);
   const [savedEvent, setSavedEvent] = useState(initialEvent);
   const [editConflict, setEditConflict] = useState<{
-    updatedAt: string;
-    deletedQuotas: string[];
-    deletedQuestions: string[];
+    updatedAt: Date;
+    deletedQuotas: QuotaID[];
+    deletedQuestions: QuestionID[];
   } | null>(null);
-  const [moveToQueueWarning, setMoveToQueueWarning] = useState<{ count: number; draft: boolean } | null>(null);
-  const { fieldErrors, validate, clearErrors } = useFormValidation();
+  const [moveToQueueWarning, setMoveToQueueWarning] = useState<{
+    count: number;
+    draft: boolean;
+  } | null>(null);
+  const { fieldErrors, validate } = useFormValidation();
+  // Used to defer handleSave after state updates in edit conflict overwrite
+  const pendingOverwrite = useRef<boolean | null>(null);
 
   // Determine which tabs have validation errors
   const tabErrors = useMemo(() => {
@@ -240,7 +245,10 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
               if (existing) {
                 // Resize options if they changed
                 if (q.options && existing.options && q.options.length !== existing.options.length) {
-                  return { ...existing, options: q.options.map((_, j) => existing.options?.[j] ?? "") };
+                  return {
+                    ...existing,
+                    options: q.options.map((_, j) => existing.options?.[j] ?? ""),
+                  };
                 }
                 if (q.options && !existing.options) {
                   return { ...existing, options: q.options.map(() => "") };
@@ -250,7 +258,10 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
                 }
                 return existing;
               }
-              return { question: "", options: q.options ? q.options.map(() => "") : null };
+              return {
+                question: "",
+                options: q.options ? q.options.map(() => "") : null,
+              };
             });
           }
           syncedLanguages[langKey] = synced;
@@ -277,6 +288,50 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
     [t],
   );
 
+  /** Converts the editor form state into the API request body. */
+  function buildBody(asDraft: boolean) {
+    return {
+      title: form.title,
+      slug: form.slug,
+      draft: asDraft,
+      listed: form.listed,
+      category: form.category,
+      date: form.date ? new Date(form.date) : null,
+      endDate: form.endDate ? new Date(form.endDate) : null,
+      registrationStartDate: form.registrationStartDate ? new Date(form.registrationStartDate) : null,
+      registrationEndDate: form.registrationEndDate ? new Date(form.registrationEndDate) : null,
+      openQuotaSize: form.openQuotaSize,
+      description: form.description || null,
+      price: form.price || null,
+      location: form.location || null,
+      webpageUrl: form.webpageUrl || null,
+      signupsPublic: form.signupsPublic,
+      nameQuestion: form.nameQuestion,
+      emailQuestion: form.emailQuestion,
+      payments: form.payments,
+      defaultLanguage: form.defaultLanguage,
+      languages: form.languages,
+      verificationEmail: form.verificationEmail || null,
+      quotas: form.quotas.map((q, i) => ({
+        id: q.id,
+        title: q.title,
+        size: q.size,
+        price: q.price,
+        order: i,
+      })),
+      questions: form.questions.map((q, i) => ({
+        id: q.id,
+        question: q.question,
+        type: q.type,
+        options: q.options,
+        prices: q.prices,
+        required: q.required,
+        public: q.public,
+        order: i,
+      })),
+    };
+  }
+
   const handleSave = useCallback(
     async (asDraft: boolean) => {
       setError(null);
@@ -301,46 +356,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
 
       setSubmitting(true);
       try {
-        const body = {
-          title: form.title,
-          slug: form.slug,
-          draft: asDraft,
-          listed: form.listed,
-          category: form.category,
-          date: form.date || null,
-          endDate: form.endDate || null,
-          registrationStartDate: form.registrationStartDate || null,
-          registrationEndDate: form.registrationEndDate || null,
-          openQuotaSize: form.openQuotaSize,
-          description: form.description || null,
-          price: form.price || null,
-          location: form.location || null,
-          webpageUrl: form.webpageUrl || null,
-          signupsPublic: form.signupsPublic,
-          nameQuestion: form.nameQuestion,
-          emailQuestion: form.emailQuestion,
-          payments: form.payments,
-          defaultLanguage: form.defaultLanguage,
-          languages: form.languages,
-          verificationEmail: form.verificationEmail || null,
-          quotas: form.quotas.map((q, i) => ({
-            id: q.id,
-            title: q.title,
-            size: q.size,
-            price: q.price,
-            order: i,
-          })),
-          questions: form.questions.map((q, i) => ({
-            id: q.id,
-            question: q.question,
-            type: q.type,
-            options: q.options,
-            prices: q.prices,
-            required: q.required,
-            public: q.public,
-            order: i,
-          })),
-        };
+        const body = buildBody(asDraft);
 
         if (effectiveIsNew) {
           const result = await createEventAction(body);
@@ -365,13 +381,20 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
             console.error("Validation errors:", result.validationErrors);
             setError(t("saveInvalid"));
           } else if (result?.data && "editConflict" in result.data) {
-            const conflict = result.data as { updatedAt: string; deletedQuotas: string[]; deletedQuestions: string[] };
+            const conflict = result.data as {
+              updatedAt: Date;
+              deletedQuotas: QuotaID[];
+              deletedQuestions: QuestionID[];
+            };
             setEditConflict(conflict);
           } else if (result?.data && "wouldMoveToQueue" in result.data) {
-            const warning = result.data as { count: number };
-            setMoveToQueueWarning({ count: warning.count, draft: asDraft });
+            const warning = result.data;
+            setMoveToQueueWarning({
+              count: warning.count ?? 0,
+              draft: asDraft,
+            });
           } else if (result?.data && "id" in result.data) {
-            const eventData = result.data as AdminEventResponse;
+            const eventData = result.data;
             setSavedEvent(eventData);
             setForm((prev) => ({ ...prev, draft: eventData.draft }));
             setSuccess(t("saveSuccess"));
@@ -385,8 +408,17 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
         setSubmitting(false);
       }
     },
-    [form, effectiveIsNew, savedEvent, router, t, validate, clearErrors, mapEditorError],
+    [form, effectiveIsNew, savedEvent, router, t, validate, mapEditorError],
   );
+
+  // Deferred save after edit conflict overwrite (waits for React to commit the state updates)
+  useEffect(() => {
+    if (pendingOverwrite.current !== null) {
+      const draft = pendingOverwrite.current;
+      pendingOverwrite.current = null;
+      handleSave(draft);
+    }
+  }, [form, savedEvent, handleSave]);
 
   return (
     <>
@@ -460,10 +492,17 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
                     q.id && editConflict.deletedQuestions.includes(q.id) ? { ...q, id: undefined } : q,
                   ),
                 }));
-                setSavedEvent((prev) => (prev ? { ...prev, updatedAt: editConflict.updatedAt } : prev));
+                setSavedEvent((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        updatedAt: new Date(editConflict.updatedAt),
+                      }
+                    : prev,
+                );
                 setEditConflict(null);
-                // Re-trigger save with current draft state
-                handleSave(form.draft);
+                // Defer save until React commits the state updates above
+                pendingOverwrite.current = form.draft;
               }}
             >
               {t("editConflict.overwrite")}
@@ -492,53 +531,18 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
                 setError(null);
                 if (!savedEvent) return;
                 try {
-                  const body = {
-                    title: form.title,
-                    slug: form.slug,
-                    draft,
-                    listed: form.listed,
-                    category: form.category,
-                    date: form.date || null,
-                    endDate: form.endDate || null,
-                    registrationStartDate: form.registrationStartDate || null,
-                    registrationEndDate: form.registrationEndDate || null,
-                    openQuotaSize: form.openQuotaSize,
-                    description: form.description || null,
-                    price: form.price || null,
-                    location: form.location || null,
-                    webpageUrl: form.webpageUrl || null,
-                    signupsPublic: form.signupsPublic,
-                    nameQuestion: form.nameQuestion,
-                    emailQuestion: form.emailQuestion,
-                    payments: form.payments,
-                    defaultLanguage: form.defaultLanguage,
-                    languages: form.languages,
-                    verificationEmail: form.verificationEmail || null,
-                    moveSignupsToQueue: true,
-                    quotas: form.quotas.map((q, i) => ({
-                      id: q.id,
-                      title: q.title,
-                      size: q.size,
-                      price: q.price,
-                      order: i,
-                    })),
-                    questions: form.questions.map((q, i) => ({
-                      id: q.id,
-                      question: q.question,
-                      type: q.type,
-                      options: q.options,
-                      prices: q.prices,
-                      required: q.required,
-                      public: q.public,
-                      order: i,
-                    })),
-                    updatedAt: savedEvent.updatedAt,
-                  };
-                  const result = await updateEventAction({ eventId: savedEvent.id, body });
+                  const result = await updateEventAction({
+                    eventId: savedEvent.id,
+                    body: {
+                      ...buildBody(draft),
+                      moveSignupsToQueue: true,
+                      updatedAt: savedEvent.updatedAt,
+                    },
+                  });
                   if (result?.serverError) {
                     setError(result.serverError);
                   } else if (result?.data && "id" in result.data) {
-                    const eventData = result.data as AdminEventResponse;
+                    const eventData = result.data;
                     setSavedEvent(eventData);
                     setForm((prev) => ({ ...prev, draft: eventData.draft }));
                     setSuccess(t("saveSuccess"));

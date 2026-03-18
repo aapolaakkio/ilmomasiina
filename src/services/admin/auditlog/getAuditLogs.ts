@@ -1,8 +1,8 @@
 import type { SQL } from "drizzle-orm";
 import { and, count, desc, eq, inArray, like, or } from "drizzle-orm";
 
-import type { AuditLogResponse, AuditLoqQuery } from "@/models";
-import { AUDIT_LOG_DEFAULT_LIMIT } from "@/models";
+import type { EventID, SignupID } from "@/db/schema";
+import { AUDIT_LOG_DEFAULT_LIMIT, type AuditLogResponse, type AuditLoqQuery } from "@/db/zod";
 
 import { db } from "../../../db";
 import { auditlogs } from "../../../db/schema";
@@ -10,7 +10,6 @@ import { auditlogs } from "../../../db/schema";
 const MAX_LOGS = 100;
 
 /** Get audit log entries with optional filtering and pagination. */
-// eslint-disable-next-line import/prefer-default-export
 export async function getAuditLogItems(query: AuditLoqQuery): Promise<AuditLogResponse> {
   const conditions: SQL[] = [];
 
@@ -24,10 +23,12 @@ export async function getAuditLogItems(query: AuditLoqQuery): Promise<AuditLogRe
     conditions.push(inArray(auditlogs.action, query.action));
   }
   if (query.event) {
-    conditions.push(or(eq(auditlogs.eventId, query.event), like(auditlogs.eventName, `%${query.event}%`))!);
+    conditions.push(or(eq(auditlogs.eventId, query.event as EventID), like(auditlogs.eventName, `%${query.event}%`))!);
   }
   if (query.signup) {
-    conditions.push(or(eq(auditlogs.signupId, query.signup), like(auditlogs.signupName, `%${query.signup}%`))!);
+    conditions.push(
+      or(eq(auditlogs.signupId, query.signup as SignupID), like(auditlogs.signupName, `%${query.signup}%`))!,
+    );
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -40,7 +41,7 @@ export async function getAuditLogItems(query: AuditLoqQuery): Promise<AuditLogRe
   ]);
 
   return {
-    rows: rows as unknown as AuditLogResponse["rows"],
+    rows,
     count: total,
   };
 }
