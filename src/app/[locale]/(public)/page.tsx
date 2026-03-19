@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { appLocaleToBcp47 } from "@/i18n/intlLocale";
 import { Link, redirect } from "@/i18n/navigation";
 import { getLocalizedEventListItem } from "@/lib/localizedEvent";
 import { eventsToRows } from "@/lib/eventListUtils";
@@ -93,7 +94,7 @@ export default async function EventListPage({
 
   const localizedEvents = events.map((event) => getLocalizedEventListItem(event, language));
   const tableRows = eventsToRows(localizedEvents).filter((row) => row.type !== "waitlist");
-  const locale = language === "en" ? "en-FI" : "fi-FI";
+  const locale = appLocaleToBcp47(language);
 
   return (
     <>

@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
 import { createEmptyLanguageVersion, type EditorFormState } from "./types";
-
-const KNOWN_LANGUAGES = ["fi", "en", "sv"] as const;
+import { KNOWN_LANGUAGES } from "@/i18n/routing";
 
 type Props = {
   form: EditorFormState;

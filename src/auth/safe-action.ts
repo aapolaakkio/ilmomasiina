@@ -2,8 +2,17 @@ import { createSafeActionClient } from "next-safe-action";
 import { createMiddleware } from "next-safe-action";
 
 import { createAdminAuditLogger, requireAdmin } from "@/auth/adminAuth";
+import type { SignupID } from "@/db/schema";
+import { verifyToken } from "@/services/signups/editTokens";
 
 export class ActionError extends Error {}
+
+/** Verifies a signup edit token, throwing an ActionError if invalid. */
+export function verifyEditToken(signupId: SignupID, editToken: string): void {
+  if (!verifyToken(signupId, editToken)) {
+    throw new ActionError("Invalid edit token");
+  }
+}
 
 export const actionClient = createSafeActionClient({
   handleServerError: (error) => {

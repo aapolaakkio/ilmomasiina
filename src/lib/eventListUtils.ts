@@ -1,11 +1,8 @@
 import type { EventID, QuotaID } from "@/db/schema";
 import type { EventSlug, UserEventListItem, UserEventListResponse } from "@/db/zod";
+import { sumBy } from "@/util/sumBy";
 
 import { SignupState, signupState, type SignupStateInfo } from "./signupState";
-
-function sumBy<T>(items: T[], getValue: (item: T) => number): number {
-  return items.reduce((sum, item) => sum + getValue(item), 0);
-}
 
 export interface EventTableOptions {
   /** If true, quotas are not placed on separate rows. */

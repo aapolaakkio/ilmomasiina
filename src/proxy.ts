@@ -24,8 +24,10 @@ export function proxy(request: NextRequest) {
 
     if (!sessionToken) {
       const locale = pathname.split("/")[1];
-      const validLocales = ["fi", "en", "sv"];
-      const loginPath = locale && validLocales.includes(locale) ? `/${locale}/login` : "/fi/login";
+      const loginPath =
+        locale && routing.locales.includes(locale as (typeof routing.locales)[number])
+          ? `/${locale}/login`
+          : "/fi/login";
       const loginUrl = new URL(loginPath, request.url);
       return NextResponse.redirect(loginUrl);
     }

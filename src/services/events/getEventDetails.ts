@@ -116,7 +116,7 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
   };
 }
 
-export async function eventDetailsForUser(eventSlug: EventSlug): Promise<UserEventResponse> {
+export async function getEventBySlug(eventSlug: EventSlug): Promise<UserEventResponse> {
   const { event, registrationStartDate, registrationEndDate } = await getEventDetailsForUser(eventSlug);
 
   let registrationClosed = true;
@@ -128,8 +128,7 @@ export async function eventDetailsForUser(eventSlug: EventSlug): Promise<UserEve
     registrationClosed = now > registrationEndDate;
   }
 
-  const res = { ...event, millisTillOpening, registrationClosed };
-  return res;
+  return { ...event, millisTillOpening, registrationClosed };
 }
 
 /** Converts a signup with answers to JSON for the admin API. */
@@ -149,7 +148,7 @@ export function formatSignupForAdmin(
   };
 }
 
-export async function eventDetailsForAdmin(eventID: EventID): Promise<AdminEventResponse> {
+export async function getEventByIdForAdmin(eventID: EventID): Promise<AdminEventResponse> {
   const event = await db.query.events.findFirst({
     where: { id: { eq: eventID } },
     with: {
@@ -197,7 +196,7 @@ export async function eventDetailsForAdmin(eventID: EventID): Promise<AdminEvent
 
   const positionMap = assignSignupPositions(activeSignups, event.quotas, event.openQuotaSize);
 
-  const res = {
+  return {
     ...event,
     ...langFields,
     quotas: event.quotas.map((quota) => {
@@ -225,16 +224,6 @@ export async function eventDetailsForAdmin(eventID: EventID): Promise<AdminEvent
       };
     }),
   };
-
-  return res;
-}
-
-export async function getEventBySlug(slug: EventSlug): Promise<UserEventResponse> {
-  return eventDetailsForUser(slug);
-}
-
-export async function getEventByIdForAdmin(eventId: EventID): Promise<AdminEventResponse> {
-  return eventDetailsForAdmin(eventId);
 }
 
 /** Get event details without signups (for users who can view but not edit). */
@@ -260,7 +249,7 @@ export async function getEventByIdForViewer(eventId: EventID): Promise<AdminEven
 
   const langFields = reconstructEventLanguages(event, event.languages, event.quotas, event.questions, true);
 
-  const res = {
+  return {
     ...event,
     ...langFields,
     quotas: event.quotas.map((quota) => ({
@@ -269,6 +258,4 @@ export async function getEventByIdForViewer(eventId: EventID): Promise<AdminEven
       signupCount: 0,
     })),
   };
-
-  return res;
 }

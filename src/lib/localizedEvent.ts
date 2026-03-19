@@ -2,6 +2,20 @@ import type { SignupForEdit, SignupForEditResponse, UserEventListItem, UserEvent
 
 type EventForEditSignup = SignupForEditResponse["event"];
 
+/** Top-level localizable fields shared by all event types. */
+const LOCALIZABLE_FIELDS = ["title", "description", "price", "location", "webpageUrl"] as const;
+
+/** Overrides top-level localizable fields from the locale, falling back to the event's own values. */
+function localizeFields<T extends Record<string, unknown>>(event: T, locale: Record<string, unknown>): T {
+  const result = { ...event };
+  for (const field of LOCALIZABLE_FIELDS) {
+    if (field in locale) {
+      (result as Record<string, unknown>)[field] = (locale[field] as string) || (event[field] as string);
+    }
+  }
+  return result;
+}
+
 /** Overrides localized properties in the event and quotas with localized versions.
  *
  * If the language version is not found (including invalid languages), falls back to the default language.
@@ -9,12 +23,7 @@ type EventForEditSignup = SignupForEditResponse["event"];
 export function getLocalizedEventListItem(event: UserEventListItem, language: string): UserEventListItem {
   const locale = event.languages?.[language] ?? event;
   return {
-    ...event,
-    title: locale.title || event.title,
-    location: locale.location || event.location,
-    price: locale.price || event.price,
-    webpageUrl: locale.webpageUrl || event.webpageUrl,
-    description: locale.description || event.description,
+    ...localizeFields(event, locale),
     quotas: event.quotas.map((quota, index) => ({
       ...quota,
       title: locale.quotas[index]?.title || quota.title,
@@ -29,12 +38,7 @@ export function getLocalizedEventListItem(event: UserEventListItem, language: st
 export function getLocalizedEvent<E extends UserEventResponse | EventForEditSignup>(event: E, language: string): E {
   const locale = event.languages?.[language] ?? event;
   return {
-    ...event,
-    title: locale.title || event.title,
-    location: locale.location || event.location,
-    price: locale.price || event.price,
-    webpageUrl: locale.webpageUrl || event.webpageUrl,
-    description: locale.description || event.description,
+    ...localizeFields(event, locale),
     questions: event.questions.map((question, index) => ({
       ...question,
       question: locale.questions[index]?.question || question.question,

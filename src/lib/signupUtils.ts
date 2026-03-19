@@ -1,11 +1,8 @@
 import { type QuotaID, SignupStatus } from "@/db/schema";
 import type { AdminEventResponse, QuotaWithSignupCount, UserEventResponse } from "@/db/zod";
+import { sumBy } from "@/util/sumBy";
 
 import { SignupState, signupState } from "./signupState";
-
-function sumBy<T>(items: T[], iteratee: (item: T) => number): number {
-  return items.reduce((sum, item) => sum + iteratee(item), 0);
-}
 
 export type AnyEventSchema = AdminEventResponse | UserEventResponse;
 

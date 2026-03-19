@@ -13,6 +13,7 @@ import {
 import type { AdminSignupUpdateBody, SignupUpdateBody, SignupValidationErrors } from "@/db/zod";
 
 import { env } from "@/env";
+import { sumBy } from "@/util/sumBy";
 import type { DrizzleDb } from "../../db";
 import { paymentsEnabled } from "../../db/computed";
 import { answers, signups } from "../../db/schema";
@@ -21,10 +22,6 @@ import { SignupValidationError } from "./errors";
 
 const MAX_NAME_LENGTH = 255;
 const MAX_EMAIL_LENGTH = 255;
-
-function sumBy<T>(items: T[], iteratee: (item: T) => number): number {
-  return items.reduce((sum, item) => sum + iteratee(item), 0);
-}
 
 function isEmail(value: string): boolean {
   return z.email().safeParse(value).success;

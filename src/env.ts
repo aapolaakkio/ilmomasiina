@@ -2,9 +2,6 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import Stripe from "stripe";
 import { z, ZodType } from "zod";
 
-// Must be kept in sync with i18n/routing.ts locales
-const knownLanguages = ["fi", "en", "sv"];
-
 const booleanFromEnv = z.preprocess((value) => {
   if (value === "true" || value === "1" || value === true) return true;
   if (value === "false" || value === "0" || value === false) return false;
@@ -137,12 +134,7 @@ export const env = createEnv({
     NEXT_PUBLIC_BRANDING_FOOTER_HOME_TEXT: nullableString,
     NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK: nullableString,
     NEXT_PUBLIC_BRANDING_CANCELLATION_LINK: nullableString,
-    NEXT_PUBLIC_DEFAULT_LANGUAGE: z
-      .string()
-      .default("fi")
-      .refine((value) => knownLanguages.includes(value as (typeof knownLanguages)[number]), {
-        message: `NEXT_PUBLIC_DEFAULT_LANGUAGE must be one of: ${knownLanguages.join(", ")}`,
-      }),
+    NEXT_PUBLIC_DEFAULT_LANGUAGE: z.enum(["fi", "sv", "en"]).default("fi"),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,

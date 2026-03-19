@@ -1,4 +1,4 @@
-import { inArray, lt, sql } from "drizzle-orm";
+import { inArray, lt } from "drizzle-orm";
 
 import { env } from "@/env";
 import { db } from "../db";
@@ -16,48 +16,30 @@ import {
 export default async function removeDeletedData() {
   const cutoff = new Date(Date.now() - env.DELETION_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
 
-  // Find events to hard-delete
-  const deletedEvents = await db.query.events.findMany({
-    where: { deletedAt: { lt: cutoff } },
-    columns: { id: true },
-  });
-
-  if (deletedEvents.length > 0) {
-    const eventIds = deletedEvents.map((e) => e.id);
-    // Clean up language rows for these events
-    await db.delete(eventLanguages).where(inArray(eventLanguages.eventId, eventIds));
-    // Clean up quota/question language rows via their parent IDs
-    await db
-      .delete(quotaLanguages)
-      .where(sql`${quotaLanguages.quotaId} IN (SELECT id FROM "quota" WHERE "eventId" IN ${eventIds})`);
-    await db
-      .delete(questionLanguages)
-      .where(sql`${questionLanguages.questionId} IN (SELECT id FROM "question" WHERE "eventId" IN ${eventIds})`);
-    // Hard delete the events
-    await db.delete(events).where(lt(events.deletedAt, cutoff));
-  }
+  // Clean up language rows for deleted events, then hard-delete the events
+  const deletedEventIds = db.select({ id: events.id }).from(events).where(lt(events.deletedAt, cutoff));
+  const deletedEventQuotaIds = db
+    .select({ id: quotas.id })
+    .from(quotas)
+    .where(inArray(quotas.eventId, deletedEventIds));
+  const deletedEventQuestionIds = db
+    .select({ id: questions.id })
+    .from(questions)
+    .where(inArray(questions.eventId, deletedEventIds));
+  await db.delete(eventLanguages).where(inArray(eventLanguages.eventId, deletedEventIds));
+  await db.delete(quotaLanguages).where(inArray(quotaLanguages.quotaId, deletedEventQuotaIds));
+  await db.delete(questionLanguages).where(inArray(questionLanguages.questionId, deletedEventQuestionIds));
+  await db.delete(events).where(lt(events.deletedAt, cutoff));
 
   // Hard delete orphaned questions and their language rows
-  const deletedQuestions = await db.query.questions.findMany({
-    where: { deletedAt: { lt: cutoff } },
-    columns: { id: true },
-  });
-  if (deletedQuestions.length > 0) {
-    const questionIds = deletedQuestions.map((q) => q.id);
-    await db.delete(questionLanguages).where(inArray(questionLanguages.questionId, questionIds));
-    await db.delete(questions).where(lt(questions.deletedAt, cutoff));
-  }
+  const deletedQuestionIds = db.select({ id: questions.id }).from(questions).where(lt(questions.deletedAt, cutoff));
+  await db.delete(questionLanguages).where(inArray(questionLanguages.questionId, deletedQuestionIds));
+  await db.delete(questions).where(lt(questions.deletedAt, cutoff));
 
   // Hard delete orphaned quotas and their language rows
-  const deletedQuotas = await db.query.quotas.findMany({
-    where: { deletedAt: { lt: cutoff } },
-    columns: { id: true },
-  });
-  if (deletedQuotas.length > 0) {
-    const quotaIds = deletedQuotas.map((q) => q.id);
-    await db.delete(quotaLanguages).where(inArray(quotaLanguages.quotaId, quotaIds));
-    await db.delete(quotas).where(lt(quotas.deletedAt, cutoff));
-  }
+  const deletedQuotaIds = db.select({ id: quotas.id }).from(quotas).where(lt(quotas.deletedAt, cutoff));
+  await db.delete(quotaLanguages).where(inArray(quotaLanguages.quotaId, deletedQuotaIds));
+  await db.delete(quotas).where(lt(quotas.deletedAt, cutoff));
 
   // Hard delete signups (may fail if payments exist due to FK constraints)
   await db.delete(signups).where(lt(signups.deletedAt, cutoff));

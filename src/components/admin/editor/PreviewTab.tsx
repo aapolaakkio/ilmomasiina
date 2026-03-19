@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import Markdown from "@/components/Markdown";
+import { appLocaleToBcp47 } from "@/i18n/intlLocale";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
 
@@ -31,7 +32,7 @@ export default function PreviewTab({ form }: Props) {
   const t = useTranslations("singleEvent");
   const tEdit = useTranslations("editSignup");
   const currentLocale = useLocale();
-  const locale = currentLocale === "en" ? "en-FI" : "fi-FI";
+  const locale = appLocaleToBcp47(currentLocale);
   const [showSignupForm, setShowSignupForm] = useState(false);
 
   // Build dummy quotas for the signup button preview

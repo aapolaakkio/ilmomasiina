@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import Markdown from "@/components/Markdown";
 import SignupButton from "@/components/SignupButton";
 import { env } from "@/env";
+import { appLocaleToBcp47 } from "@/i18n/intlLocale";
 import { Link } from "@/i18n/navigation";
 import { getAdminSession } from "@/auth";
 import { getLocalizedEvent } from "@/lib/localizedEvent";
@@ -57,7 +58,7 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
 
   const localizedEvent = getLocalizedEvent(event, language);
   const signupsByQuota = getSignupsByQuota(localizedEvent);
-  const locale = language === "en" ? "en-FI" : "fi-FI";
+  const locale = appLocaleToBcp47(language);
   const publicQuestions = localizedEvent.questions.filter((q) => q.public);
   const adminSession = await getAdminSession();
 
