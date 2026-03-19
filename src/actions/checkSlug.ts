@@ -1,12 +1,13 @@
 "use server";
 
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
+import { eventSlug } from "@/db/zod";
 import { checkSlugAvailability } from "@/services/admin/slugs/checkSlugAvailability";
 
 const schema = z.object({
-  slug: z.string(),
+  slug: eventSlug,
 });
 
 export const checkSlugAction = actionClient

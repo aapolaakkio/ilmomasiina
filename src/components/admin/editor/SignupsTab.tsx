@@ -162,7 +162,7 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
 
   const refreshEvent = useCallback(async () => {
     if (!savedEvent || !onEventChange) return;
-    const result = await getAdminEventAction({ id: savedEvent.id });
+    const result = await getAdminEventAction({ eventId: savedEvent.id });
     if (result?.data) {
       onEventChange(result.data);
     }

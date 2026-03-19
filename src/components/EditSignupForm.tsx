@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import { deleteSignupAction } from "@/actions/deleteSignup";
 import { startPaymentAction } from "@/actions/startPayment";

@@ -40,56 +40,36 @@ export const eventSlug = z
   .regex(/^[A-Za-z0-9_-]+$/);
 
 const questionOptions = z.array(z.string().max(255)).max(64).nullable();
+const questionPrices = z.array(z.int().min(0)).max(64).nullable();
 
 // --- Base Select Schemas ---
 
 const eventSelect = createSelectSchema(events, {
   id: eventID,
-  slug: eventSlug,
-  // Override columns with .default() — drizzle-orm/zod infers them as unknown with Zod v4
-  title: z.string().max(255),
-  openQuotaSize: z.int().min(0),
-  category: z.string().max(255),
-  draft: z.boolean(),
-  listed: z.boolean(),
-  signupsPublic: z.boolean(),
-  nameQuestion: z.boolean(),
-  emailQuestion: z.boolean(),
   payments: z.enum(PaymentMode),
 });
 
 const questionSelect = createSelectSchema(questions, {
   id: questionID,
   eventId: eventID,
-  question: z.string().max(1024),
   type: z.enum(QuestionType),
   options: questionOptions,
-  prices: z.array(z.int().min(0)).max(64).nullable(),
-  required: z.boolean(),
-  public: z.boolean(),
+  prices: questionPrices,
 });
 
-const quotaSelect = createSelectSchema(quotas, {
-  id: quotaID,
-  eventId: eventID,
-  title: z.string().max(255),
-});
+const quotaSelect = createSelectSchema(quotas);
 
 const questionLangSelect = createSelectSchema(questionLanguages, {
-  questionId: questionID,
   options: questionOptions,
 });
 
-const quotaLangSelect = createSelectSchema(quotaLanguages, {
-  quotaId: quotaID,
-});
+const quotaLangSelect = createSelectSchema(quotaLanguages);
 
-const auditLogSelect = createSelectSchema(auditlogs, {
-  eventId: eventID.nullable(),
-  signupId: signupID.nullable(),
-});
+const auditLogSelect = createSelectSchema(auditlogs);
 
-const userSelect = createSelectSchema(users, { id: userID });
+const userSelect = createSelectSchema(users, {
+  id: userID,
+});
 
 // --- Question Schemas ---
 
@@ -394,23 +374,8 @@ export const eventListQuery = z.object({
 // --- Signup For Edit Schemas ---
 
 /** Schema for fetching a signup for editing. */
-export const signupForEdit = z.object({
+export const signupForEdit = adminEditableSignupAttributes.extend(ownerDynamicSignupAttributes.shape).extend({
   id: signupID,
-  firstName: z.string().max(255).nullable(),
-  lastName: z.string().max(255).nullable(),
-  namePublic: z.boolean(),
-  answers: z.array(signupAnswer),
-  email: z.string().max(255).nullable(),
-  status: z.enum(SignupStatus).nullable(),
-  position: z.int().nullable(),
-  createdAt: z.date(),
-  confirmed: z.boolean(),
-  price: z.int().min(0).nullable(),
-  currency: z.string().max(8).nullable(),
-  paymentStatus: z.enum(SignupPaymentStatus).nullable(),
-  deletedAt: z.date().nullable(),
-  products: z.array(productSchema).nullable(),
-  manualPaymentStatus: z.enum(ManualPaymentStatus).nullable(),
   quota,
   confirmableForMillis: z.int(),
   editableForMillis: z.int(),
@@ -524,15 +489,22 @@ export const removeEventEditorSchema = z.object({
   userId: userID,
 });
 
-/** Schema for listing editors of an event. */
-export const getEventEditorsSchema = z.object({
-  eventId: eventID,
+// --- Shared Action Input Schemas ---
+
+/** Input schema for actions that identify a signup by ID and edit token. */
+export const signupWithToken = z.object({
+  signupId: signupID,
+  editToken,
 });
 
-/** Schema for an event editor entry. */
-export const eventEditorSchema = z.object({
-  userId: userID,
-  email: z.email(),
+/** Input schema for actions that identify a signup by ID. */
+export const signupIdInput = z.object({
+  signupId: signupID,
+});
+
+/** Input schema for actions that identify an event by ID. */
+export const eventIdInput = z.object({
+  eventId: eventID,
 });
 
 // --- Type Exports ---
@@ -577,10 +549,9 @@ export type StartPaymentResponse = z.infer<typeof startPaymentResponse>;
 export type EditConflictError = z.infer<typeof editConflictError>;
 export type WouldMoveSignupsToQueueError = z.infer<typeof wouldMoveSignupsToQueueError>;
 
-export type AddEventEditorSchema = z.infer<typeof addEventEditorSchema>;
-export type RemoveEventEditorSchema = z.infer<typeof removeEventEditorSchema>;
-export type GetEventEditorsSchema = z.infer<typeof getEventEditorsSchema>;
-export type EventEditorSchema = z.infer<typeof eventEditorSchema>;
+export type SignupWithToken = z.infer<typeof signupWithToken>;
+export type SignupIdInput = z.infer<typeof signupIdInput>;
+export type EventIdInput = z.infer<typeof eventIdInput>;
 
 export type CheckSlugResponse = {
   id: z.infer<typeof eventID> | null;

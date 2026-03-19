@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslations } from "next-intl";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import { createEventAction } from "@/actions/createEvent";
 import { updateEventAction } from "@/actions/updateEvent";

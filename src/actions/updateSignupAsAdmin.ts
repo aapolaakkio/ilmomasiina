@@ -1,15 +1,11 @@
 "use server";
 
-import { z } from "zod/v4";
-
 import { requireEventAccessBySignup } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { signupID } from "@/db/schema";
-import { adminSignupUpdateBody } from "@/db/zod";
+import { adminSignupUpdateBody, signupIdInput } from "@/db/zod";
 import { updateSignupAsAdmin } from "@/services/signups/updateSignup";
 
-const schema = z.object({
-  signupId: signupID,
+const schema = signupIdInput.extend({
   body: adminSignupUpdateBody,
 });
 

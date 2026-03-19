@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAction } from "next-safe-action/hooks";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import { deleteUserAction } from "@/actions/deleteUser";
 import { inviteUserAction } from "@/actions/inviteUser";

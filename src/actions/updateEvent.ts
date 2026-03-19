@@ -1,17 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod/v4";
 
 import { requireEventAccess } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
-import { eventID } from "@/db/schema";
-import { eventUpdateBody } from "@/db/zod";
+import { eventIdInput, eventUpdateBody } from "@/db/zod";
 import { updateEvent } from "@/services/admin/events/updateEvent";
 import { EditConflict, WouldMoveSignupsToQueue } from "@/services/admin/events/errors";
 
-const schema = z.object({
-  eventId: eventID,
+const schema = eventIdInput.extend({
   body: eventUpdateBody,
 });
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import { actionClient, isAdminMiddleware, isAuthorizedMiddleware } from "@/auth/safe-action";
 import { userID } from "@/db/schema";

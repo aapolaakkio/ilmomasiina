@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 
-import type { z } from "zod/v4";
+import type { z } from "zod";
 
 type FieldErrors = Record<string, string>;
 

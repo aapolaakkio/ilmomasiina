@@ -1,16 +1,11 @@
 "use server";
 
-import { z } from "zod/v4";
-
 import { ActionError, actionClient } from "@/auth/safe-action";
-import { signupID, editToken } from "@/db/schema";
-import { signupUpdateBody } from "@/db/zod";
+import { signupUpdateBody, signupWithToken } from "@/db/zod";
 import { internalAuditLogger } from "@/auditlog";
 import { updateSignupAsUser } from "@/services/signups/updateSignup";
 
-const schema = z.object({
-  signupId: signupID,
-  editToken,
+const schema = signupWithToken.extend({
   body: signupUpdateBody,
 });
 

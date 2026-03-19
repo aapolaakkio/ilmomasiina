@@ -27,7 +27,12 @@ export function reconstructEventLanguages(
   eventDefaults: EventDefaultFields,
   eventLangRows: EventLangRow[],
   quotasWithLangs: { id: string; title: string; languages: QuotaLangRow[] }[],
-  questionsWithLangs: { id: string; question: string; options: string[] | null; languages: QuestionLangRow[] }[],
+  questionsWithLangs: {
+    id: string;
+    question: string;
+    options: string[] | null;
+    languages: QuestionLangRow[];
+  }[],
   includeAdmin: boolean,
 ): {
   title: string;
@@ -93,7 +98,10 @@ export function getQuestionForLanguage(
   language: string,
 ): { question: string; options: string[] | null } {
   const row = languages.find((r) => r.language === language);
-  return { question: row?.question ?? defaultQuestion, options: row?.options ?? defaultOptions };
+  return {
+    question: row?.question ?? defaultQuestion,
+    options: row?.options ?? defaultOptions,
+  };
 }
 
 // --- Language row builders for insert operations ---
