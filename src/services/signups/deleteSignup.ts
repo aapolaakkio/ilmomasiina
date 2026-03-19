@@ -16,7 +16,6 @@ import { NoSuchSignup, SignupsClosed } from "./errors";
 import { signupEditable } from "./helpers";
 
 /** Delete a signup. Set `admin` to true to bypass editability checks and payment restrictions. */
-// eslint-disable-next-line import/prefer-default-export
 export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin: boolean = false): Promise<void> {
   await expireExistingPaymentsForSignupUpdate(id);
 

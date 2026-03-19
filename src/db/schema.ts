@@ -240,7 +240,10 @@ export const events = pgTable("event", {
 export const eventLanguages = pgTable(
   "event_language",
   {
-    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>().notNull(),
+    eventId: char("eventId", { length: RANDOM_ID_LENGTH })
+      .$type<EventID>()
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
     language: varchar("language", { length: 8 }).notNull(),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
@@ -259,7 +262,10 @@ export const quotas = pgTable(
       .$defaultFn(() => generateRandomId())
       .$type<QuotaID>()
       .primaryKey(),
-    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>().notNull(),
+    eventId: char("eventId", { length: RANDOM_ID_LENGTH })
+      .$type<EventID>()
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 255 }).notNull().default(""),
     order: integer("order").notNull(),
     size: integer("size"),
@@ -275,7 +281,10 @@ export const quotas = pgTable(
 export const quotaLanguages = pgTable(
   "quota_language",
   {
-    quotaId: char("quotaId", { length: RANDOM_ID_LENGTH }).$type<QuotaID>().notNull(),
+    quotaId: char("quotaId", { length: RANDOM_ID_LENGTH })
+      .$type<QuotaID>()
+      .notNull()
+      .references(() => quotas.id, { onDelete: "cascade" }),
     language: varchar("language", { length: 8 }).notNull(),
     title: varchar("title", { length: 255 }).notNull(),
   },
@@ -289,7 +298,10 @@ export const signups = pgTable(
       .$defaultFn(() => generateRandomId())
       .$type<SignupID>()
       .primaryKey(),
-    quotaId: char("quotaId", { length: RANDOM_ID_LENGTH }).$type<QuotaID>().notNull(),
+    quotaId: char("quotaId", { length: RANDOM_ID_LENGTH })
+      .$type<QuotaID>()
+      .notNull()
+      .references(() => quotas.id, { onDelete: "cascade" }),
     firstName: varchar("firstName", { length: 255 }),
     lastName: varchar("lastName", { length: 255 }),
     namePublic: boolean("namePublic").notNull().default(false),
@@ -318,7 +330,10 @@ export const questions = pgTable(
       .$defaultFn(() => generateRandomId())
       .$type<QuestionID>()
       .primaryKey(),
-    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>().notNull(),
+    eventId: char("eventId", { length: RANDOM_ID_LENGTH })
+      .$type<EventID>()
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
     question: varchar("question", { length: 1024 }).notNull().default(""),
     options: json("options").$type<string[] | null>(),
     order: integer("order").notNull(),
@@ -337,7 +352,10 @@ export const questions = pgTable(
 export const questionLanguages = pgTable(
   "question_language",
   {
-    questionId: char("questionId", { length: RANDOM_ID_LENGTH }).$type<QuestionID>().notNull(),
+    questionId: char("questionId", { length: RANDOM_ID_LENGTH })
+      .$type<QuestionID>()
+      .notNull()
+      .references(() => questions.id, { onDelete: "cascade" }),
     language: varchar("language", { length: 8 }).notNull(),
     question: varchar("question", { length: 1024 }).notNull(),
     options: json("options").$type<string[] | null>(),
@@ -349,8 +367,14 @@ export const answers = pgTable(
   "answer",
   {
     id: serial("id").$type<AnswerID>().primaryKey(),
-    questionId: char("questionId", { length: RANDOM_ID_LENGTH }).$type<QuestionID>().notNull(),
-    signupId: char("signupId", { length: RANDOM_ID_LENGTH }).$type<SignupID>().notNull(),
+    questionId: char("questionId", { length: RANDOM_ID_LENGTH })
+      .$type<QuestionID>()
+      .notNull()
+      .references(() => questions.id, { onDelete: "cascade" }),
+    signupId: char("signupId", { length: RANDOM_ID_LENGTH })
+      .$type<SignupID>()
+      .notNull()
+      .references(() => signups.id, { onDelete: "cascade" }),
     answer: json("answer").notNull().$type<string | string[]>(),
 
     createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
@@ -364,7 +388,10 @@ export const payments = pgTable(
   "payment",
   {
     id: serial("id").$type<PaymentID>().primaryKey(),
-    signupId: varchar("signupId", { length: 255 }).$type<SignupID>().notNull(),
+    signupId: varchar("signupId", { length: 255 })
+      .$type<SignupID>()
+      .notNull()
+      .references(() => signups.id, { onDelete: "cascade" }),
     stripeCheckoutSessionId: varchar("stripeCheckoutSessionId", {
       length: 255,
     }).unique(),
@@ -397,8 +424,14 @@ export const users = pgTable(
 export const eventEditors = pgTable(
   "event_editor",
   {
-    eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>().notNull(),
-    userId: integer("userId").$type<UserID>().notNull(),
+    eventId: char("eventId", { length: RANDOM_ID_LENGTH })
+      .$type<EventID>()
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    userId: integer("userId")
+      .$type<UserID>()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.eventId, t.userId] }), index("idx_event_editor_userId").on(t.userId)],
@@ -409,9 +442,13 @@ export const auditlogs = pgTable("auditlog", {
   user: varchar("user", { length: 255 }),
   ipAddress: varchar("ipAddress", { length: 64 }).notNull(),
   action: auditEventEnum("action").notNull(),
-  eventId: char("eventId", { length: RANDOM_ID_LENGTH }).$type<EventID>(),
+  eventId: char("eventId", { length: RANDOM_ID_LENGTH })
+    .$type<EventID>()
+    .references(() => events.id, { onDelete: "set null" }),
   eventName: varchar("eventName", { length: 255 }),
-  signupId: char("signupId", { length: RANDOM_ID_LENGTH }).$type<SignupID>(),
+  signupId: char("signupId", { length: RANDOM_ID_LENGTH })
+    .$type<SignupID>()
+    .references(() => signups.id, { onDelete: "set null" }),
   signupName: varchar("signupName", { length: 255 }),
   extra: text("extra"),
 

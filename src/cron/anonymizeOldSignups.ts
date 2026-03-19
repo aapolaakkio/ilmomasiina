@@ -1,16 +1,12 @@
-/* eslint-disable no-console */
 import { inArray } from "drizzle-orm";
 
 import { env } from "@/env";
 import { db } from "../db";
 import { answers, signups } from "../db/schema";
-import { createDebugLogger } from "../util/debug";
 
 const redactedName = "Deleted";
 const redactedEmail = "deleted@gdpr.invalid";
 const redactedAnswer = "Deleted";
-
-const debugLog = createDebugLogger("app:cron:anonymize");
 
 export default async function anonymizeOldSignups() {
   const redactOlderThan = new Date(Date.now() - env.ANONYMIZE_AFTER_DAYS * 24 * 60 * 60 * 1000);
@@ -46,12 +42,11 @@ export default async function anonymizeOldSignups() {
   });
 
   if (oldSignups.length === 0) {
-    debugLog("No old signups to redact");
     return;
   }
 
   const ids = oldSignups.map((s) => s.id);
-  console.info(`Redacting older signups: ${ids.join(", ")}`);
+  console.info(`Anonymizing older signups: ${ids.join(", ")}`);
 
   try {
     const now = new Date();
@@ -62,8 +57,7 @@ export default async function anonymizeOldSignups() {
         .where(inArray(signups.id, ids)),
       db.update(answers).set({ answer: redactedAnswer, updatedAt: now }).where(inArray(answers.signupId, ids)),
     ]);
-    debugLog("Signups anonymized");
   } catch (error) {
-    console.error(error);
+    console.error("Error anonymizing signups:", error);
   }
 }

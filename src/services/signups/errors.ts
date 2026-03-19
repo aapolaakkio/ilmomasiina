@@ -1,4 +1,3 @@
-/* eslint-disable max-classes-per-file */
 import { ErrorCode } from "@/db/schema";
 import type { SignupValidationErrors } from "@/db/zod";
 

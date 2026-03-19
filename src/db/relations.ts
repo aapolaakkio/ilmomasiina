@@ -2,7 +2,6 @@ import { defineRelations } from "drizzle-orm";
 
 import * as schema from "./schema";
 
-// eslint-disable-next-line import/prefer-default-export
 export const relations = defineRelations(schema, (r) => ({
   events: {
     quotas: r.many.quotas(),

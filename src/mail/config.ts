@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import nodemailer, { Transporter } from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 

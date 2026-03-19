@@ -170,7 +170,6 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
 
   const handleDelete = useCallback(
     async (signupId: string) => {
-      // eslint-disable-next-line no-alert
       if (!window.confirm(t("deleteConfirm"))) return;
       await deleteSignupAsAdminAction({ signupId });
       await refreshEvent();

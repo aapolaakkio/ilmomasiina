@@ -157,9 +157,7 @@ export default function PreviewTab({ form }: Props) {
               </Field.Root>
             )}
             {form.questions.map((question, i) => (
-              // eslint-disable-next-line react/no-array-index-key
               <Field.Root key={i}>
-                {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   {question.question || `(Question ${i + 1})`}
                   {question.required && <span className="text-red-600"> *</span>}

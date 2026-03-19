@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { env } from "@/env";
 
 import { t } from "../i18n/server";

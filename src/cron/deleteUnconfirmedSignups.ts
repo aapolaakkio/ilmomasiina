@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { inArray } from "drizzle-orm";
 
 import { db } from "../db";
@@ -9,9 +8,6 @@ import {
   fetchActiveSignupsForEvent,
   handlePositionSideEffects,
 } from "../services/signups/computeSignupPosition";
-import { createDebugLogger } from "../util/debug";
-
-const debugLog = createDebugLogger("app:cron:unconfirmed");
 
 export default async function deleteUnconfirmedSignups() {
   const cutoff = activeSignupCutoff();
@@ -33,7 +29,6 @@ export default async function deleteUnconfirmedSignups() {
   });
 
   if (unconfirmed.length === 0) {
-    debugLog("No unconfirmed signups to delete");
     return;
   }
 
@@ -74,7 +69,6 @@ export default async function deleteUnconfirmedSignups() {
     for (const eventId of uniqueEventIds) {
       const snapshot = snapshots.get(eventId);
       if (!snapshot) continue;
-      // eslint-disable-next-line no-await-in-loop
       await db.transaction(async (tx) => {
         await handlePositionSideEffects(eventId, tx, {
           previousSignups: snapshot.signups,
@@ -83,8 +77,7 @@ export default async function deleteUnconfirmedSignups() {
         });
       });
     }
-    debugLog("Unconfirmed signups deleted");
   } catch (error) {
-    console.error(error);
+    console.error("Error deleting unconfirmed signups:", error);
   }
 }

@@ -66,7 +66,6 @@ export default function AdminUsersClient({ users }: Props) {
 
   const handleDelete = useCallback(
     async (userId: UserID, email: string) => {
-      // eslint-disable-next-line no-alert
       if (!window.confirm(t("deleteConfirm", { user: email }))) return;
       setProcessing(true);
       setError(null);

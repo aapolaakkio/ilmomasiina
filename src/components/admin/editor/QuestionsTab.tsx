@@ -164,7 +164,6 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
                     <LocalizedIndicator />
                   </span>
                   {(question.options ?? []).map((opt, j) => (
-                    // eslint-disable-next-line react/no-array-index-key
                     <div key={j} className="mb-1 flex gap-1">
                       <input
                         type="text"

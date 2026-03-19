@@ -141,7 +141,6 @@ export async function expirePaymentForSignupUpdate(payment: {
           err instanceof Stripe.errors.StripeInvalidRequestError ||
           err instanceof Stripe.errors.StripeRateLimitError
         ) {
-          // eslint-disable-next-line no-console
           console.error("Failed to expire checkout session for updating signup:", err);
           return;
         }
@@ -161,7 +160,6 @@ export async function expirePaymentForSignupUpdate(payment: {
           .where(eq(payments.id, payment.id));
       } catch (error: unknown) {
         if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P0001") {
-          // eslint-disable-next-line no-console
           console.error("Failed to expire CREATING payment for updating signup:", error);
           return;
         }

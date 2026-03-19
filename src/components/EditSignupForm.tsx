@@ -460,7 +460,6 @@ export default function EditSignupForm({ data, editToken }: Props) {
 
           return (
             <Field.Root key={question.id}>
-              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
               <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor={fieldName}>
                 {question.question}
                 {question.required && <span className="text-red-600"> *</span>}

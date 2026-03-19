@@ -1,4 +1,3 @@
-/* eslint-disable max-classes-per-file */
 import { ErrorCode, type QuestionID, type QuotaID } from "@/db/schema";
 import type { EditConflictError, WouldMoveSignupsToQueueError } from "@/db/zod";
 

@@ -61,7 +61,6 @@ export default function AdminEventsClient({ events, role, userId }: Props) {
 
   const handleDelete = useCallback(
     async (eventId: EventID) => {
-      // eslint-disable-next-line no-alert
       if (!window.confirm(t("deleteConfirm"))) return;
       setDeleting(eventId);
       setError(null);

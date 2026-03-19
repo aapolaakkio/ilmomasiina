@@ -140,7 +140,6 @@ function validateAnswersAndGetProducts(
     if ((question.type === QuestionType.CHECKBOX || question.type === QuestionType.SELECT) && defaultOptions) {
       defaultOptions.forEach((opt, i) => {
         if (validOptions.has(opt)) {
-          // eslint-disable-next-line no-console
           console.warn(`Duplicate option "${opt}" detected in question ${question.id}`);
           error = SignupFieldError.DUPLICATE_OPTION;
           return;
@@ -155,7 +154,6 @@ function validateAnswersAndGetProducts(
             const opt = langRow.options[i];
             if (opt) {
               if (validOptions.has(opt) && validOptions.get(opt) !== i) {
-                // eslint-disable-next-line no-console
                 console.warn(`Duplicate option "${opt}" detected in question ${question.id}`);
                 error = SignupFieldError.DUPLICATE_OPTION;
               } else {

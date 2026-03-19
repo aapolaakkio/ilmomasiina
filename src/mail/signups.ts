@@ -22,7 +22,6 @@ function sendSynchronouslyInTest<A extends any[]>(func: (...args: A) => Promise<
   if (env.NODE_ENV === "test" || env.NODE_ENV === "bench") return func;
   return async (...args: A) => {
     func(...args).catch((err) => {
-      // eslint-disable-next-line no-console
       console.error("Error sending email:", err);
     });
   };
