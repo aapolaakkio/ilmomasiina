@@ -1,79 +1,49 @@
-# syntax=docker/dockerfile:1.15-labs
+FROM node:24-alpine AS base
 
-# Build stage:
-FROM node:24-alpine AS builder
-RUN apk add --no-cache brotli
+ARG SKIP_ENV_VALIDATION=true
+ARG NODE_ENV=production
 
-# Build-time env variables
-ARG SENTRY_DSN
-ARG PATH_PREFIX
-ARG API_URL
-ARG BRANDING_HEADER_TITLE_TEXT
-ARG BRANDING_HEADER_TITLE_TEXT_SHORT
-ARG BRANDING_FOOTER_GDPR_TEXT
-ARG BRANDING_FOOTER_GDPR_LINK
-ARG BRANDING_FOOTER_HOME_TEXT
-ARG BRANDING_FOOTER_HOME_LINK
-ARG BRANDING_LOGIN_PLACEHOLDER_EMAIL
-ARG FRONTENDS
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
 
-WORKDIR /opt/ilmomasiina
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable pnpm && pnpm install --frozen-lockfile --ignore-scripts
 
-# Copy files needed for dependency installation
-COPY --parents .eslint* package.json pnpm-*.yaml packages/*/package.json /opt/ilmomasiina/
+# Build the source code
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-# Install dependencies (we're running as root, so the postinstall script doesn't run automatically)
-RUN corepack enable && pnpm install --frozen-lockfile
+ENV SKIP_ENV_VALIDATION=${SKIP_ENV_VALIDATION}
+ENV NODE_ENV=${NODE_ENV}
 
-# Copy rest of source files
-COPY packages /opt/ilmomasiina/packages
+RUN corepack enable pnpm && pnpm run build
 
-# Default to production (after pnpm install, so we get our types etc.)
-ENV NODE_ENV=production
+# Production image
+FROM base AS runner
+WORKDIR /app
 
-# Build all packages
-RUN npm run build
+ENV NODE_ENV=${NODE_ENV}
 
-# precompress static files for frontend
-RUN find packages/ilmomasiina-frontend/build -type f\
-  -regex ".*\.\(js\|json\|html\|map\|css\|svg\|ico\|txt\)" -exec gzip -k "{}" \; -exec brotli "{}" \;
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-# Main stage:
-FROM node:24-alpine
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
 
-# Accept VERSION at build time, pass to backend server
-ARG VERSION
-ENV VERSION=$VERSION
+# Copy standalone Next.js build
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Default to production
-ENV NODE_ENV=production
+USER nextjs
 
-# Listen at 0.0.0.0 when inside Docker
-ENV HOST=0.0.0.0
+EXPOSE 3000
 
-WORKDIR /opt/ilmomasiina
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-# Copy files needed for dependency installation
-COPY --parents package.json pnpm-*.yaml packages/*/package.json /opt/ilmomasiina/
-
-# Install dependencies for backend only
-RUN corepack enable && pnpm install --frozen-lockfile --prod --filter @tietokilta/ilmomasiina-backend --filter @tietokilta/ilmomasiina-models
-
-# Copy rest of source files
-COPY packages /opt/ilmomasiina/packages
-
-# Copy compiled ilmomasiina-models from build stage
-COPY --from=builder /opt/ilmomasiina/packages/ilmomasiina-models/dist /opt/ilmomasiina/packages/ilmomasiina-models/dist
-
-# Copy built backend from build stage
-COPY --from=builder /opt/ilmomasiina/packages/ilmomasiina-backend/dist /opt/ilmomasiina/packages/ilmomasiina-backend/dist
-
-# Copy built frontend from build stage
-COPY --from=builder /opt/ilmomasiina/packages/ilmomasiina-frontend/build /opt/ilmomasiina/frontend
-
-# Create user for running
-RUN adduser -D -h /opt/ilmomasiina ilmomasiina
-USER ilmomasiina
-
-# Start server
-CMD ["node", "packages/ilmomasiina-backend/dist/bin/server.js"]
+CMD ["node", "server.js"]

@@ -194,5 +194,6 @@ export const env = createEnv({
     NEXT_PUBLIC_BRANDING_CANCELLATION_LINK: process.env.NEXT_PUBLIC_BRANDING_CANCELLATION_LINK,
     NEXT_PUBLIC_DEFAULT_LANGUAGE: process.env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
   },
+  skipValidation: process.env.SKIP_ENV_VALIDATION === "true" || process.env.SKIP_ENV_VALIDATION === "1",
   emptyStringAsUndefined: false,
 });
