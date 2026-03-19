@@ -208,7 +208,7 @@ export const signupUpdateResponse = ownerEditableSignupAttributes.extend(ownerDy
 });
 
 /** Schema for signups in event details from the public API. */
-export const publicSignupSchema = publicEditableSignupAttributes.extend(publicDynamicSignupAttributes.shape);
+const publicSignupSchema = publicEditableSignupAttributes.extend(publicDynamicSignupAttributes.shape);
 
 /** Schema for signups in event details from the admin API. */
 export const adminSignupSchema = adminEditableSignupAttributes
@@ -273,7 +273,7 @@ const publicLanguageAttributes = z.object({
 });
 
 /** Schema for an event language version. */
-export const userEventLanguage = publicCommonAttributes.extend(publicLanguageAttributes.shape);
+const userEventLanguage = publicCommonAttributes.extend(publicLanguageAttributes.shape);
 
 /** Schema for an event language version for admins. */
 export const adminEventLanguage = publicCommonAttributes
@@ -310,7 +310,7 @@ export const userEventResponse = publicAttributes.extend({
 });
 
 /** Response schema when an event is fetched as part of an editable signup. */
-export const userEventForSignup = publicAttributes.extend({
+const userEventForSignup = publicAttributes.extend({
   id: eventID,
   questions: z.array(question),
   quotas: z.array(quota),
@@ -513,7 +513,6 @@ export type EventSlug = z.infer<typeof eventSlug>;
 export type AdminEventResponse = z.infer<typeof adminEventResponse>;
 export type UserEventResponse = z.infer<typeof userEventResponse>;
 export type AdminEventLanguage = z.infer<typeof adminEventLanguage>;
-export type UserEventLanguage = z.infer<typeof userEventLanguage>;
 export type EventCreateBody = z.infer<typeof eventCreateBody>;
 export type EventUpdateBody = z.infer<typeof eventUpdateBody>;
 
