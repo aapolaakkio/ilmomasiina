@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAction, type HookActionStatus } from "next-safe-action/hooks";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { deleteSignupAction } from "@/actions/deleteSignup";
@@ -19,30 +21,34 @@ import {
   type SignupUpdateBody,
 } from "@/db/zod";
 import { firstAmongHookErrors, isHookActionPending } from "@/lib/safeActionHook";
-import { useFormValidation } from "@/lib/useFormValidation";
+import { useCountdown } from "@/lib/useCountdown";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
+import { CheckboxField } from "@/components/ui/CheckboxField";
+import { Field, inputClassName } from "@/components/ui/Field";
 import { FieldError } from "@/components/ui/FieldError";
+import { QuestionField } from "@/components/QuestionField";
 
 type Props = {
   data: SignupForEditResponse;
   editToken: string;
 };
 
-type FormValues = {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  namePublic?: string;
-} & Record<`answer_${string}`, string | string[] | undefined>;
+type FormValues = Record<string, any>;
 
-function signupToFormValues(signup: SignupForEditResponse["signup"]): FormValues {
-  const values: FormValues = {};
-  if (signup.firstName) values.firstName = signup.firstName;
-  if (signup.lastName) values.lastName = signup.lastName;
-  if (signup.email) values.email = signup.email;
-  values.namePublic = signup.namePublic ? "true" : "";
+function signupToFormValues(
+  signup: SignupForEditResponse["signup"],
+  event: SignupForEditResponse["event"],
+): FormValues {
+  const values: FormValues = {
+    firstName: signup.firstName ?? "",
+    lastName: signup.lastName ?? "",
+    email: signup.email ?? "",
+    namePublic: signup.namePublic ?? false,
+  };
+  for (const q of event.questions) {
+    values[`answer_${q.id}`] = q.type === "checkbox" ? [] : "";
+  }
   for (const answer of signup.answers ?? []) {
     values[`answer_${answer.questionId}`] = answer.answer;
   }
@@ -54,7 +60,7 @@ function formValuesToUpdate(values: FormValues, event: SignupForEditResponse["ev
     firstName: values.firstName || undefined,
     lastName: values.lastName || undefined,
     email: values.email || undefined,
-    namePublic: values.namePublic === "true",
+    namePublic: !!values.namePublic,
     answers: event.questions.map((q) => ({
       questionId: q.id,
       answer: values[`answer_${q.id}`] ?? "",
@@ -79,11 +85,18 @@ function buildSignupSchema(event: SignupForEditResponse["event"]) {
       const base = q.required ? signupAnswerTextMax.min(1) : signupAnswerTextMax;
       shape[fieldName] = base.refine((v) => v === "" || !Number.isNaN(Number(v)), { message: "notANumber" });
     } else {
-      // text, textarea, select
       shape[fieldName] = q.required ? signupAnswerTextMax.min(1) : signupAnswerTextMax;
     }
   }
   return z.object(shape);
+}
+
+function translateFieldError(msg: string | undefined, t: (key: string) => string): string | undefined {
+  if (!msg) return undefined;
+  if (msg === "notANumber") return t("fieldError.notANumber");
+  if (/email/i.test(msg)) return t("fieldError.invalidEmail");
+  if (/too.*big|at most|maximum|too long/i.test(msg)) return t("fieldError.tooLong");
+  return t("fieldError.missing");
 }
 
 function DeleteConfirmButton({
@@ -127,10 +140,17 @@ export default function EditSignupForm({ data, editToken }: Props) {
   const t = useTranslations("editSignup");
   const tDuration = useTranslations("duration");
   const { signup, event } = data;
-  const [values, setValues] = useState<FormValues>(() => signupToFormValues(signup));
-  const { fieldErrors, validate, clearError } = useFormValidation();
 
-  const signupSchema = buildSignupSchema(event);
+  const {
+    register,
+    control,
+    handleSubmit,
+    getValues,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(buildSignupSchema(event)),
+    defaultValues: signupToFormValues(signup, event),
+  });
 
   const isNew = !signup.confirmed;
   const editableForMillis = signup.editableForMillis ?? 0;
@@ -193,17 +213,7 @@ export default function EditSignupForm({ data, editToken }: Props) {
     isHookActionPending(deleteSignupActionStatus) ||
     isHookActionPending(payActionStatus);
 
-  // Countdown timer
-  const [timeLeft, setTimeLeft] = useState(isNew ? confirmableForMillis : editableForMillis);
-  useEffect(() => {
-    if (!canEdit) return undefined;
-    const start = Date.now();
-    const initial = isNew ? confirmableForMillis : editableForMillis;
-    const timer = setInterval(() => {
-      setTimeLeft(Math.max(0, initial - (Date.now() - start)));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [canEdit, isNew, confirmableForMillis, editableForMillis]);
+  const timeLeft = useCountdown(isNew ? confirmableForMillis : canEdit ? editableForMillis : 0);
 
   const formatDuration = (ms: number) => {
     const sec = ms / 1000;
@@ -213,57 +223,15 @@ export default function EditSignupForm({ data, editToken }: Props) {
     return tDuration("days", { count: Math.floor(sec / 86400) });
   };
 
-  const handleChange = (field: keyof FormValues, value: string | string[]) => {
-    setValues((prev) => ({ ...prev, [field]: value }));
-    clearError(field);
-  };
-
-  const handleCheckboxChange = (field: `answer_${string}`, option: string, checked: boolean) => {
-    setValues((prev) => {
-      const val = prev[field];
-      const current = Array.isArray(val) ? val : [];
-      return {
-        ...prev,
-        [field]: checked ? [...current, option] : current.filter((v) => v !== option),
-      };
-    });
-    clearError(field);
-  };
-
-  const mapFieldError = (field: string, msg: string) => {
-    if (msg === "notANumber") return t("fieldError.notANumber");
-    if (/email/i.test(msg)) return t("fieldError.invalidEmail");
-    if (/too.*big|at most|maximum|too long/i.test(msg)) return t("fieldError.tooLong");
-    return t("fieldError.missing");
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = handleSubmit(() => {
     if (!canEdit || actionBusy) return;
     resetAllSignupActions();
-
-    const validationData: Record<string, unknown> = {};
-    if (event.nameQuestion) {
-      validationData.firstName = values.firstName ?? "";
-      validationData.lastName = values.lastName ?? "";
-    }
-    if (event.emailQuestion) {
-      validationData.email = values.email ?? "";
-    }
-    for (const q of event.questions) {
-      const fieldName = `answer_${q.id}` as const;
-      validationData[fieldName] = values[fieldName] ?? (q.type === "checkbox" ? [] : "");
-    }
-
-    const valid = validate(signupSchema, validationData, mapFieldError);
-    if (!valid) return;
-
     executeUpdate({
       signupId: signup.id,
       editToken,
-      body: formValuesToUpdate(values, event),
+      body: formValuesToUpdate(getValues(), event),
     });
-  };
+  });
 
   const handleDelete = () => {
     resetAllSignupActions();
@@ -275,13 +243,9 @@ export default function EditSignupForm({ data, editToken }: Props) {
     executePay({ signupId: signup.id, editToken });
   };
 
-  // Position display
   const positionText = (() => {
     if (signup.status === SignupStatus.IN_QUOTA) {
-      return t("position.quota", {
-        quota: signup.quota?.title ?? "",
-        position: signup.position ?? 0,
-      });
+      return t("position.quota", { quota: signup.quota?.title ?? "", position: signup.position ?? 0 });
     }
     if (signup.status === SignupStatus.IN_OPEN_QUOTA) {
       return t("position.openQuota", { position: signup.position ?? 0 });
@@ -292,9 +256,10 @@ export default function EditSignupForm({ data, editToken }: Props) {
     return null;
   })();
 
+  const err = (field: string) => translateFieldError(errors[field]?.message as string, t);
+
   return (
     <div className="mx-auto max-w-xl">
-      {/* Payment section */}
       {showPayment && (
         <section className="mb-6">
           <h2 className="mb-3 text-xl font-bold">{t("payment.title")}</h2>
@@ -349,7 +314,6 @@ export default function EditSignupForm({ data, editToken }: Props) {
         </section>
       )}
 
-      {/* Form title */}
       <h2 className="mb-3 text-xl font-bold">
         {(() => {
           if (!canEdit) return t("titleView");
@@ -357,10 +321,8 @@ export default function EditSignupForm({ data, editToken }: Props) {
         })()}
       </h2>
 
-      {/* Position */}
       {positionText && <p className="mb-3 text-sm text-gray-600">{positionText}</p>}
 
-      {/* Editable timer */}
       {canEdit && !alreadyPaid && (
         <p className={`mb-3 text-sm ${isNew && timeLeft < 5 * 60 * 1000 ? "text-red-600" : "text-gray-600"}`}>
           {isNew
@@ -370,16 +332,13 @@ export default function EditSignupForm({ data, editToken }: Props) {
       )}
       {!canEdit && <p className="mb-3 text-sm text-gray-500">{t("editable.closed")}</p>}
 
-      {/* Error */}
       {actionError && (
         <Alert variant="danger" className="mb-4">
           {actionError}
         </Alert>
       )}
 
-      {/* Form */}
-      <form onSubmit={handleSubmit}>
-        {/* Name fields */}
+      <form onSubmit={onSubmit}>
         {event.nameQuestion && (
           <>
             <Field.Root>
@@ -391,11 +350,10 @@ export default function EditSignupForm({ data, editToken }: Props) {
                 id="signup-firstName"
                 type="text"
                 className={inputClassName}
-                value={values.firstName ?? ""}
-                onChange={(e) => handleChange("firstName", e.target.value)}
                 disabled={!canEdit || (!isNew && signup.confirmed)}
+                {...register("firstName")}
               />
-              <FieldError error={fieldErrors.firstName} />
+              <FieldError error={err("firstName")} />
             </Field.Root>
             <Field.Root>
               <Field.Label htmlFor="signup-lastName">
@@ -406,29 +364,27 @@ export default function EditSignupForm({ data, editToken }: Props) {
                 id="signup-lastName"
                 type="text"
                 className={inputClassName}
-                value={values.lastName ?? ""}
-                onChange={(e) => handleChange("lastName", e.target.value)}
                 disabled={!canEdit || (!isNew && signup.confirmed)}
+                {...register("lastName")}
               />
-              <FieldError error={fieldErrors.lastName} />
+              <FieldError error={err("lastName")} />
             </Field.Root>
-            <div className="mb-4 flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                id="namePublic"
-                checked={values.namePublic === "true"}
-                onChange={(e) => handleChange("namePublic", e.target.checked ? "true" : "")}
-                disabled={!canEdit}
-              />
-              <label htmlFor="namePublic" className="text-sm text-gray-700">
-                {t("fields.namePublic")}
-              </label>
-            </div>
+            <Controller
+              name="namePublic"
+              control={control}
+              render={({ field }) => (
+                <CheckboxField
+                  id="namePublic"
+                  label={t("fields.namePublic")}
+                  checked={!!field.value}
+                  onChange={field.onChange}
+                  disabled={!canEdit}
+                />
+              )}
+            />
           </>
         )}
 
-        {/* Email */}
         {event.emailQuestion && (
           <Field.Root>
             <Field.Label htmlFor="signup-email">
@@ -439,121 +395,38 @@ export default function EditSignupForm({ data, editToken }: Props) {
               id="signup-email"
               type="email"
               className={inputClassName}
-              value={values.email ?? ""}
-              onChange={(e) => handleChange("email", e.target.value)}
               disabled={!canEdit || (!isNew && signup.confirmed)}
+              {...register("email")}
             />
-            <FieldError error={fieldErrors.email} />
+            <FieldError error={err("email")} />
           </Field.Root>
         )}
 
-        {/* Questions */}
         {event.questions.map((question) => {
-          const fieldName = `answer_${question.id}` as const;
-          const value = values[fieldName] ?? "";
-          const stringValue = typeof value === "string" ? value : "";
+          const fieldName = `answer_${question.id}`;
           const disabled = !canEdit || (alreadyPaid && (question.prices?.some((p) => p > 0) ?? false));
 
           return (
-            <Field.Root key={question.id}>
-              <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor={fieldName}>
-                {question.question}
-                {question.required && <span className="text-red-600"> *</span>}
-              </label>
-              {question.public && <small className="mb-1 block text-xs text-gray-500">{t("publicQuestion")}</small>}
-
-              {question.type === "text" && (
-                <input
-                  id={fieldName}
-                  type="text"
-                  className={inputClassName}
-                  value={stringValue}
-                  onChange={(e) => handleChange(fieldName, e.target.value)}
+            <Controller
+              key={question.id}
+              name={fieldName}
+              control={control}
+              render={({ field, fieldState }) => (
+                <QuestionField
+                  question={question}
+                  fieldId={fieldName}
+                  value={field.value}
+                  onChange={field.onChange}
                   disabled={disabled}
+                  showPrices
+                  showPublic
+                  error={translateFieldError(fieldState.error?.message, t)}
                 />
               )}
-              {question.type === "number" && (
-                <input
-                  id={fieldName}
-                  type="number"
-                  className={inputClassName}
-                  value={stringValue}
-                  onChange={(e) => handleChange(fieldName, e.target.value)}
-                  disabled={disabled}
-                />
-              )}
-              {question.type === "textarea" && (
-                <textarea
-                  id={fieldName}
-                  className={inputClassName}
-                  rows={3}
-                  value={stringValue}
-                  onChange={(e) => handleChange(fieldName, e.target.value)}
-                  disabled={disabled}
-                />
-              )}
-              {question.type === "select" &&
-                question.options &&
-                (question.options.length > 3 ? (
-                  <select
-                    id={fieldName}
-                    className={selectClassName}
-                    value={stringValue}
-                    onChange={(e) => handleChange(fieldName, e.target.value)}
-                    disabled={disabled}
-                  >
-                    <option value="">{t("fields.selectPlaceholder")}</option>
-                    {question.options.map((opt, optIdx) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                        {question.prices?.[optIdx] ? ` (+${(question.prices[optIdx] / 100).toFixed(2)})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  question.options.map((opt, optIdx) => (
-                    <div key={opt} className="flex items-center gap-2 py-1">
-                      <input
-                        type="radio"
-                        className="h-4 w-4 border-gray-300 text-brand-600 focus:ring-brand-500"
-                        id={`${fieldName}_${opt}`}
-                        name={fieldName}
-                        value={opt}
-                        checked={value === opt}
-                        onChange={() => handleChange(fieldName, opt)}
-                        disabled={disabled}
-                      />
-                      <label className="text-sm text-gray-700" htmlFor={`${fieldName}_${opt}`}>
-                        {opt}
-                        {question.prices?.[optIdx] ? ` (+${(question.prices[optIdx] / 100).toFixed(2)})` : ""}
-                      </label>
-                    </div>
-                  ))
-                ))}
-              {question.type === "checkbox" &&
-                question.options &&
-                question.options.map((opt, optIdx) => (
-                  <div key={opt} className="flex items-center gap-2 py-1">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                      id={`${fieldName}_${opt}`}
-                      checked={Array.isArray(value) && value.includes(opt)}
-                      onChange={(e) => handleCheckboxChange(fieldName, opt, e.target.checked)}
-                      disabled={disabled}
-                    />
-                    <label className="text-sm text-gray-700" htmlFor={`${fieldName}_${opt}`}>
-                      {opt}
-                      {question.prices?.[optIdx] ? ` (+${(question.prices[optIdx] / 100).toFixed(2)})` : ""}
-                    </label>
-                  </div>
-                ))}
-              <FieldError error={fieldErrors[fieldName]} />
-            </Field.Root>
+            />
           );
         })}
 
-        {/* Instructions + Submit */}
         {canEdit && (
           <p className="mb-4 text-sm text-gray-600">
             {t("editInstructions")}
@@ -574,7 +447,6 @@ export default function EditSignupForm({ data, editToken }: Props) {
         </nav>
       </form>
 
-      {/* Delete */}
       {canEdit && !isNew && (
         <div className="mt-8 border-t border-gray-200 pt-4 text-center">
           <p className="mb-3 text-sm text-gray-500">{t("delete.warning")}</p>

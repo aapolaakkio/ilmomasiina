@@ -1,16 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useAction } from "next-safe-action/hooks";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 import { deleteUserAction } from "@/actions/deleteUser";
 import { inviteUserAction } from "@/actions/inviteUser";
 import { Link, useRouter } from "@/i18n/navigation";
 import { UserID, UserRole } from "@/db/schema";
-import { inviteEmailOnlySchema, type UserListResponse } from "@/db/zod";
+import { adminInviteEmail, type UserListResponse } from "@/db/zod";
 import { firstAmongHookErrors, isHookActionPending } from "@/lib/safeActionHook";
-import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { inputClassName, selectClassName } from "@/components/ui/Field";
@@ -20,12 +22,24 @@ type Props = {
   users: UserListResponse;
 };
 
+const inviteFormSchema = z.object({
+  email: adminInviteEmail,
+  role: z.enum(UserRole),
+});
+
 export default function AdminUsersClient({ users }: Props) {
   const router = useRouter();
   const t = useTranslations("adminUsers");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<UserRole>(UserRole.USER);
-  const inviteValidation = useFormValidation();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(inviteFormSchema),
+    defaultValues: { email: "", role: UserRole.USER as UserRole },
+  });
 
   const lastDeletedEmailRef = useRef("");
 
@@ -37,8 +51,7 @@ export default function AdminUsersClient({ users }: Props) {
     reset: resetInviteUser,
   } = useAction(inviteUserAction, {
     onSuccess: () => {
-      setInviteEmail("");
-      inviteValidation.clearErrors();
+      reset();
       router.refresh();
     },
   });
@@ -72,20 +85,12 @@ export default function AdminUsersClient({ users }: Props) {
 
   const adminUsersBusy = isHookActionPending(inviteUserStatus) || isHookActionPending(deleteUserActionStatus);
 
-  const handleInvite = (e: React.SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onInvite = handleSubmit((values) => {
     if (isHookActionPending(inviteUserStatus)) return;
     resetInviteUser();
     resetDeleteUser();
-
-    const valid = inviteValidation.validate(inviteEmailOnlySchema, { email: inviteEmail }, (field) => {
-      if (field === "email") return t("errors.required");
-      return undefined;
-    });
-    if (!valid) return;
-
-    executeInvite({ email: inviteEmail, role: inviteRole });
-  };
+    executeInvite({ email: values.email, role: values.role });
+  });
 
   const handleDelete = (userId: UserID, email: string) => {
     if (!window.confirm(t("deleteConfirm", { user: email }))) return;
@@ -149,27 +154,14 @@ export default function AdminUsersClient({ users }: Props) {
 
       <h2 className="mb-2 mt-8 text-xl font-bold">{t("createUser")}</h2>
       <p className="mb-4 text-sm text-gray-600">{t("createUserInfo")}</p>
-      <form onSubmit={handleInvite} className="mb-8">
+      <form onSubmit={onInvite} className="mb-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-3">
           <div className="min-w-0 w-full sm:max-w-lg sm:flex-1">
-            <input
-              type="email"
-              className={inputClassName}
-              placeholder={t("email")}
-              value={inviteEmail}
-              onChange={(e) => {
-                setInviteEmail(e.target.value);
-                inviteValidation.clearError("email");
-              }}
-            />
-            <FieldError error={inviteValidation.fieldErrors.email} />
+            <input type="email" className={inputClassName} placeholder={t("email")} {...register("email")} />
+            <FieldError error={errors.email?.message ? t("errors.required") : undefined} />
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
-            <select
-              className={`${selectClassName} w-full sm:w-44 shrink-0`}
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as UserRole)}
-            >
+            <select className={`${selectClassName} w-full sm:w-44 shrink-0`} {...register("role")}>
               <option value="user">{t("role_user")}</option>
               <option value="admin">{t("role_admin")}</option>
             </select>

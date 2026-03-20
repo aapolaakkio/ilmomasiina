@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import type { UseFormSetValue } from "react-hook-form";
 
 import type { AdminEventResponse } from "@/db/zod";
 
@@ -8,8 +9,8 @@ import type { EditorFormState } from "./types";
 export function applySavedAdminEventToEditor(
   eventData: AdminEventResponse,
   setSavedEvent: Dispatch<SetStateAction<AdminEventResponse | null>>,
-  setForm: Dispatch<SetStateAction<EditorFormState>>,
+  setDraft: UseFormSetValue<EditorFormState>,
 ): void {
   setSavedEvent(eventData);
-  setForm((prev) => ({ ...prev, draft: eventData.draft }));
+  setDraft("draft", eventData.draft);
 }

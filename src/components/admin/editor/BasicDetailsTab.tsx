@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { checkSlugAction } from "@/actions/checkSlug";
 import { PaymentMode } from "@/db/schema";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
 import { FieldError } from "@/components/ui/FieldError";
 
@@ -238,32 +239,20 @@ export default function BasicDetailsTab({
         <FieldError error={fieldErrors.dateMissing} />
       </div>
 
-      <div className="mb-4 flex items-center gap-2">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-          id="listed"
-          checked={form.listed}
-          onChange={(e) => updateField("listed", e.target.checked)}
-          disabled={readOnly}
-        />
-        <label htmlFor="listed" className="text-sm text-gray-700">
-          {t("basic.listed")}
-        </label>
-      </div>
-      <div className="mb-4 flex items-center gap-2">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-          id="signupsPublic"
-          checked={form.signupsPublic}
-          onChange={(e) => updateField("signupsPublic", e.target.checked)}
-          disabled={readOnly}
-        />
-        <label htmlFor="signupsPublic" className="text-sm text-gray-700">
-          {t("basic.signupsPublic")}
-        </label>
-      </div>
+      <CheckboxField
+        id="listed"
+        label={t("basic.listed")}
+        checked={form.listed}
+        onChange={(v) => updateField("listed", v)}
+        disabled={readOnly}
+      />
+      <CheckboxField
+        id="signupsPublic"
+        label={t("basic.signupsPublic")}
+        checked={form.signupsPublic}
+        onChange={(v) => updateField("signupsPublic", v)}
+        disabled={readOnly}
+      />
 
       <Field.Root>
         <Field.Label htmlFor="editor-location">

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useAction } from "next-safe-action/hooks";
+import { Controller, useForm } from "react-hook-form";
 
 import { createSignupAsAdminAction } from "@/actions/createSignupAsAdmin";
 import { updateSignupAsAdminAction } from "@/actions/updateSignupAsAdmin";
@@ -11,7 +12,9 @@ import type { AdminEventResponse, AdminSignupSchema } from "@/db/zod";
 import { firstAmongHookErrors } from "@/lib/safeActionHook";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
+import { QuestionField } from "@/components/QuestionField";
 
 import { isSaveErrorResult } from "./saveResultHelpers";
 
@@ -22,6 +25,39 @@ type Props = {
   onSave: () => Promise<void>;
 };
 
+type ModalFormValues = {
+  quotaId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  language: string;
+  namePublic: boolean;
+  answers: Record<QuestionID, string | string[]>;
+  manualPaymentStatus: ManualPaymentStatus;
+  sendEmail: boolean;
+  keepEditing: boolean;
+};
+
+function buildDefaults(event: AdminEventResponse, signup?: AdminSignupSchema): ModalFormValues {
+  const answers: Record<string, string | string[]> = {};
+  for (const q of event.questions) {
+    const existing = signup?.answers?.find((a) => a.questionId === q.id);
+    answers[q.id] = existing ? existing.answer : q.type === QuestionType.CHECKBOX ? [] : "";
+  }
+  return {
+    quotaId: event.quotas[0]?.id ?? "",
+    firstName: signup?.firstName ?? "",
+    lastName: signup?.lastName ?? "",
+    email: signup?.email ?? "",
+    language: event.defaultLanguage,
+    namePublic: signup?.namePublic ?? false,
+    answers,
+    manualPaymentStatus: signup?.manualPaymentStatus ?? ManualPaymentStatus.NONE,
+    sendEmail: true,
+    keepEditing: false,
+  };
+}
+
 export default function EditSignupModal({ event, signup, onClose, onSave }: Props) {
   const t = useTranslations("editor.signups.editModal");
   const tFields = useTranslations("editSignup.fields");
@@ -29,27 +65,9 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
 
   const isCreate = !signup;
 
-  function buildEmptyAnswers(existingSignup?: AdminSignupSchema): Record<string, string | string[]> {
-    const map: Record<string, string | string[]> = {};
-    for (const q of event.questions) {
-      const existing = existingSignup?.answers?.find((a) => a.questionId === q.id);
-      map[q.id] = existing ? existing.answer : q.type === QuestionType.CHECKBOX ? [] : "";
-    }
-    return map;
-  }
-
-  const [quotaId, setQuotaId] = useState<string>(event.quotas[0]?.id ?? "");
-  const [firstName, setFirstName] = useState(signup?.firstName ?? "");
-  const [lastName, setLastName] = useState(signup?.lastName ?? "");
-  const [email, setEmail] = useState(signup?.email ?? "");
-  const [language, setLanguage] = useState(event.defaultLanguage);
-  const [namePublic, setNamePublic] = useState(signup?.namePublic ?? false);
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>(() => buildEmptyAnswers(signup));
-  const [manualPaymentStatus, setManualPaymentStatus] = useState<ManualPaymentStatus | null>(
-    signup?.manualPaymentStatus ?? null,
-  );
-  const [sendEmail, setSendEmail] = useState(true);
-  const [keepEditing, setKeepEditing] = useState(false);
+  const { register, control, handleSubmit, reset } = useForm<ModalFormValues>({
+    defaultValues: buildDefaults(event, signup),
+  });
 
   const {
     executeAsync: runCreateSignup,
@@ -80,64 +98,44 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
     }
   }
 
-  function setAnswer(questionId: QuestionID, value: string | string[]) {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
-  }
-
-  function toggleCheckbox(questionId: QuestionID, option: string, checked: boolean) {
-    setAnswers((prev) => {
-      const current = prev[questionId] ?? [];
-      if (!Array.isArray(current)) {
-        return { ...prev, [questionId]: [] };
-      }
-      return {
-        ...prev,
-        [questionId]: checked ? [...current, option] : current.filter((o) => o !== option),
-      };
-    });
-  }
-
-  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
+  const onSubmit = handleSubmit(async (values) => {
     resetCreateSignup();
     resetUpdateSignup();
 
     const body = {
-      firstName: event.nameQuestion ? firstName : null,
-      lastName: event.nameQuestion ? lastName : null,
-      email: event.emailQuestion ? email : null,
-      namePublic,
-      language,
+      firstName: event.nameQuestion ? values.firstName : null,
+      lastName: event.nameQuestion ? values.lastName : null,
+      email: event.emailQuestion ? values.email : null,
+      namePublic: values.namePublic,
+      language: values.language,
       answers: event.questions.map((q) => ({
         questionId: q.id,
-        answer: answers[q.id] ?? "",
+        answer: values.answers[q.id] ?? "",
       })),
-      manualPaymentStatus: event.payments !== "disabled" && manualPaymentStatus !== null ? manualPaymentStatus : null,
-      sendEmail,
+      manualPaymentStatus:
+        event.payments !== "disabled" && values.manualPaymentStatus !== "none"
+          ? (values.manualPaymentStatus as ManualPaymentStatus)
+          : null,
+      sendEmail: values.sendEmail,
     };
 
     try {
       const result = isCreate
-        ? await runCreateSignup({ quotaId, ...body })
+        ? await runCreateSignup({ quotaId: values.quotaId, ...body })
         : await runUpdateSignup({ signupId: signup!.id, body });
 
-      if (isSaveErrorResult(result)) {
-        return;
-      }
+      if (isSaveErrorResult(result)) return;
 
       await onSave();
-      if (isCreate && keepEditing) {
-        setFirstName("");
-        setLastName("");
-        setEmail("");
-        setAnswers(buildEmptyAnswers());
+      if (isCreate && values.keepEditing) {
+        reset(buildDefaults(event));
         return;
       }
       onClose();
     } catch {
       /* Hook records failure via `status` / `result` when the action rejects. */
     }
-  }
+  });
 
   const availableLanguages = [
     event.defaultLanguage,
@@ -158,11 +156,11 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={onSubmit}>
         {isCreate && (
           <Field.Root>
             <Field.Label>{t("quota")}</Field.Label>
-            <select className={selectClassName} value={quotaId} onChange={(e) => setQuotaId(e.target.value)}>
+            <select className={selectClassName} {...register("quotaId")}>
               {event.quotas.map((q) => (
                 <option key={q.id} value={q.id}>
                   {q.title}
@@ -176,21 +174,11 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
           <>
             <Field.Root>
               <Field.Label>{tFields("firstName")}</Field.Label>
-              <input
-                type="text"
-                className={inputClassName}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
+              <input type="text" className={inputClassName} {...register("firstName")} />
             </Field.Root>
             <Field.Root>
               <Field.Label>{tFields("lastName")}</Field.Label>
-              <input
-                type="text"
-                className={inputClassName}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
+              <input type="text" className={inputClassName} {...register("lastName")} />
             </Field.Root>
           </>
         )}
@@ -198,13 +186,13 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
         {event.emailQuestion && (
           <Field.Root>
             <Field.Label>{tFields("email")}</Field.Label>
-            <input type="email" className={inputClassName} value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="email" className={inputClassName} {...register("email")} />
           </Field.Root>
         )}
 
         <Field.Root>
           <Field.Label>{t("language")}</Field.Label>
-          <select className={selectClassName} value={language} onChange={(e) => setLanguage(e.target.value)}>
+          <select className={selectClassName} {...register("language")}>
             {availableLanguages.map((l) => (
               <option key={l} value={l}>
                 {l}
@@ -213,102 +201,39 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
           </select>
         </Field.Root>
 
-        <Field.Root>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-brand-600"
-              checked={namePublic}
-              onChange={(e) => setNamePublic(e.target.checked)}
+        <Controller
+          name="namePublic"
+          control={control}
+          render={({ field }) => (
+            <CheckboxField
+              id="modal-namePublic"
+              label={t("namePublic")}
+              checked={field.value}
+              onChange={field.onChange}
             />
-            {t("namePublic")}
-          </label>
-        </Field.Root>
+          )}
+        />
 
         {event.questions.map((question) => (
-          <Field.Root key={question.id}>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              {question.question}
-              {question.required && <span className="text-red-600"> *</span>}
-            </label>
-            {question.type === QuestionType.TEXT && (
-              <input
-                type="text"
-                className={inputClassName}
-                value={answers[question.id] ?? ""}
-                onChange={(e) => setAnswer(question.id, e.target.value)}
+          <Controller
+            key={question.id}
+            name={`answers.${question.id}`}
+            control={control}
+            render={({ field }) => (
+              <QuestionField
+                question={question}
+                fieldId={`modal-q-${question.id}`}
+                value={field.value}
+                onChange={field.onChange}
               />
             )}
-            {question.type === QuestionType.NUMBER && (
-              <input
-                type="number"
-                className={inputClassName}
-                value={answers[question.id] ?? ""}
-                onChange={(e) => setAnswer(question.id, e.target.value)}
-              />
-            )}
-            {question.type === QuestionType.TEXT_AREA && (
-              <textarea
-                className={inputClassName}
-                rows={3}
-                value={answers[question.id] ?? ""}
-                onChange={(e) => setAnswer(question.id, e.target.value)}
-              />
-            )}
-            {question.type === QuestionType.SELECT &&
-              question.options &&
-              (question.options.length <= 3 ? (
-                <div className="space-y-1">
-                  {question.options.map((opt) => (
-                    <label key={opt} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="radio"
-                        name={`q-${question.id}`}
-                        className="h-4 w-4 border-gray-300 text-brand-600"
-                        checked={answers[question.id] === opt}
-                        onChange={() => setAnswer(question.id, opt)}
-                      />
-                      {opt}
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <select
-                  className={selectClassName}
-                  value={answers[question.id] ?? ""}
-                  onChange={(e) => setAnswer(question.id, e.target.value)}
-                >
-                  <option value="">{tFields("selectPlaceholder")}</option>
-                  {question.options.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              ))}
-            {question.type === QuestionType.CHECKBOX &&
-              question.options?.map((opt) => (
-                <div key={opt} className="flex items-center gap-2 py-1">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-brand-600"
-                    checked={Array.isArray(answers[question.id]) && answers[question.id].includes(opt)}
-                    onChange={(e) => toggleCheckbox(question.id, opt, e.target.checked)}
-                  />
-                  <span className="text-sm text-gray-700">{opt}</span>
-                </div>
-              ))}
-          </Field.Root>
+          />
         ))}
 
         {event.payments !== "disabled" && (
           <Field.Root>
             <Field.Label>{t("manualPaymentStatus")}</Field.Label>
-            <select
-              className={selectClassName}
-              value={manualPaymentStatus ?? ""}
-              onChange={(e) => setManualPaymentStatus(e.target.value as ManualPaymentStatus)}
-            >
+            <select className={selectClassName} {...register("manualPaymentStatus")}>
               <option value="none">{t("manualPaymentNone")}</option>
               <option value="paid">{t("manualPaymentPaid")}</option>
               <option value="refunded">{t("manualPaymentRefunded")}</option>
@@ -316,30 +241,32 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
           </Field.Root>
         )}
 
-        <Field.Root>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-brand-600"
-              checked={sendEmail}
-              onChange={(e) => setSendEmail(e.target.checked)}
+        <Controller
+          name="sendEmail"
+          control={control}
+          render={({ field }) => (
+            <CheckboxField
+              id="modal-sendEmail"
+              label={t("sendEmail")}
+              checked={field.value}
+              onChange={field.onChange}
             />
-            {t("sendEmail")}
-          </label>
-        </Field.Root>
+          )}
+        />
 
         {isCreate && (
-          <Field.Root>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-brand-600"
-                checked={keepEditing}
-                onChange={(e) => setKeepEditing(e.target.checked)}
+          <Controller
+            name="keepEditing"
+            control={control}
+            render={({ field }) => (
+              <CheckboxField
+                id="modal-keepEditing"
+                label={t("keepEditing")}
+                checked={field.value}
+                onChange={field.onChange}
               />
-              {t("keepEditing")}
-            </label>
-          </Field.Root>
+            )}
+          />
         )}
 
         <div className="mt-4 flex justify-end gap-2">

@@ -5,6 +5,7 @@ import { arrayMove } from "@dnd-kit/sortable";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
 import { FieldError } from "@/components/ui/FieldError";
 import { SortableList } from "@/components/ui/Sortable";
@@ -117,40 +118,28 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
               </div>
 
               <div className="mb-3 flex gap-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                    id={`question-required-${i}`}
-                    checked={question.required}
-                    disabled={readOnly}
-                    onChange={(e) => {
-                      const questions = [...form.questions];
-                      questions[i] = { ...question, required: e.target.checked };
-                      updateField("questions", questions);
-                    }}
-                  />
-                  <label className="text-sm text-gray-700" htmlFor={`question-required-${i}`}>
-                    {t("questions.required")}
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                    id={`question-public-${i}`}
-                    checked={question.public}
-                    disabled={readOnly}
-                    onChange={(e) => {
-                      const questions = [...form.questions];
-                      questions[i] = { ...question, public: e.target.checked };
-                      updateField("questions", questions);
-                    }}
-                  />
-                  <label className="text-sm text-gray-700" htmlFor={`question-public-${i}`}>
-                    {t("questions.public")}
-                  </label>
-                </div>
+                <CheckboxField
+                  id={`question-required-${i}`}
+                  label={t("questions.required")}
+                  checked={question.required}
+                  disabled={readOnly}
+                  onChange={(v) => {
+                    const questions = [...form.questions];
+                    questions[i] = { ...question, required: v };
+                    updateField("questions", questions);
+                  }}
+                />
+                <CheckboxField
+                  id={`question-public-${i}`}
+                  label={t("questions.public")}
+                  checked={question.public}
+                  disabled={readOnly}
+                  onChange={(v) => {
+                    const questions = [...form.questions];
+                    questions[i] = { ...question, public: v };
+                    updateField("questions", questions);
+                  }}
+                />
               </div>
 
               {(question.type === "select" || question.type === "checkbox") && (

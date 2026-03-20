@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAction } from "next-safe-action/hooks";
 
 import { createSignupAction } from "@/actions/createSignup";
 import { useRouter } from "@/i18n/navigation";
 import { isHookActionPending } from "@/lib/safeActionHook";
+import { useCountdown } from "@/lib/useCountdown";
 import type { QuotaID } from "@/db/schema";
 import type { UserEventResponse } from "@/db/zod";
 import { Button } from "@/components/ui/Button";
@@ -20,8 +20,8 @@ type Props = {
 export default function SignupButton({ event, registrationClosed, millisTillOpening }: Props) {
   const t = useTranslations("singleEvent");
   const router = useRouter();
-  const [countdown, setCountdown] = useState(millisTillOpening ?? 0);
-  const [isOpen, setIsOpen] = useState(!registrationClosed && (millisTillOpening ?? 0) <= 0);
+  const countdown = useCountdown(millisTillOpening ?? 0);
+  const isOpen = !registrationClosed && countdown <= 0;
 
   const { execute, status: createSignupActionStatus } = useAction(createSignupAction, {
     onSuccess: ({ data }) => {
@@ -30,21 +30,6 @@ export default function SignupButton({ event, registrationClosed, millisTillOpen
       }
     },
   });
-
-  // Countdown timer
-  useEffect(() => {
-    if (millisTillOpening == null || millisTillOpening <= 0) return undefined;
-    const start = Date.now();
-    const timer = setInterval(() => {
-      const remaining = Math.max(0, millisTillOpening - (Date.now() - start));
-      setCountdown(remaining);
-      if (remaining <= 0) {
-        setIsOpen(true);
-        clearInterval(timer);
-      }
-    }, 100);
-    return () => clearInterval(timer);
-  }, [millisTillOpening]);
 
   const isDisabled = event.registrationStartDate == null || event.registrationEndDate == null;
 

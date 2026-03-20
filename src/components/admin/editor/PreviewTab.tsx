@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import Markdown from "@/components/Markdown";
+import { QuestionField } from "@/components/QuestionField";
 import { appLocaleToBcp47 } from "@/i18n/intlLocale";
 import { formatAppDateTime } from "@/lib/intlDateTime";
 import { Button } from "@/components/ui/Button";
-import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
+import { Field, inputClassName } from "@/components/ui/Field";
 
 import type { EditorFormState } from "./types";
 
@@ -142,32 +143,12 @@ export default function PreviewTab({ form }: Props) {
               </Field.Root>
             )}
             {form.questions.map((question, i) => (
-              <Field.Root key={i}>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  {question.question || `(Question ${i + 1})`}
-                  {question.required && <span className="text-red-600"> *</span>}
-                </label>
-                {question.type === "text" && <input type="text" className={inputClassName} disabled />}
-                {question.type === "number" && <input type="number" className={inputClassName} disabled />}
-                {question.type === "textarea" && <textarea className={inputClassName} rows={3} disabled />}
-                {question.type === "select" && question.options && (
-                  <select className={selectClassName} disabled>
-                    <option value="">{tEdit("fields.selectPlaceholder")}</option>
-                    {question.options.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {question.type === "checkbox" &&
-                  question.options?.map((opt) => (
-                    <div key={opt} className="flex items-center gap-2 py-1">
-                      <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-brand-600" disabled />
-                      <span className="text-sm text-gray-700">{opt}</span>
-                    </div>
-                  ))}
-              </Field.Root>
+              <QuestionField
+                key={i}
+                question={{ ...question, question: question.question || `(Question ${i + 1})` }}
+                fieldId={`preview-q-${i}`}
+                disabled
+              />
             ))}
             <Button variant="primary" disabled>
               {tEdit("save")}

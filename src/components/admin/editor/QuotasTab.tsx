@@ -5,6 +5,7 @@ import { arrayMove } from "@dnd-kit/sortable";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { CheckboxField } from "@/components/ui/CheckboxField";
 import { Field, inputClassName } from "@/components/ui/Field";
 import { FieldError } from "@/components/ui/FieldError";
 import { SortableList } from "@/components/ui/Sortable";
@@ -43,32 +44,20 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-          id="nameQuestion"
-          checked={form.nameQuestion}
-          disabled={readOnly}
-          onChange={(e) => updateField("nameQuestion", e.target.checked)}
-        />
-        <label htmlFor="nameQuestion" className="text-sm text-gray-700">
-          {t("quotas.nameQuestion")}
-        </label>
-      </div>
-      <div className="mb-4 flex items-center gap-2">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-          id="emailQuestion"
-          checked={form.emailQuestion}
-          disabled={readOnly}
-          onChange={(e) => updateField("emailQuestion", e.target.checked)}
-        />
-        <label htmlFor="emailQuestion" className="text-sm text-gray-700">
-          {t("quotas.emailQuestion")}
-        </label>
-      </div>
+      <CheckboxField
+        id="nameQuestion"
+        label={t("quotas.nameQuestion")}
+        checked={form.nameQuestion}
+        onChange={(v) => updateField("nameQuestion", v)}
+        disabled={readOnly}
+      />
+      <CheckboxField
+        id="emailQuestion"
+        label={t("quotas.emailQuestion")}
+        checked={form.emailQuestion}
+        onChange={(v) => updateField("emailQuestion", v)}
+        disabled={readOnly}
+      />
 
       <h3 className="mb-3 text-lg font-semibold">{t("quotas.title")}</h3>
       {fieldErrors.quotas && <FieldError error={fieldErrors.quotas} />}

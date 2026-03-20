@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { useTranslations } from "next-intl";
 import { useAction } from "next-safe-action/hooks";
+import { useForm, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import { createEventAction } from "@/actions/createEvent";
 import { updateEventAction } from "@/actions/updateEvent";
@@ -11,7 +13,6 @@ import { Link, useRouter } from "@/i18n/navigation";
 import type { UserID } from "@/db/schema";
 import type { AdminEventResponse } from "@/db/zod";
 import { firstAmongHookErrors } from "@/lib/safeActionHook";
-import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -20,11 +21,12 @@ import { Tabs } from "@/components/ui/Tabs";
 import BasicDetailsTab from "./editor/BasicDetailsTab";
 import { applySavedAdminEventToEditor } from "./editor/applySavedAdminEvent";
 import { buildEventUpdateBody } from "./editor/buildEventUpdateBody";
-import { editorTabErrors, editorSchema, editorValidationPayload } from "./editor/editorSchema";
+import { editorTabErrors, editorSchema } from "./editor/editorSchema";
 import { EditorEditConflictAlert } from "./editor/EditorEditConflictAlert";
 import { EditorMoveToQueueAlert } from "./editor/EditorMoveToQueueAlert";
 import EditorsTab from "./editor/EditorsTab";
 import EmailsTab from "./editor/EmailsTab";
+import { flattenRHFErrors } from "./editor/flattenRHFErrors";
 import { createInitialEditorSession } from "./editor/initialEditorForm";
 import LanguageManager from "./editor/LanguageManager";
 import { mapEditorSchemaIssue } from "./editor/mapEditorSchemaIssue";
@@ -59,9 +61,20 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
     return mountSeedRef.current;
   }
 
-  const [form, setForm] = useState(() => mountSeed().form);
+  const {
+    watch,
+    setValue,
+    getValues,
+    trigger,
+    formState: { errors },
+  } = useForm<EditorFormState>({
+    resolver: zodResolver(editorSchema) as unknown as Resolver<EditorFormState>,
+    defaultValues: mountSeed().form,
+  });
+
+  const form = watch();
+
   const [selectedLanguage, setSelectedLanguage] = useState(() => mountSeed().selectedLanguage);
-  /** Client-side validation and non-hook failures (e.g. unexpected empty result). Server/action errors use `useAction` `status` + `result`. */
   const [localError, setLocalError] = useState<string | null>(null);
   const [savedEvent, setSavedEvent] = useState(initialEvent);
   const [editConflict, setEditConflict] = useState<EditorEditConflictState | null>(null);
@@ -69,7 +82,8 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
     count: number;
     draft: boolean;
   } | null>(null);
-  const { fieldErrors, validate } = useFormValidation();
+
+  const fieldErrors = flattenRHFErrors(errors, (msg) => mapEditorSchemaIssue(msg, t));
 
   const {
     executeAsync: runCreate,
@@ -103,27 +117,19 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
       ? t("saveSuccess")
       : null;
 
-  /**
-   * After edit-conflict overwrite we `setForm` / `setSavedEvent` synchronously, then save on a later
-   * commit so `handleSave` reads the updated state. Cleared inside the effect below.
-   */
   const pendingOverwrite = useRef<boolean | null>(null);
 
   const tabErrors = editorTabErrors(fieldErrors);
 
   const updateField: EditorUpdateField = (key, value) => {
-    setForm((prev) => {
-      const next = { ...prev, [key]: value };
-      if (Object.keys(prev.languages).length === 0) {
-        return next;
-      }
-      if (key === "quotas") {
-        next.languages = syncQuotasAcrossLanguages(prev.languages, value as EditorFormState["quotas"]);
-      } else if (key === "questions") {
-        next.languages = syncQuestionsAcrossLanguages(prev.languages, value as EditorFormState["questions"]);
-      }
-      return next;
-    });
+    (setValue as (name: string, value: unknown) => void)(key, value);
+    if (key === "quotas") {
+      const languages = getValues("languages");
+      setValue("languages", syncQuotasAcrossLanguages(languages, value as EditorFormState["quotas"]));
+    } else if (key === "questions") {
+      const languages = getValues("languages");
+      setValue("languages", syncQuestionsAcrossLanguages(languages, value as EditorFormState["questions"]));
+    }
   };
 
   const editorTabProps = {
@@ -141,14 +147,14 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
     resetCreateSave();
     resetUpdateSave();
 
-    const valid = validate(editorSchema, editorValidationPayload(form), (_field, msg) => mapEditorSchemaIssue(msg, t));
+    const valid = await trigger();
     if (!valid) {
       setLocalError(invalidLabel);
       return;
     }
 
     try {
-      const body = buildEventUpdateBody(form, asDraft);
+      const body = buildEventUpdateBody(getValues(), asDraft);
 
       if (effectiveIsNew) {
         const result = await runCreate(body);
@@ -181,7 +187,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
             draft: asDraft,
           });
         } else if (result?.data && "id" in result.data) {
-          applySavedAdminEventToEditor(result.data, setSavedEvent, setForm);
+          applySavedAdminEventToEditor(result.data, setSavedEvent, setValue);
         } else {
           setLocalError(saveFailedLabel);
         }
@@ -199,7 +205,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
       pendingOverwrite.current = null;
       void handleSaveRef.current(draft);
     }
-  }, [form, savedEvent]);
+  }, [savedEvent]);
 
   const editConflictLabels = {
     title: t("editConflict.title"),
@@ -266,25 +272,17 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
           }}
           onOverwrite={() => {
             const conflict = editConflict;
-            setForm((prev) => ({
-              ...prev,
-              quotas: prev.quotas.map((q) =>
-                q.id && conflict.deletedQuotas.includes(q.id) ? { ...q, id: undefined } : q,
-              ),
-              questions: prev.questions.map((q) =>
-                q.id && conflict.deletedQuestions.includes(q.id) ? { ...q, id: undefined } : q,
-              ),
-            }));
-            setSavedEvent((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    updatedAt: conflict.updatedAt,
-                  }
-                : prev,
+            const quotas = getValues("quotas").map((q) =>
+              q.id && conflict.deletedQuotas.includes(q.id) ? { ...q, id: undefined } : q,
             );
+            const questions = getValues("questions").map((q) =>
+              q.id && conflict.deletedQuestions.includes(q.id) ? { ...q, id: undefined } : q,
+            );
+            setValue("quotas", quotas);
+            setValue("questions", questions);
+            setSavedEvent((prev) => (prev ? { ...prev, updatedAt: conflict.updatedAt } : prev));
             setEditConflict(null);
-            pendingOverwrite.current = form.draft;
+            pendingOverwrite.current = getValues("draft");
           }}
         />
       )}
@@ -305,7 +303,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
               const result = await runUpdate({
                 eventId: savedEvent.id,
                 body: {
-                  ...buildEventUpdateBody(form, draft),
+                  ...buildEventUpdateBody(getValues(), draft),
                   moveSignupsToQueue: true,
                   updatedAt: savedEvent.updatedAt,
                 },
@@ -314,7 +312,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
                 return;
               }
               if (result?.data && "id" in result.data) {
-                applySavedAdminEventToEditor(result.data, setSavedEvent, setForm);
+                applySavedAdminEventToEditor(result.data, setSavedEvent, setValue);
               } else {
                 setLocalError(saveFailedLabel);
               }

@@ -77,7 +77,7 @@ export const EDITOR_BASIC_TAB_ERROR_KEYS = [
 
 export const EDITOR_BASIC_TAB_ERROR_KEY_SET = new Set<string>(EDITOR_BASIC_TAB_ERROR_KEYS);
 
-/** Which editor tabs currently show validation errors (from `useFormValidation` keys). */
+/** Which editor tabs currently show validation errors (from flattened error keys). */
 export function editorTabErrors(fieldErrors: Record<string, string>): {
   basic: boolean;
   quotas: boolean;
