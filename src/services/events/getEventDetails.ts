@@ -116,6 +116,23 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
   };
 }
 
+/** Slugs for published events within the same visibility window as `getEventDetailsForUser` (for `generateStaticParams`). */
+export async function getPublicEventSlugsForStaticParams(): Promise<{ slug: string }[]> {
+  const hideBeforeDate = new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000);
+  return db.query.events.findMany({
+    where: {
+      deletedAt: { isNull: true },
+      draft: false,
+      OR: [
+        { registrationEndDate: { gt: hideBeforeDate } },
+        { date: { gt: hideBeforeDate } },
+        { endDate: { gt: hideBeforeDate } },
+      ],
+    },
+    columns: { slug: true },
+  });
+}
+
 export async function getEventBySlug(eventSlug: EventSlug): Promise<UserEventResponse> {
   const { event, registrationStartDate, registrationEndDate } = await getEventDetailsForUser(eventSlug);
 

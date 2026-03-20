@@ -102,7 +102,7 @@ export default async function AdminEventsList({ events, showPast, role, userId }
                     </td>
                     <td className="py-3 pr-4 text-gray-600">
                       {!event.draft && event.slug ? (
-                        <Link href={`/events/${event.slug}`} className="text-brand-600 hover:underline" target="_blank">
+                        <Link href={`/event/${event.slug}`} className="text-brand-600 hover:underline" target="_blank">
                           {getEventStatus(event, t)}
                         </Link>
                       ) : (

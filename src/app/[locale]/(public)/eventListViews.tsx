@@ -67,7 +67,7 @@ export function EventListTable({ tableRows, locale, t, tState }: EventListViewPr
                 <tr key={row.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50">
                   <td className="min-w-[300px] px-4 py-3">
                     <Link
-                      href={`/events/${row.slug}`}
+                      href={`/event/${row.slug}`}
                       className="font-medium text-gray-900 no-underline hover:text-brand-600"
                     >
                       {row.title}
@@ -112,7 +112,7 @@ export function EventListCards({ tableRows, locale, t, tState }: EventListViewPr
           const stateText = getSignupStateText(row.signupState, locale, tState);
           return (
             <div key={row.id} className="border-b border-gray-200 py-3">
-              <Link href={`/events/${row.slug}`} className="font-semibold text-brand-600 hover:underline">
+              <Link href={`/event/${row.slug}`} className="font-semibold text-brand-600 hover:underline">
                 {row.title}
               </Link>
               {row.date && <p className="text-sm text-gray-600">{formatDate(row.date, locale)}</p>}

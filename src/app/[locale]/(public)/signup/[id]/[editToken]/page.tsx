@@ -8,6 +8,11 @@ import type { SignupID } from "@/db/schema";
 import { getSignupForEdit } from "@/services/signups/getSignupForEdit";
 import { verifyToken } from "@/services/signups/editTokens";
 
+/** Edit links are per-signup secrets; nothing is enumerated at build time. */
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {

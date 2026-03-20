@@ -13,7 +13,11 @@ import { getSignupsByQuota, stringifyAnswer } from "@/lib/signupUtils";
 import { Button } from "@/components/ui/Button";
 import { SignupStatus } from "@/db/schema";
 import { formatAppDateTime } from "@/lib/intlDateTime";
-import { getEventBySlug } from "@/services/events/getEventDetails";
+import { getEventBySlug, getPublicEventSlugsForStaticParams } from "@/services/events/getEventDetails";
+
+export async function generateStaticParams() {
+  return getPublicEventSlugsForStaticParams();
+}
 
 function formatDateTime(date: Date, bcp47Locale: string): string {
   return formatAppDateTime(date, bcp47Locale, "dateTimeWeekday");

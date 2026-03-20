@@ -209,7 +209,7 @@ export default function EditSignupForm({ data, editToken }: Props) {
       if (result?.serverError) {
         setError(result.serverError);
       } else if (isNew && !showPayment) {
-        router.push(`/events/${event.slug}`);
+        router.push(`/event/${event.slug}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t("signupError.failed"));
@@ -230,7 +230,7 @@ export default function EditSignupForm({ data, editToken }: Props) {
         setError(result.serverError);
         setSubmitting(false);
       } else {
-        router.push(`/events/${event.slug}`);
+        router.push(`/event/${event.slug}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t("deleteError.failed"));
@@ -544,7 +544,7 @@ export default function EditSignupForm({ data, editToken }: Props) {
         )}
         <nav className="flex justify-end gap-2">
           {!isNew && (
-            <Link href={`/events/${event.slug}`}>
+            <Link href={`/event/${event.slug}`}>
               <Button variant="ghost">{t("back")}</Button>
             </Link>
           )}

@@ -199,7 +199,7 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
           ) : (
             <>
               <Badge variant="success">{t("statusPublished")}</Badge>
-              <Link href={`/events/${form.slug}`} className="text-sm text-brand-600 hover:underline" target="_blank">
+              <Link href={`/event/${form.slug}`} className="text-sm text-brand-600 hover:underline" target="_blank">
                 {t("viewEvent") + " \u2197"}
               </Link>
             </>
