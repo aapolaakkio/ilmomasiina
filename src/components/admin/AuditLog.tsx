@@ -4,23 +4,10 @@ import { Link } from "@/i18n/navigation";
 import { appLocaleToBcp47 } from "@/i18n/intlLocale";
 import { AuditEvent } from "@/db/schema";
 import type { AuditLogResponse, AuditLogQuery } from "@/db/zod";
-import { AUDIT_LOG_PAGE_SIZE, auditLogSearchSuffix } from "@/lib/auditLogUrl";
+import { AUDIT_LOG_PAGE_SIZE, auditLogQueryToSearchParams, auditLogSearchSuffix } from "@/lib/auditLogUrl";
 import { formatAppDateTime } from "@/lib/intlDateTime";
-import { inputClassName, selectClassName } from "@/components/ui/Field";
 
-const AUDIT_EVENT_KEYS: { value: AuditEvent; labelKey: string }[] = [
-  { value: AuditEvent.CREATE_EVENT, labelKey: "actions.createEvent" },
-  { value: AuditEvent.EDIT_EVENT, labelKey: "actions.editEvent" },
-  { value: AuditEvent.PUBLISH_EVENT, labelKey: "actions.publishEvent" },
-  { value: AuditEvent.UNPUBLISH_EVENT, labelKey: "actions.unpublishEvent" },
-  { value: AuditEvent.DELETE_EVENT, labelKey: "actions.deleteEvent" },
-  { value: AuditEvent.CREATE_SIGNUP, labelKey: "actions.createSignup" },
-  { value: AuditEvent.EDIT_SIGNUP, labelKey: "actions.editSignup" },
-  { value: AuditEvent.DELETE_SIGNUP, labelKey: "actions.deleteSignup" },
-  { value: AuditEvent.PROMOTE_SIGNUP, labelKey: "actions.promoteSignup" },
-  { value: AuditEvent.CREATE_USER, labelKey: "actions.createUser" },
-  { value: AuditEvent.DELETE_USER, labelKey: "actions.deleteUser" },
-];
+import AuditLogFilterForm from "./AuditLogFilterForm";
 
 /** Maps audit actions to their description translation key and required variables. */
 const ACTION_DESCRIPTIONS: Record<AuditEvent, { key: string; vars: "event" | "signup" | "user" }> = {
@@ -53,7 +40,7 @@ function formatActionDescription(
 }
 
 const outlineButtonClass =
-  "inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:text-gray-400 disabled:bg-gray-50";
+  "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-gray-50";
 
 type Props = {
   query: AuditLogQuery;
@@ -68,7 +55,6 @@ export default async function AuditLogView({ query, logs }: Props) {
 
   const prevQuery: AuditLogQuery = { ...query, offset: Math.max(0, offset - AUDIT_LOG_PAGE_SIZE) };
   const nextQuery: AuditLogQuery = { ...query, offset: offset + AUDIT_LOG_PAGE_SIZE };
-  const selectedAction = query.action?.[0] ?? "";
 
   return (
     <>
@@ -77,47 +63,7 @@ export default async function AuditLogView({ query, logs }: Props) {
         {t("back")}
       </Link>
 
-      <form method="get" className="mb-4 flex flex-wrap items-end gap-2">
-        <input
-          type="text"
-          name="user"
-          defaultValue={query.user ?? ""}
-          className={`${inputClassName} max-w-[150px]`}
-          placeholder={t("filterUser")}
-        />
-        <input
-          type="text"
-          name="ip"
-          defaultValue={query.ip ?? ""}
-          className={`${inputClassName} max-w-[150px]`}
-          placeholder={t("filterIp")}
-        />
-        <input
-          type="text"
-          name="event"
-          defaultValue={query.event ?? ""}
-          className={`${inputClassName} max-w-[150px]`}
-          placeholder={t("filterEvent")}
-        />
-        <input
-          type="text"
-          name="signup"
-          defaultValue={query.signup ?? ""}
-          className={`${inputClassName} max-w-[150px]`}
-          placeholder={t("filterSignup")}
-        />
-        <select name="action" defaultValue={selectedAction} className={`${selectClassName} max-w-[200px]`}>
-          <option value="">{t("filterAction")}</option>
-          {AUDIT_EVENT_KEYS.map((ae) => (
-            <option key={ae.value} value={ae.value}>
-              {t(ae.labelKey)}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className={outlineButtonClass}>
-          {t("applyFilters")}
-        </button>
-      </form>
+      <AuditLogFilterForm key={auditLogQueryToSearchParams(query).toString()} query={query} />
 
       <div className="mb-3 flex items-center gap-2">
         {offset > 0 ? (

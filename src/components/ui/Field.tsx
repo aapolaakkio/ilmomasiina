@@ -6,7 +6,7 @@ export const inputClassName =
   "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 export const selectClassName =
-  "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-gray-50 disabled:text-gray-500";
+  "select-control block w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-12 text-sm font-normal text-gray-900 shadow-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 function Root({ className, ...props }: React.ComponentProps<typeof BaseField.Root>) {
   return <BaseField.Root className={`mb-4 ${className ?? ""}`} {...props} />;

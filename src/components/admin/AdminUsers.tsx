@@ -12,7 +12,7 @@ import { inviteEmailOnlySchema, type UserListResponse } from "@/db/zod";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { inputClassName } from "@/components/ui/Field";
+import { inputClassName, selectClassName } from "@/components/ui/Field";
 import { FieldError } from "@/components/ui/FieldError";
 
 type Props = {
@@ -130,11 +130,11 @@ export default function AdminUsersClient({ users }: Props) {
       <h2 className="mb-2 mt-8 text-xl font-bold">{t("createUser")}</h2>
       <p className="mb-4 text-sm text-gray-600">{t("createUserInfo")}</p>
       <form onSubmit={handleInvite} className="mb-8">
-        <div className="flex gap-2">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-3">
+          <div className="min-w-0 w-full sm:max-w-lg sm:flex-1">
             <input
               type="email"
-              className={`${inputClassName} max-w-xs`}
+              className={inputClassName}
               placeholder={t("email")}
               value={inviteEmail}
               onChange={(e) => {
@@ -144,17 +144,19 @@ export default function AdminUsersClient({ users }: Props) {
             />
             <FieldError error={inviteValidation.fieldErrors.email} />
           </div>
-          <select
-            className={inputClassName}
-            value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value as UserRole)}
-          >
-            <option value="user">{t("role_user")}</option>
-            <option value="admin">{t("role_admin")}</option>
-          </select>
-          <Button type="submit" variant="secondary" disabled={isProcessing}>
-            {t("createSubmit")}
-          </Button>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+            <select
+              className={`${selectClassName} w-full sm:w-44 shrink-0`}
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value as UserRole)}
+            >
+              <option value="user">{t("role_user")}</option>
+              <option value="admin">{t("role_admin")}</option>
+            </select>
+            <Button type="submit" variant="secondary" className="w-full shrink-0 sm:w-auto" disabled={isProcessing}>
+              {t("createSubmit")}
+            </Button>
+          </div>
         </div>
       </form>
     </>
