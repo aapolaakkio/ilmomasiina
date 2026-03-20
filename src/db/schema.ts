@@ -146,14 +146,13 @@ export type AuditLogID = z.infer<typeof auditLogID>;
 
 export const editToken = z.string();
 
-/** Schema for a product line used to compute signup prices. */
+/** Product line used to compute signup prices. */
 export const productSchema = z.object({
   name: z.string().min(1),
   amount: z.int(),
   unitPrice: z.int(),
 });
 
-/** Schema for a product line used to compute signup prices. */
 export type ProductSchema = z.infer<typeof productSchema>;
 
 // --- Database Enums (names match Sequelize-generated enum type names) ---

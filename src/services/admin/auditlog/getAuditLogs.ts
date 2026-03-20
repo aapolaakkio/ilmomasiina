@@ -2,7 +2,7 @@ import type { SQL } from "drizzle-orm";
 import { and, count, desc, eq, inArray, like, or } from "drizzle-orm";
 
 import type { EventID, SignupID } from "@/db/schema";
-import { AUDIT_LOG_DEFAULT_LIMIT, type AuditLogResponse, type AuditLoqQuery } from "@/db/zod";
+import { AUDIT_LOG_DEFAULT_LIMIT, type AuditLogResponse, type AuditLogQuery } from "@/db/zod";
 
 import { db } from "../../../db";
 import { auditlogs } from "../../../db/schema";
@@ -10,7 +10,7 @@ import { auditlogs } from "../../../db/schema";
 const MAX_LOGS = 100;
 
 /** Get audit log entries with optional filtering and pagination. */
-export async function getAuditLogItems(query: AuditLoqQuery): Promise<AuditLogResponse> {
+export async function getAuditLogItems(query: AuditLogQuery): Promise<AuditLogResponse> {
   const conditions: SQL[] = [];
 
   if (query.user) {

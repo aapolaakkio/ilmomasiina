@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { arrayMove } from "@dnd-kit/sortable";
 
@@ -11,11 +10,11 @@ import { FieldError } from "@/components/ui/FieldError";
 import { SortableList } from "@/components/ui/Sortable";
 
 import LocalizedIndicator from "./LocalizedIndicator";
-import { type EditorTabProps, generateKey } from "./types";
+import { type EditorTabProps, generateKey, isDefaultLanguageView } from "./types";
 
 export default function QuotasTab({ form, updateField, fieldErrors, selectedLanguage, readOnly }: EditorTabProps) {
   const t = useTranslations("editor");
-  const isDefaultLang = selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage];
+  const isDefaultLang = isDefaultLanguageView(form, selectedLanguage);
 
   const getQuotaTitle = (index: number): string => {
     if (isDefaultLang) return form.quotas[index].title;
@@ -36,12 +35,9 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
     }
   };
 
-  const handleReorder = useCallback(
-    (oldIndex: number, newIndex: number) => {
-      updateField("quotas", arrayMove(form.quotas, oldIndex, newIndex));
-    },
-    [form.quotas, updateField],
-  );
+  const handleReorder = (oldIndex: number, newIndex: number) => {
+    updateField("quotas", arrayMove(form.quotas, oldIndex, newIndex));
+  };
 
   const sortableItems = form.quotas.map((q) => ({ id: q.key }));
 

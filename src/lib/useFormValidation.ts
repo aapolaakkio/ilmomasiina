@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import type { z } from "zod";
 
@@ -23,7 +23,7 @@ function pathToKey(path: (string | number)[]): string {
 export function useFormValidation() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  const validate = useCallback(<T extends z.ZodType>(schema: T, data: unknown, errorMap?: ErrorMapper): boolean => {
+  const validate = <T extends z.ZodType>(schema: T, data: unknown, errorMap?: ErrorMapper): boolean => {
     const result = schema.safeParse(data);
     if (result.success) {
       setFieldErrors({});
@@ -40,19 +40,19 @@ export function useFormValidation() {
 
     setFieldErrors(errors);
     return false;
-  }, []);
+  };
 
-  const clearErrors = useCallback(() => {
+  const clearErrors = () => {
     setFieldErrors({});
-  }, []);
+  };
 
-  const clearError = useCallback((field: string) => {
+  const clearError = (field: string) => {
     setFieldErrors((prev) => {
       const next = { ...prev };
       delete next[field];
       return next;
     });
-  }, []);
+  };
 
   return { fieldErrors, validate, clearErrors, clearError };
 }

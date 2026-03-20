@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { deleteEventAction } from "@/actions/deleteEvent";
@@ -51,30 +51,25 @@ export default function AdminEventsClient({ events, role, userId }: Props) {
   const [deleting, setDeleting] = useState<EventID | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const filteredEvents = useMemo(() => {
-    const filtered = events.filter((e) => isEventInPast(e) === showPast);
-    return showPast ? filtered.reverse() : filtered;
-  }, [events, showPast]);
+  const filtered = events.filter((e) => isEventInPast(e) === showPast);
+  const filteredEvents = showPast ? filtered.reverse() : filtered;
 
   const totalSignups = (event: AdminEventListResponse[number]) =>
     event.quotas.reduce((sum, q) => sum + q.signupCount, 0);
 
-  const handleDelete = useCallback(
-    async (eventId: EventID) => {
-      if (!window.confirm(t("deleteConfirm"))) return;
-      setDeleting(eventId);
-      setError(null);
-      try {
-        await deleteEventAction({ eventId });
-        router.refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t("deleteFailed"));
-      } finally {
-        setDeleting(null);
-      }
-    },
-    [router],
-  );
+  const handleDelete = async (eventId: EventID) => {
+    if (!window.confirm(t("deleteConfirm"))) return;
+    setDeleting(eventId);
+    setError(null);
+    try {
+      await deleteEventAction({ eventId });
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("deleteFailed"));
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   return (
     <>

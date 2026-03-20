@@ -4,11 +4,11 @@ import { Field, inputClassName } from "@/components/ui/Field";
 
 import LocalizedIndicator from "./LocalizedIndicator";
 import type { EditorTabProps } from "./types";
-import { getLocalizedValue, setLocalizedValue } from "./types";
+import { getLocalizedValue, isDefaultLanguageView, setLocalizedValue } from "./types";
 
 export default function EmailsTab({ form, updateField, selectedLanguage, readOnly }: EditorTabProps) {
   const t = useTranslations("editor");
-  const isDefaultLang = selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage];
+  const isDefaultLang = isDefaultLanguageView(form, selectedLanguage);
 
   return (
     <div>

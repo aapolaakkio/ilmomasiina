@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { arrayMove } from "@dnd-kit/sortable";
 
@@ -12,11 +11,11 @@ import { SortableList } from "@/components/ui/Sortable";
 import { QuestionType } from "@/db/schema";
 
 import LocalizedIndicator from "./LocalizedIndicator";
-import { type EditorTabProps, generateKey } from "./types";
+import { type EditorTabProps, generateKey, isDefaultLanguageView } from "./types";
 
 export default function QuestionsTab({ form, updateField, fieldErrors, selectedLanguage, readOnly }: EditorTabProps) {
   const t = useTranslations("editor");
-  const isDefaultLang = selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage];
+  const isDefaultLang = isDefaultLanguageView(form, selectedLanguage);
 
   const getQuestionText = (index: number): string => {
     if (isDefaultLang) return form.questions[index].question;
@@ -60,12 +59,9 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
     }
   };
 
-  const handleReorder = useCallback(
-    (oldIndex: number, newIndex: number) => {
-      updateField("questions", arrayMove(form.questions, oldIndex, newIndex));
-    },
-    [form.questions, updateField],
-  );
+  const handleReorder = (oldIndex: number, newIndex: number) => {
+    updateField("questions", arrayMove(form.questions, oldIndex, newIndex));
+  };
 
   const sortableItems = form.questions.map((q) => ({ id: q.key }));
 

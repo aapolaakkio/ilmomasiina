@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAction } from "next-safe-action/hooks";
 
@@ -47,13 +47,10 @@ export default function SignupButton({ event, registrationClosed, millisTillOpen
 
   const isDisabled = event.registrationStartDate == null || event.registrationEndDate == null;
 
-  const onClick = useCallback(
-    (quotaId: QuotaID) => {
-      if (!isOpen || isPending) return;
-      execute({ quotaId });
-    },
-    [isOpen, isPending, execute],
-  );
+  const onClick = (quotaId: QuotaID) => {
+    if (!isOpen || isPending) return;
+    execute({ quotaId });
+  };
 
   if (isDisabled) return null;
 

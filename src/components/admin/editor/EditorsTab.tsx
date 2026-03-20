@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { addEventEditorAction } from "@/actions/addEventEditor";
@@ -26,57 +26,51 @@ export default function EditorsTab({ eventId, initialEditors, readOnly }: Props)
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleAdd = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!email.trim() || processing) return;
-      setError(null);
-      setSuccess(null);
-      setProcessing(true);
-      try {
-        const result = await addEventEditorAction({
-          eventId,
-          email: email.trim(),
-        });
-        if (result?.serverError) {
-          setError(result.serverError);
-        } else if (result?.data) {
-          const data = result.data;
-          setEditors((prev) => [...prev, data]);
-          setEmail("");
-          setSuccess(t("addSuccess", { email: email.trim() }));
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t("addFailed"));
-      } finally {
-        setProcessing(false);
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || processing) return;
+    setError(null);
+    setSuccess(null);
+    setProcessing(true);
+    try {
+      const result = await addEventEditorAction({
+        eventId,
+        email: email.trim(),
+      });
+      if (result?.serverError) {
+        setError(result.serverError);
+      } else if (result?.data) {
+        const data = result.data;
+        setEditors((prev) => [...prev, data]);
+        setEmail("");
+        setSuccess(t("addSuccess", { email: email.trim() }));
       }
-    },
-    [eventId, email, processing, t],
-  );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("addFailed"));
+    } finally {
+      setProcessing(false);
+    }
+  };
 
-  const handleRemove = useCallback(
-    async (userId: UserID, editorEmail: string) => {
-      if (processing) return;
-      setError(null);
-      setSuccess(null);
-      setProcessing(true);
-      try {
-        const result = await removeEventEditorAction({ eventId, userId });
-        if (result?.serverError) {
-          setError(result.serverError);
-        } else {
-          setEditors((prev) => prev.filter((ed) => ed.userId !== userId));
-          setSuccess(t("removeSuccess", { email: editorEmail }));
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t("removeFailed"));
-      } finally {
-        setProcessing(false);
+  const handleRemove = async (userId: UserID, editorEmail: string) => {
+    if (processing) return;
+    setError(null);
+    setSuccess(null);
+    setProcessing(true);
+    try {
+      const result = await removeEventEditorAction({ eventId, userId });
+      if (result?.serverError) {
+        setError(result.serverError);
+      } else {
+        setEditors((prev) => prev.filter((ed) => ed.userId !== userId));
+        setSuccess(t("removeSuccess", { email: editorEmail }));
       }
-    },
-    [eventId, processing, t],
-  );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("removeFailed"));
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <div className="space-y-4 py-4">

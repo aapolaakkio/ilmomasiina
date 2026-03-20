@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { z } from "zod";
 
@@ -9,7 +9,14 @@ import { startPaymentAction } from "@/actions/startPayment";
 import { updateSignupAction } from "@/actions/updateSignup";
 import { Link, useRouter } from "@/i18n/navigation";
 import { SignupPaymentStatus, SignupStatus } from "@/db/schema";
-import type { SignupForEditResponse, SignupUpdateBody } from "@/db/zod";
+import {
+  signupAnswerChoiceList,
+  signupAnswerTextMax,
+  signupFormEmail,
+  signupPersonNameRequired,
+  type SignupForEditResponse,
+  type SignupUpdateBody,
+} from "@/db/zod";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -56,22 +63,22 @@ function formValuesToUpdate(values: FormValues, event: SignupForEditResponse["ev
 function buildSignupSchema(event: SignupForEditResponse["event"]) {
   const shape: Record<string, z.ZodType> = {};
   if (event.nameQuestion) {
-    shape.firstName = z.string().min(1).max(255);
-    shape.lastName = z.string().min(1).max(255);
+    shape.firstName = signupPersonNameRequired;
+    shape.lastName = signupPersonNameRequired;
   }
   if (event.emailQuestion) {
-    shape.email = z.email().max(255);
+    shape.email = signupFormEmail;
   }
   for (const q of event.questions) {
     const fieldName = `answer_${q.id}`;
     if (q.type === "checkbox") {
-      shape[fieldName] = q.required ? z.array(z.string().max(255)).min(1) : z.array(z.string().max(255));
+      shape[fieldName] = q.required ? signupAnswerChoiceList.min(1) : signupAnswerChoiceList;
     } else if (q.type === "number") {
-      const base = q.required ? z.string().min(1).max(255) : z.string().max(255);
+      const base = q.required ? signupAnswerTextMax.min(1) : signupAnswerTextMax;
       shape[fieldName] = base.refine((v) => v === "" || !Number.isNaN(Number(v)), { message: "notANumber" });
     } else {
       // text, textarea, select
-      shape[fieldName] = q.required ? z.string().min(1).max(255) : z.string().max(255);
+      shape[fieldName] = q.required ? signupAnswerTextMax.min(1) : signupAnswerTextMax;
     }
   }
   return z.object(shape);
@@ -114,7 +121,7 @@ export default function EditSignupForm({ data, editToken }: Props) {
   const [error, setError] = useState<string | null>(null);
   const { fieldErrors, validate, clearError } = useFormValidation();
 
-  const signupSchema = useMemo(() => buildSignupSchema(event), [event]);
+  const signupSchema = buildSignupSchema(event);
 
   const isNew = !signup.confirmed;
   const editableForMillis = signup.editableForMillis ?? 0;
@@ -137,110 +144,81 @@ export default function EditSignupForm({ data, editToken }: Props) {
     return () => clearInterval(timer);
   }, [canEdit, isNew, confirmableForMillis, editableForMillis]);
 
-  const formatDuration = useCallback(
-    (ms: number) => {
-      const sec = ms / 1000;
-      if (sec < 120) return tDuration("seconds", { count: Math.floor(sec) });
-      if (sec < 3600 + 60 - 1) return tDuration("minutes", { count: Math.floor(sec / 60) });
-      if (sec < 86400 + 3600 - 1) return tDuration("hours", { count: Math.floor(sec / 3600) });
-      return tDuration("days", { count: Math.floor(sec / 86400) });
-    },
-    [tDuration],
-  );
+  const formatDuration = (ms: number) => {
+    const sec = ms / 1000;
+    if (sec < 120) return tDuration("seconds", { count: Math.floor(sec) });
+    if (sec < 3600 + 60 - 1) return tDuration("minutes", { count: Math.floor(sec / 60) });
+    if (sec < 86400 + 3600 - 1) return tDuration("hours", { count: Math.floor(sec / 3600) });
+    return tDuration("days", { count: Math.floor(sec / 86400) });
+  };
 
-  const handleChange = useCallback(
-    (field: keyof FormValues, value: string | string[]) => {
-      setValues((prev) => ({ ...prev, [field]: value }));
-      clearError(field);
-    },
-    [clearError],
-  );
+  const handleChange = (field: keyof FormValues, value: string | string[]) => {
+    setValues((prev) => ({ ...prev, [field]: value }));
+    clearError(field);
+  };
 
-  const handleCheckboxChange = useCallback(
-    (field: `answer_${string}`, option: string, checked: boolean) => {
-      setValues((prev) => {
-        const val = prev[field];
-        const current = Array.isArray(val) ? val : [];
-        return {
-          ...prev,
-          [field]: checked ? [...current, option] : current.filter((v) => v !== option),
-        };
+  const handleCheckboxChange = (field: `answer_${string}`, option: string, checked: boolean) => {
+    setValues((prev) => {
+      const val = prev[field];
+      const current = Array.isArray(val) ? val : [];
+      return {
+        ...prev,
+        [field]: checked ? [...current, option] : current.filter((v) => v !== option),
+      };
+    });
+    clearError(field);
+  };
+
+  const mapFieldError = (field: string, msg: string) => {
+    if (msg === "notANumber") return t("fieldError.notANumber");
+    if (/email/i.test(msg)) return t("fieldError.invalidEmail");
+    if (/too.*big|at most|maximum|too long/i.test(msg)) return t("fieldError.tooLong");
+    return t("fieldError.missing");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canEdit || submitting) return;
+    setError(null);
+
+    // Build validation data from form values
+    const validationData: Record<string, unknown> = {};
+    if (event.nameQuestion) {
+      validationData.firstName = values.firstName ?? "";
+      validationData.lastName = values.lastName ?? "";
+    }
+    if (event.emailQuestion) {
+      validationData.email = values.email ?? "";
+    }
+    for (const q of event.questions) {
+      const fieldName = `answer_${q.id}` as const;
+      validationData[fieldName] = values[fieldName] ?? (q.type === "checkbox" ? [] : "");
+    }
+
+    const valid = validate(signupSchema, validationData, mapFieldError);
+    if (!valid) return;
+
+    setSubmitting(true);
+    try {
+      const update = formValuesToUpdate(values, event);
+      const result = await updateSignupAction({
+        signupId: signup.id,
+        editToken,
+        body: update,
       });
-      clearError(field);
-    },
-    [clearError],
-  );
-
-  const mapFieldError = useCallback(
-    (field: string, msg: string) => {
-      if (msg === "notANumber") return t("fieldError.notANumber");
-      if (/email/i.test(msg)) return t("fieldError.invalidEmail");
-      if (/too.*big|at most|maximum|too long/i.test(msg)) return t("fieldError.tooLong");
-      return t("fieldError.missing");
-    },
-    [t],
-  );
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!canEdit || submitting) return;
-      setError(null);
-
-      // Build validation data from form values
-      const validationData: Record<string, unknown> = {};
-      if (event.nameQuestion) {
-        validationData.firstName = values.firstName ?? "";
-        validationData.lastName = values.lastName ?? "";
+      if (result?.serverError) {
+        setError(result.serverError);
+      } else if (isNew && !showPayment) {
+        router.push(`/events/${event.slug}`);
       }
-      if (event.emailQuestion) {
-        validationData.email = values.email ?? "";
-      }
-      for (const q of event.questions) {
-        const fieldName = `answer_${q.id}` as const;
-        validationData[fieldName] = values[fieldName] ?? (q.type === "checkbox" ? [] : "");
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("signupError.failed"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-      const valid = validate(signupSchema, validationData, mapFieldError);
-      if (!valid) return;
-
-      setSubmitting(true);
-      try {
-        const update = formValuesToUpdate(values, event);
-        const result = await updateSignupAction({
-          signupId: signup.id,
-          editToken,
-          body: update,
-        });
-        if (result?.serverError) {
-          setError(result.serverError);
-        } else if (isNew && !showPayment) {
-          router.push(`/events/${event.slug}`);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t("signupError.failed"));
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [
-      canEdit,
-      submitting,
-      values,
-      event,
-      signup.id,
-      editToken,
-      isNew,
-      showPayment,
-      router,
-      validate,
-      signupSchema,
-      mapFieldError,
-      t,
-    ],
-  );
-
-  const handleDelete = useCallback(async () => {
+  const handleDelete = async () => {
     setSubmitting(true);
     setError(null);
     try {
@@ -258,9 +236,9 @@ export default function EditSignupForm({ data, editToken }: Props) {
       setError(err instanceof Error ? err.message : t("deleteError.failed"));
       setSubmitting(false);
     }
-  }, [signup.id, editToken, event.slug, router]);
+  };
 
-  const handlePay = useCallback(async () => {
+  const handlePay = async () => {
     setSubmitting(true);
     try {
       const result = await startPaymentAction({
@@ -277,10 +255,10 @@ export default function EditSignupForm({ data, editToken }: Props) {
       setError(err instanceof Error ? err.message : t("paymentError.failed"));
       setSubmitting(false);
     }
-  }, [signup.id, editToken]);
+  };
 
   // Position display
-  const positionText = useMemo(() => {
+  const positionText = (() => {
     if (signup.status === SignupStatus.IN_QUOTA) {
       return t("position.quota", {
         quota: signup.quota?.title ?? "",
@@ -294,7 +272,7 @@ export default function EditSignupForm({ data, editToken }: Props) {
       return t("position.queue", { position: signup.position ?? 0 });
     }
     return null;
-  }, [signup.status, signup.position, signup.quota?.title, t]);
+  })();
 
   return (
     <div className="mx-auto max-w-xl">

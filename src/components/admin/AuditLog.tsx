@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useTranslations } from "next-intl";
 
 import { getAuditLogAction } from "@/actions/getAuditLog";
 import { Link } from "@/i18n/navigation";
 import { AuditEvent } from "@/db/schema";
-import type { AuditLogResponse, AuditLoqQuery } from "@/db/zod";
+import type { AuditLogResponse, AuditLogQuery } from "@/db/zod";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { inputClassName, selectClassName } from "@/components/ui/Field";
@@ -73,12 +73,12 @@ export default function AuditLogClient() {
   const [logs, setLogs] = useState<AuditLogResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState<AuditLoqQuery>({
+  const [query, setQuery] = useState<AuditLogQuery>({
     limit: LOGS_PER_PAGE,
     offset: 0,
   });
 
-  const fetchLogs = useCallback(async (q: AuditLoqQuery) => {
+  const fetchLogs = async (q: AuditLogQuery) => {
     setLoading(true);
     setError(null);
     try {
@@ -93,20 +93,20 @@ export default function AuditLogClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchLogs(query);
-  }, [query, fetchLogs]);
+  }, [query]);
 
-  const updateFilter = useCallback((key: keyof AuditLoqQuery, value: string | AuditEvent[] | undefined) => {
+  const updateFilter = (key: keyof AuditLogQuery, value: string | AuditEvent[] | undefined) => {
     setQuery((prev) => ({
       ...prev,
       [key]: value || undefined,
       // Reset pagination when changing filters (except offset/limit)
       ...(key !== "offset" && key !== "limit" ? { offset: 0 } : {}),
     }));
-  }, []);
+  };
 
   const offset = query.offset ?? 0;
   const lastRow = logs ? Math.min(offset + LOGS_PER_PAGE, logs.count) : 0;

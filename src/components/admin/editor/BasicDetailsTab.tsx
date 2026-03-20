@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { checkSlugAction } from "@/actions/checkSlug";
@@ -9,8 +9,8 @@ import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
 import { FieldError } from "@/components/ui/FieldError";
 
 import LocalizedIndicator from "./LocalizedIndicator";
-import type { EditorTabProps, LocalizableFields } from "./types";
-import { getLocalizedValue, setLocalizedValue } from "./types";
+import type { EditorTabProps, LocalizableFieldKey } from "./types";
+import { getLocalizedValue, isDefaultLanguageView, setLocalizedValue } from "./types";
 
 /** Generate a URL slug from a title. */
 function generateSlug(title: string): string {
@@ -54,11 +54,11 @@ export default function BasicDetailsTab({
   isNew,
 }: Props) {
   const t = useTranslations("editor");
-  const isDefaultLang = selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage];
+  const isDefaultLang = isDefaultLanguageView(form, selectedLanguage);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(!isNew || !!form.slug);
 
-  const getLocalized = (field: keyof LocalizableFields) => getLocalizedValue(form, field, selectedLanguage);
-  const setLocalized = (field: keyof LocalizableFields, value: string) =>
+  const getLocalized = (field: LocalizableFieldKey) => getLocalizedValue(form, field, selectedLanguage);
+  const setLocalized = (field: LocalizableFieldKey, value: string) =>
     setLocalizedValue(form, updateField, field, value, selectedLanguage);
 
   // Slug availability checking
@@ -66,58 +66,49 @@ export default function BasicDetailsTab({
   const [slugConflictTitle, setSlugConflictTitle] = useState<string | null>(null);
   const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const checkSlug = useCallback(
-    async (slug: string) => {
-      if (!slug || !/^[A-Za-z0-9_-]+$/.test(slug)) {
-        setSlugStatus("idle");
-        return;
-      }
-      setSlugStatus("checking");
-      const result = await checkSlugAction({ slug });
-      if (result?.data) {
-        // If the slug is used by the current event, it's fine
-        if (result.data.id && result.data.id !== eventId) {
-          setSlugStatus("taken");
-          setSlugConflictTitle(result.data.title);
-        } else {
-          setSlugStatus("free");
-          setSlugConflictTitle(null);
-        }
+  const checkSlug = async (slug: string) => {
+    if (!slug || !/^[A-Za-z0-9_-]+$/.test(slug)) {
+      setSlugStatus("idle");
+      return;
+    }
+    setSlugStatus("checking");
+    const result = await checkSlugAction({ slug });
+    if (result?.data) {
+      // If the slug is used by the current event, it's fine
+      if (result.data.id && result.data.id !== eventId) {
+        setSlugStatus("taken");
+        setSlugConflictTitle(result.data.title);
       } else {
-        setSlugStatus("idle");
+        setSlugStatus("free");
+        setSlugConflictTitle(null);
       }
-    },
-    [eventId],
-  );
+    } else {
+      setSlugStatus("idle");
+    }
+  };
 
-  const handleSlugChange = useCallback(
-    (value: string) => {
-      setSlugManuallyEdited(true);
-      updateField("slug", value);
+  const handleSlugChange = (value: string) => {
+    setSlugManuallyEdited(true);
+    updateField("slug", value);
+    setSlugStatus("idle");
+    if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
+    if (value && /^[A-Za-z0-9_-]+$/.test(value)) {
+      slugTimerRef.current = setTimeout(() => checkSlug(value), 500);
+    }
+  };
+
+  const handleTitleChange = (value: string) => {
+    setLocalized("title", value);
+    if (!slugManuallyEdited && isDefaultLang) {
+      const slug = generateSlug(value);
+      updateField("slug", slug);
       setSlugStatus("idle");
       if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
-      if (value && /^[A-Za-z0-9_-]+$/.test(value)) {
-        slugTimerRef.current = setTimeout(() => checkSlug(value), 500);
+      if (slug && /^[A-Za-z0-9_-]+$/.test(slug)) {
+        slugTimerRef.current = setTimeout(() => checkSlug(slug), 500);
       }
-    },
-    [updateField, checkSlug],
-  );
-
-  const handleTitleChange = useCallback(
-    (value: string) => {
-      setLocalizedValue(form, updateField, "title", value, selectedLanguage);
-      if (!slugManuallyEdited && isDefaultLang) {
-        const slug = generateSlug(value);
-        updateField("slug", slug);
-        setSlugStatus("idle");
-        if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
-        if (slug && /^[A-Za-z0-9_-]+$/.test(slug)) {
-          slugTimerRef.current = setTimeout(() => checkSlug(slug), 500);
-        }
-      }
-    },
-    [form, slugManuallyEdited, isDefaultLang, selectedLanguage, updateField, checkSlug],
-  );
+    }
+  };
 
   useEffect(() => {
     return () => {

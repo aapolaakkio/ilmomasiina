@@ -1,15 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAction } from "next-safe-action/hooks";
-import { z } from "zod";
 
 import { deleteUserAction } from "@/actions/deleteUser";
 import { inviteUserAction } from "@/actions/inviteUser";
 import { Link, useRouter } from "@/i18n/navigation";
 import { UserID, UserRole } from "@/db/schema";
-import type { UserListResponse } from "@/db/zod";
+import { inviteEmailOnlySchema, type UserListResponse } from "@/db/zod";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -32,8 +31,6 @@ export default function AdminUsersClient({ users }: Props) {
   const [inviteRole, setInviteRole] = useState<UserRole>(UserRole.USER);
   const inviteValidation = useFormValidation();
 
-  const inviteSchema = useMemo(() => z.object({ email: z.email().min(1).max(255) }), []);
-
   const { execute: executeInvite, isPending: invitePending } = useAction(inviteUserAction, {
     onSuccess: () => {
       setSuccess(t("createSuccess", { email: inviteEmail }));
@@ -46,41 +43,35 @@ export default function AdminUsersClient({ users }: Props) {
     },
   });
 
-  const handleInvite = useCallback(
-    (e: React.SubmitEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      if (invitePending) return;
-      setError(null);
-      setSuccess(null);
+  const handleInvite = (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (invitePending) return;
+    setError(null);
+    setSuccess(null);
 
-      const valid = inviteValidation.validate(inviteSchema, { email: inviteEmail }, (field) => {
-        if (field === "email") return t("errors.required");
-        return undefined;
-      });
-      if (!valid) return;
+    const valid = inviteValidation.validate(inviteEmailOnlySchema, { email: inviteEmail }, (field) => {
+      if (field === "email") return t("errors.required");
+      return undefined;
+    });
+    if (!valid) return;
 
-      executeInvite({ email: inviteEmail, role: inviteRole });
-    },
-    [inviteEmail, invitePending, inviteValidation, inviteSchema, executeInvite, t],
-  );
+    executeInvite({ email: inviteEmail, role: inviteRole });
+  };
 
-  const handleDelete = useCallback(
-    async (userId: UserID, email: string) => {
-      if (!window.confirm(t("deleteConfirm", { user: email }))) return;
-      setProcessing(true);
-      setError(null);
-      setSuccess(null);
-      const result = await deleteUserAction({ userId });
-      if (result?.serverError) {
-        setError(result.serverError);
-      } else {
-        setSuccess(t("deleteSuccess", { user: email }));
-        router.refresh();
-      }
-      setProcessing(false);
-    },
-    [router],
-  );
+  const handleDelete = async (userId: UserID, email: string) => {
+    if (!window.confirm(t("deleteConfirm", { user: email }))) return;
+    setProcessing(true);
+    setError(null);
+    setSuccess(null);
+    const result = await deleteUserAction({ userId });
+    if (result?.serverError) {
+      setError(result.serverError);
+    } else {
+      setSuccess(t("deleteSuccess", { user: email }));
+      router.refresh();
+    }
+    setProcessing(false);
+  };
 
   const isProcessing = processing || invitePending;
 

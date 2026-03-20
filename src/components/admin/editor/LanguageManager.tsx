@@ -3,15 +3,13 @@
 import { useTranslations } from "next-intl";
 
 import type { AdminEventLanguage } from "@/db/zod";
+import { KNOWN_LANGUAGES } from "@/i18n/routing";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
-import { createEmptyLanguageVersion, type EditorFormState } from "./types";
-import { KNOWN_LANGUAGES } from "@/i18n/routing";
+import { createEmptyLanguageVersion, type EditorCoreProps } from "./types";
 
-type Props = {
-  form: EditorFormState;
-  updateField: <K extends keyof EditorFormState>(key: K, value: EditorFormState[K]) => void;
+type Props = EditorCoreProps & {
   selectedLanguage: string;
   onSelectLanguage: (lang: string) => void;
   readOnly?: boolean;

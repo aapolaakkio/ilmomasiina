@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import Markdown from "@/components/Markdown";
@@ -36,18 +36,14 @@ export default function PreviewTab({ form }: Props) {
   const [showSignupForm, setShowSignupForm] = useState(false);
 
   // Build dummy quotas for the signup button preview
-  const previewQuotas = useMemo(
-    () =>
-      form.quotas
-        .filter((q) => q.title)
-        .map((q, i) => ({
-          id: `preview-${i}`,
-          title: q.title,
-          size: q.size,
-          signupCount: 0,
-        })),
-    [form.quotas],
-  );
+  const previewQuotas = form.quotas
+    .filter((q) => q.title)
+    .map((q, i) => ({
+      id: `preview-${i}`,
+      title: q.title,
+      size: q.size,
+      signupCount: 0,
+    }));
 
   return (
     <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6">

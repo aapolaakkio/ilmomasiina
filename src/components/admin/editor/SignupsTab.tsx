@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { deleteSignupAsAdminAction } from "@/actions/deleteSignupAsAdmin";
@@ -50,16 +50,13 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
   const paymentsEnabled = savedEvent?.payments !== "disabled";
   const hasMemberCheck = savedEvent?.emailQuestion && memberEmails.length > 0;
 
-  const signups = useMemo<FlatSignup[]>(
-    () =>
-      savedEvent?.quotas.flatMap((q) =>
-        q.signups.map((s) => ({ ...s, quotaTitle: q.title, quotaId: q.id, quotaSize: q.size })),
-      ) ?? [],
-    [savedEvent],
-  );
+  const signups: FlatSignup[] =
+    savedEvent?.quotas.flatMap((q) =>
+      q.signups.map((s) => ({ ...s, quotaTitle: q.title, quotaId: q.id, quotaSize: q.size })),
+    ) ?? [];
 
   // Group signups by quota for group-by-quota view
-  const quotaGroups = useMemo(() => {
+  const quotaGroups = (() => {
     if (!savedEvent) return [];
     type QuotaGroup = { key: string; title: string; signups: FlatSignup[] };
     const groups: QuotaGroup[] = savedEvent.quotas.map((q) => ({
@@ -76,21 +73,17 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
       groups.push({ key: "queue", title: "Queue", signups: queueSignups });
     }
     return groups;
-  }, [savedEvent, signups]);
+  })();
 
-  const dateFormat = useMemo(
-    () =>
-      new Intl.DateTimeFormat("fi-FI", {
-        day: "numeric",
-        month: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "numeric",
-        second: "numeric",
-        hour12: false,
-      }),
-    [],
-  );
+  const dateFormat = new Intl.DateTimeFormat("fi-FI", {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+  });
 
   function formatStatus(signup: FlatSignup): string {
     switch (signup.status) {
@@ -122,7 +115,7 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
     }
   }
 
-  const handleDownloadCsv = useCallback(() => {
+  const handleDownloadCsv = () => {
     if (!savedEvent) return;
 
     const headers = [
@@ -158,24 +151,21 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
     a.download = `${savedEvent.title ?? "signups"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [savedEvent, signups, dateFormat, t, paymentsEnabled]);
+  };
 
-  const refreshEvent = useCallback(async () => {
+  const refreshEvent = async () => {
     if (!savedEvent || !onEventChange) return;
     const result = await getAdminEventAction({ eventId: savedEvent.id });
     if (result?.data) {
       onEventChange(result.data);
     }
-  }, [savedEvent, onEventChange]);
+  };
 
-  const handleDelete = useCallback(
-    async (signupId: string) => {
-      if (!window.confirm(t("deleteConfirm"))) return;
-      await deleteSignupAsAdminAction({ signupId });
-      await refreshEvent();
-    },
-    [refreshEvent, t],
-  );
+  const handleDelete = async (signupId: string) => {
+    if (!window.confirm(t("deleteConfirm"))) return;
+    await deleteSignupAsAdminAction({ signupId });
+    await refreshEvent();
+  };
 
   const headerCells = (
     <tr className="border-b border-gray-200">
