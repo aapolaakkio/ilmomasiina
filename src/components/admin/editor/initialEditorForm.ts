@@ -100,3 +100,12 @@ export function getInitialEditorForm(
   const src = copy ? stripIdsForCopy(initialEvent) : initialEvent;
   return mapAdminEventToEditorForm(src);
 }
+
+/** One-time mount snapshot so lazy `useState` initializers share a single `getInitialEditorForm` result. */
+export function createInitialEditorSession(
+  initialEvent: AdminEventResponse | null,
+  copy: boolean | undefined,
+): { form: EditorFormState; selectedLanguage: string } {
+  const form = getInitialEditorForm(initialEvent, copy);
+  return { form, selectedLanguage: form.defaultLanguage || "fi" };
+}

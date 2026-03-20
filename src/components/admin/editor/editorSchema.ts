@@ -76,3 +76,18 @@ export const EDITOR_BASIC_TAB_ERROR_KEYS = [
 ] as const;
 
 export const EDITOR_BASIC_TAB_ERROR_KEY_SET = new Set<string>(EDITOR_BASIC_TAB_ERROR_KEYS);
+
+/** Which editor tabs currently show validation errors (from `useFormValidation` keys). */
+export function editorTabErrors(fieldErrors: Record<string, string>): {
+  basic: boolean;
+  quotas: boolean;
+  questions: boolean;
+} {
+  const keys = Object.keys(fieldErrors);
+  if (keys.length === 0) return { basic: false, quotas: false, questions: false };
+  return {
+    basic: keys.some((k) => EDITOR_BASIC_TAB_ERROR_KEY_SET.has(k)),
+    quotas: keys.some((k) => k === "quotas" || k.startsWith("quotas[")),
+    questions: keys.some((k) => k.startsWith("questions[")),
+  };
+}

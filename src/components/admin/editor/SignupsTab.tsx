@@ -1,81 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { deleteSignupAsAdminAction } from "@/actions/deleteSignupAsAdmin";
 import { getAdminEventAction } from "@/actions/getAdminEvent";
 import { SignupStatus } from "@/db/schema";
 import type { AdminEventResponse, AdminSignupSchema } from "@/db/zod";
+import { appLocaleToBcp47 } from "@/i18n/intlLocale";
+import { rowsToCsv } from "@/lib/csv";
 import { stringifyAnswer } from "@/lib/signupUtils";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
 import EditSignupModal from "./EditSignupModal";
+import { type FlatSignup, formatSignupPrice, signupsAndQuotaGroups } from "./signupsDerived";
 
 type Props = {
   savedEvent: AdminEventResponse | null;
   onEventChange?: (event: AdminEventResponse) => void;
 };
 
-type FlatSignup = AdminSignupSchema & {
-  quotaTitle: string;
-  quotaId: string;
-  quotaSize: number | null;
-};
-
-function escapeCsvCell(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
-
-function toCsv(rows: string[][]): string {
-  return rows.map((row) => row.map(escapeCsvCell).join(",")).join("\n");
-}
-
-function formatPrice(signup: FlatSignup): string {
-  if (signup.price == null) return "\u2014";
-  return `${(signup.price / 100).toFixed(2)} ${signup.currency ?? ""}`.trim();
-}
-
 export default function SignupsTab({ savedEvent, onEventChange }: Props) {
   const t = useTranslations("editor.signups");
-
-  const [editingSignup, setEditingSignup] = useState<AdminSignupSchema | "new" | null>(null);
-  const [groupByQuota, setGroupByQuota] = useState(false);
-  const [memberEmails, setMemberEmails] = useState<string[]>([]);
-
-  const paymentsEnabled = savedEvent?.payments !== "disabled";
-  const hasMemberCheck = savedEvent?.emailQuestion && memberEmails.length > 0;
-
-  const signups: FlatSignup[] =
-    savedEvent?.quotas.flatMap((q) =>
-      q.signups.map((s) => ({ ...s, quotaTitle: q.title, quotaId: q.id, quotaSize: q.size })),
-    ) ?? [];
-
-  // Group signups by quota for group-by-quota view
-  const quotaGroups = (() => {
-    if (!savedEvent) return [];
-    type QuotaGroup = { key: string; title: string; signups: FlatSignup[] };
-    const groups: QuotaGroup[] = savedEvent.quotas.map((q) => ({
-      key: q.id,
-      title: q.title,
-      signups: signups.filter((s) => s.quotaId === q.id && s.status === SignupStatus.IN_QUOTA),
-    }));
-    const openSignups = signups.filter((s) => s.status === SignupStatus.IN_OPEN_QUOTA);
-    if (openSignups.length > 0) {
-      groups.push({ key: "open", title: "Open quota", signups: openSignups });
-    }
-    const queueSignups = signups.filter((s) => s.status === SignupStatus.IN_QUEUE);
-    if (queueSignups.length > 0) {
-      groups.push({ key: "queue", title: "Queue", signups: queueSignups });
-    }
-    return groups;
-  })();
-
-  const dateFormat = new Intl.DateTimeFormat("fi-FI", {
+  const locale = appLocaleToBcp47(useLocale());
+  const signupsDateFormatter = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "numeric",
     year: "numeric",
@@ -84,6 +33,15 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
     second: "numeric",
     hour12: false,
   });
+
+  const [editingSignup, setEditingSignup] = useState<AdminSignupSchema | "new" | null>(null);
+  const [groupByQuota, setGroupByQuota] = useState(false);
+  const [memberEmails, setMemberEmails] = useState<string[]>([]);
+
+  const paymentsEnabled = savedEvent?.payments !== "disabled";
+  const hasMemberCheck = savedEvent?.emailQuestion && memberEmails.length > 0;
+
+  const { signups, quotaGroups } = signupsAndQuotaGroups(savedEvent);
 
   function formatStatus(signup: FlatSignup): string {
     switch (signup.status) {
@@ -139,11 +97,11 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
         const answer = signup.answers?.find((a) => a.questionId === q.id);
         return stringifyAnswer(answer?.answer);
       }),
-      ...(paymentsEnabled ? [formatPrice(signup), signup.paymentStatus ?? ""] : []),
-      dateFormat.format(new Date(signup.createdAt)),
+      ...(paymentsEnabled ? [formatSignupPrice(signup), signup.paymentStatus ?? ""] : []),
+      signupsDateFormatter.format(new Date(signup.createdAt)),
     ]);
 
-    const csv = toCsv([headers, ...rows]);
+    const csv = rowsToCsv([headers, ...rows]);
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -221,13 +179,13 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
         <td className="py-2 pr-4 text-gray-600">{formatStatus(signup)}</td>
         {paymentsEnabled && (
           <>
-            <td className="py-2 pr-4 text-gray-600">{formatPrice(signup)}</td>
+            <td className="py-2 pr-4 text-gray-600">{formatSignupPrice(signup)}</td>
             <td className="py-2 pr-4">
               {payment ? <Badge variant={payment.variant}>{payment.label}</Badge> : "\u2014"}
             </td>
           </>
         )}
-        <td className="py-2 pr-4 text-gray-600">{dateFormat.format(new Date(signup.createdAt))}</td>
+        <td className="py-2 pr-4 text-gray-600">{signupsDateFormatter.format(new Date(signup.createdAt))}</td>
         <td className="py-2">
           <div className="flex gap-1">
             {!signup.deletedAt && (

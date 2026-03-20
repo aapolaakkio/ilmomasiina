@@ -1,49 +1,15 @@
-import type { PaymentMode, QuestionID, QuotaID } from "@/db/schema";
-import type { AdminEventLanguage, Question, Quota } from "@/db/zod";
+import type { AdminEventLanguage, EditConflictError, EditorFormState } from "@/db/zod";
 
-/** Quota row in the editor: stable `key` for DnD, optional `id` until persisted. */
-export type EditorQuota = Pick<Quota, "title" | "size" | "price"> & {
-  key: string;
-  id?: QuotaID;
-};
+/** Active edit-conflict payload (matches `updateEventAction` conflict branch). */
+export type EditorEditConflictState = Pick<EditConflictError, "updatedAt" | "deletedQuotas" | "deletedQuestions">;
 
-/** Question row in the editor: stable `key` for DnD, optional `id` until persisted. */
-export type EditorQuestion = Pick<Question, "question" | "type" | "required" | "public" | "options" | "prices"> & {
-  key: string;
-  id?: QuestionID;
-};
+export type { EditorFormState, EditorQuestion, EditorQuota } from "@/db/zod";
 
 let nextKey = 0;
 export function generateKey(): string {
   nextKey += 1;
   return `k${nextKey}`;
 }
-
-export type EditorFormState = {
-  title: string;
-  slug: string;
-  draft: boolean;
-  listed: boolean;
-  category: string;
-  date: string;
-  endDate: string;
-  registrationStartDate: string;
-  registrationEndDate: string;
-  openQuotaSize: number;
-  description: string;
-  price: string;
-  location: string;
-  webpageUrl: string;
-  signupsPublic: boolean;
-  nameQuestion: boolean;
-  emailQuestion: boolean;
-  payments: PaymentMode;
-  defaultLanguage: string;
-  languages: Record<string, AdminEventLanguage>;
-  verificationEmail: string;
-  quotas: EditorQuota[];
-  questions: EditorQuestion[];
-};
 
 export type EditorUpdateField = <K extends keyof EditorFormState>(key: K, value: EditorFormState[K]) => void;
 

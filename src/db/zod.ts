@@ -350,6 +350,61 @@ export const adminEventLanguage = eventLanguageBase.extend(adminDetailsOnlyCommo
 
 export type AdminEventLanguage = z.infer<typeof adminEventLanguage>;
 
+/** Quota row in the event editor (DnD `key`, optional `id`; empty title allowed until save). */
+export const editorQuotaFormRowSchema = z.object({
+  key: z.string(),
+  id: quotaID.optional(),
+  title: z.string(),
+  size: z.int().min(1).nullable(),
+  price: z.int(),
+});
+
+/** Question row in the event editor (DnD `key`, optional `id`). */
+export const editorQuestionFormRowSchema = z.object({
+  key: z.string(),
+  id: questionID.optional(),
+  question: z.string(),
+  type: z.enum(QuestionType),
+  options: questionOptions,
+  prices: questionPrices,
+  required: z.boolean(),
+  public: z.boolean(),
+});
+
+export type EditorQuota = z.infer<typeof editorQuotaFormRowSchema>;
+export type EditorQuestion = z.infer<typeof editorQuestionFormRowSchema>;
+
+/**
+ * Full event editor form (ISO date strings at top level; validated for submit via `editorSchema` in the editor).
+ */
+export const editorFormStateSchema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  draft: z.boolean(),
+  listed: z.boolean(),
+  category: z.string(),
+  date: z.string(),
+  endDate: z.string(),
+  registrationStartDate: z.string(),
+  registrationEndDate: z.string(),
+  openQuotaSize: z.int(),
+  description: z.string(),
+  price: z.string(),
+  location: z.string(),
+  webpageUrl: z.string(),
+  signupsPublic: z.boolean(),
+  nameQuestion: z.boolean(),
+  emailQuestion: z.boolean(),
+  payments: z.enum(PaymentMode),
+  defaultLanguage: z.string(),
+  languages: z.record(localeTag, adminEventLanguage),
+  verificationEmail: z.string(),
+  quotas: z.array(editorQuotaFormRowSchema),
+  questions: z.array(editorQuestionFormRowSchema),
+});
+
+export type EditorFormState = z.infer<typeof editorFormStateSchema>;
+
 const userEventLanguages = z.object({
   languages: z.record(localeTag, eventLanguageBase),
 });

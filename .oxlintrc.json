@@ -30,6 +30,11 @@
         "name": "next/navigation",
         "importNames": ["redirect", "permanentRedirect", "useRouter", "usePathname"],
         "message": "Please import from `@/i18n/navigation` instead."
+      },
+      {
+        "name": "react",
+        "importNames": ["useMemo", "useCallback"],
+        "message": "Do not use useMemo or useCallback; reactCompiler handles them automatically."
       }
     ]
   }
