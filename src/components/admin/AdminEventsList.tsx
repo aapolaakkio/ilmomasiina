@@ -1,31 +1,28 @@
-"use client";
+import { getLocale, getTranslations } from "next-intl/server";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-
-import { deleteEventAction } from "@/actions/deleteEvent";
-import { Link, useRouter } from "@/i18n/navigation";
-import type { EventID, UserID } from "@/db/schema";
+import { Link } from "@/i18n/navigation";
+import { appLocaleToBcp47 } from "@/i18n/intlLocale";
+import type { UserID } from "@/db/schema";
 import type { AdminEventListResponse } from "@/db/zod";
-import { getEffectiveEndDate } from "@/db/computed";
-import { Alert } from "@/components/ui/Alert";
-import { Button } from "@/components/ui/Button";
+import { isEventInPast, totalSignups } from "@/lib/adminEventsList";
+import { formatAppDateTime } from "@/lib/intlDateTime";
 
-function isEventInPast(event: AdminEventListResponse[number]): boolean {
-  const endDate = getEffectiveEndDate(event);
-  return endDate != null && endDate < Date.now();
-}
+import AdminEventsPastToggle from "./AdminEventsPastToggle";
+import DeleteEventButton from "./DeleteEventButton";
 
-function formatDate(date: string | null, locale: string): string {
-  if (!date) return "";
-  return new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-    hour12: false,
-    timeZone: "Europe/Helsinki",
-  }).format(new Date(date));
-}
+const outlineLinkClass =
+  "inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 no-underline transition-colors hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 whitespace-nowrap";
+
+/** Matches UI `Button` primary + small; anchor-only so we avoid invalid `<a><button>` nesting. */
+const primaryLinkClass =
+  "inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-brand-600 px-3 py-1.5 text-xs font-medium text-white no-underline transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 whitespace-nowrap";
+
+type Props = {
+  events: AdminEventListResponse;
+  showPast: boolean;
+  role: "admin" | "user";
+  userId: UserID;
+};
 
 function getEventStatus(event: AdminEventListResponse[number], t: (key: string) => string): string {
   if (event.draft) return t("statusDraft");
@@ -38,73 +35,45 @@ function getEventStatus(event: AdminEventListResponse[number], t: (key: string) 
   return t("statusPublished");
 }
 
-type Props = {
-  events: AdminEventListResponse;
-  role: "admin" | "user";
-  userId: UserID;
-};
+function formatEventListDate(date: string | null, bcp47Locale: string): string {
+  if (!date) return "";
+  return formatAppDateTime(new Date(date), bcp47Locale, "date");
+}
 
-export default function AdminEventsClient({ events, role, userId }: Props) {
-  const router = useRouter();
-  const t = useTranslations("adminEvents");
-  const [showPast, setShowPast] = useState(false);
-  const [deleting, setDeleting] = useState<EventID | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const filtered = events.filter((e) => isEventInPast(e) === showPast);
-  const filteredEvents = showPast ? filtered.reverse() : filtered;
-
-  const totalSignups = (event: AdminEventListResponse[number]) =>
-    event.quotas.reduce((sum, q) => sum + q.signupCount, 0);
-
-  const handleDelete = async (eventId: EventID) => {
-    if (!window.confirm(t("deleteConfirm"))) return;
-    setDeleting(eventId);
-    setError(null);
-    try {
-      await deleteEventAction({ eventId });
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("deleteFailed"));
-    } finally {
-      setDeleting(null);
-    }
-  };
+export default async function AdminEventsList({ events, showPast, role, userId }: Props) {
+  const t = await getTranslations("adminEvents");
+  const locale = appLocaleToBcp47(await getLocale());
 
   return (
     <>
       <h1 className="mb-4 text-2xl font-bold">{showPast ? t("titlePast") : t("title")}</h1>
-      {error && (
-        <Alert variant="danger" className="mb-4">
-          {error}
-        </Alert>
-      )}
-      <nav className="mb-4 flex flex-wrap gap-2">
-        {role === "admin" && (
-          <>
-            <Link href="/admin/users">
-              <Button variant="outline" size="small">
+      <nav className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {role === "admin" && (
+            <>
+              <Link href="/admin/users" className={outlineLinkClass}>
                 {t("users")}
-              </Button>
-            </Link>
-            <Link href="/admin/auditlog">
-              <Button variant="outline" size="small">
+              </Link>
+              <Link href="/admin/auditlog" className={outlineLinkClass}>
                 {t("auditLog")}
-              </Button>
-            </Link>
-          </>
-        )}
-        <Link href="/admin/edit/new">
-          <Button variant="primary" size="small">
+              </Link>
+            </>
+          )}
+          <Link href="/admin/edit/new" className={primaryLinkClass}>
             {t("newEvent")}
-          </Button>
-        </Link>
-        <Button variant="outline" size="small" className="ml-auto" onClick={() => setShowPast(!showPast)}>
-          {showPast ? t("upcomingEvents") : t("pastEvents")}
-        </Button>
+          </Link>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+          <AdminEventsPastToggle
+            showPast={showPast}
+            labelUpcoming={t("upcomingEvents")}
+            labelPast={t("pastEvents")}
+            className={`${outlineLinkClass} cursor-pointer disabled:cursor-wait disabled:opacity-60`}
+          />
+        </div>
       </nav>
 
-      {filteredEvents.length === 0 ? (
+      {events.length === 0 ? (
         <p className="text-gray-600">{showPast ? t("noEventsPast") : t("noEventsUpcoming")}</p>
       ) : (
         <div className="overflow-x-auto">
@@ -119,7 +88,7 @@ export default function AdminEventsClient({ events, role, userId }: Props) {
               </tr>
             </thead>
             <tbody>
-              {filteredEvents.map((event) => {
+              {events.map((event) => {
                 const canEdit = role === "admin" || (event.editors?.some((e) => e.userId === userId) ?? false);
                 return (
                   <tr key={event.id} className="border-b border-gray-100">
@@ -129,7 +98,7 @@ export default function AdminEventsClient({ events, role, userId }: Props) {
                       </Link>
                     </td>
                     <td className="py-3 pr-4 text-gray-600">
-                      {formatDate(event.date?.toISOString() ?? null, "fi-FI")}
+                      {formatEventListDate(event.date?.toISOString() ?? null, locale)}
                     </td>
                     <td className="py-3 pr-4 text-gray-600">
                       {!event.draft && event.slug ? (
@@ -142,27 +111,14 @@ export default function AdminEventsClient({ events, role, userId }: Props) {
                     </td>
                     <td className="py-3 pr-4 text-gray-600">{totalSignups(event)}</td>
                     <td className="py-3">
-                      <div className="flex gap-1">
-                        <Link href={`/admin/edit/${event.id}`}>
-                          <Button variant="outline" size="small">
-                            {canEdit ? t("edit") : t("view")}
-                          </Button>
+                      <div className="flex flex-wrap gap-1">
+                        <Link href={`/admin/edit/${event.id}`} className={outlineLinkClass}>
+                          {canEdit ? t("edit") : t("view")}
                         </Link>
-                        <Link href={`/admin/copy/${event.id}`}>
-                          <Button variant="outline" size="small">
-                            {t("copy")}
-                          </Button>
+                        <Link href={`/admin/copy/${event.id}`} className={outlineLinkClass}>
+                          {t("copy")}
                         </Link>
-                        {canEdit && (
-                          <Button
-                            variant="danger"
-                            size="small"
-                            disabled={deleting === event.id}
-                            onClick={() => handleDelete(event.id)}
-                          >
-                            {t("delete")}
-                          </Button>
-                        )}
+                        {canEdit && <DeleteEventButton eventId={event.id} />}
                       </div>
                     </td>
                   </tr>

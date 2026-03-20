@@ -235,6 +235,7 @@ const en = {
     filterEvent: "Event…",
     filterSignup: "Signup…",
     filterAction: "Action…",
+    applyFilters: "Apply",
     actions: {
       createEvent: "Event: Create",
       editEvent: "Event: Edit",

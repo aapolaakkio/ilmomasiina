@@ -235,6 +235,7 @@ const sv = {
     filterEvent: "Evenemang…",
     filterSignup: "Anmälan…",
     filterAction: "Åtgärd…",
+    applyFilters: "Sök",
     actions: {
       createEvent: "Evenemang: Skapa",
       editEvent: "Evenemang: Editera",

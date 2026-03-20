@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import Markdown from "@/components/Markdown";
 import { appLocaleToBcp47 } from "@/i18n/intlLocale";
+import { formatAppDateTime } from "@/lib/intlDateTime";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
 
@@ -13,19 +14,6 @@ import type { EditorFormState } from "./types";
 type Props = {
   form: EditorFormState;
 };
-
-function formatDateTime(date: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    weekday: "short",
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
-    timeZone: "Europe/Helsinki",
-  }).format(new Date(date));
-}
 
 /** Renders a read-only preview of the event as users would see it. */
 export default function PreviewTab({ form }: Props) {
@@ -60,12 +48,13 @@ export default function PreviewTab({ form }: Props) {
             {form.date && (
               <p>
                 <span className="font-semibold">{form.endDate ? t("startDate") : t("date")}</span>{" "}
-                {formatDateTime(form.date, locale)}
+                {formatAppDateTime(new Date(form.date), locale, "dateTimeWeekday")}
               </p>
             )}
             {form.endDate && (
               <p>
-                <span className="font-semibold">{t("endDate")}</span> {formatDateTime(form.endDate, locale)}
+                <span className="font-semibold">{t("endDate")}</span>{" "}
+                {formatAppDateTime(new Date(form.endDate), locale, "dateTimeWeekday")}
               </p>
             )}
             {form.location && (

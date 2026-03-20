@@ -9,6 +9,7 @@ import { SignupStatus } from "@/db/schema";
 import type { AdminEventResponse, AdminSignupSchema } from "@/db/zod";
 import { appLocaleToBcp47 } from "@/i18n/intlLocale";
 import { rowsToCsv } from "@/lib/csv";
+import { createAppDateTimeFormatter } from "@/lib/intlDateTime";
 import { stringifyAnswer } from "@/lib/signupUtils";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -24,15 +25,7 @@ type Props = {
 export default function SignupsTab({ savedEvent, onEventChange }: Props) {
   const t = useTranslations("editor.signups");
   const locale = appLocaleToBcp47(useLocale());
-  const signupsDateFormatter = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    hour12: false,
-  });
+  const signupsDateFormatter = createAppDateTimeFormatter(locale, "dateTimeSeconds");
 
   const [editingSignup, setEditingSignup] = useState<AdminSignupSchema | "new" | null>(null);
   const [groupByQuota, setGroupByQuota] = useState(false);

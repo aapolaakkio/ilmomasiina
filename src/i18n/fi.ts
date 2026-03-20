@@ -236,6 +236,7 @@ const fi = {
     filterEvent: "Tapahtuma…",
     filterSignup: "Ilmoittautuminen…",
     filterAction: "Toiminto…",
+    applyFilters: "Hae",
     actions: {
       createEvent: "Tapahtuma: Luo",
       editEvent: "Tapahtuma: Muokkaa",

@@ -84,7 +84,8 @@ export const sendPromotedFromQueueMail = sendSynchronouslyInTest(async (signup: 
   if (event.deletedAt) return;
 
   const date =
-    event.date && formatDateInTimezone(event.date, env.APP_TIMEZONE, t("currencyFormat.locale", { lng: lang }));
+    event.date &&
+    formatDateInTimezone(event.date, env.NEXT_PUBLIC_APP_TIMEZONE, t("currencyFormat.locale", { lng: lang }));
 
   const params: PromotedFromQueueMailParams = {
     event: {
@@ -159,7 +160,8 @@ export const sendSignupConfirmationMail = sendSynchronouslyInTest(
       .filter((x): x is { label: string; answer: string } => x !== null);
 
     const date =
-      event.date && formatDateInTimezone(event.date, env.APP_TIMEZONE, t("currencyFormat.locale", { lng: lang }));
+      event.date &&
+      formatDateInTimezone(event.date, env.NEXT_PUBLIC_APP_TIMEZONE, t("currencyFormat.locale", { lng: lang }));
 
     const params: ConfirmationMailParams = {
       name: fullName,

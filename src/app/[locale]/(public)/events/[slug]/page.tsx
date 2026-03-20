@@ -12,24 +12,15 @@ import { getLocalizedEvent } from "@/lib/localizedEvent";
 import { getSignupsByQuota, stringifyAnswer } from "@/lib/signupUtils";
 import { Button } from "@/components/ui/Button";
 import { SignupStatus } from "@/db/schema";
+import { formatAppDateTime } from "@/lib/intlDateTime";
 import { getEventBySlug } from "@/services/events/getEventDetails";
 
-const dateFormatBase: Intl.DateTimeFormatOptions = {
-  day: "numeric",
-  month: "numeric",
-  year: "numeric",
-  hour: "numeric",
-  minute: "numeric",
-  hour12: false,
-  timeZone: env.APP_TIMEZONE,
-};
-
-function formatDateTime(date: Date, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { ...dateFormatBase, weekday: "short" }).format(date);
+function formatDateTime(date: Date, bcp47Locale: string): string {
+  return formatAppDateTime(date, bcp47Locale, "dateTimeWeekday");
 }
 
-function formatSignupTime(date: Date, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { ...dateFormatBase, second: "numeric" }).format(date);
+function formatSignupTime(date: Date, bcp47Locale: string): string {
+  return formatAppDateTime(date, bcp47Locale, "dateTimeSeconds");
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
