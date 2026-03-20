@@ -12,11 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("title") };
 }
 
-export default async function AuditLogPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function AuditLogPage({ searchParams }: PageProps<"/[locale]/admin/auditlog">) {
   const session = await requireAdmin();
   if (session.role !== "admin") notFound();
 

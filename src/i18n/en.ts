@@ -17,10 +17,6 @@ const en = {
       title: "Whoops, something went wrong",
       description: "An unknown error occurred.",
     },
-    initialSetupNeeded: {
-      title: "Initial setup needed",
-      description: "The server seems to be freshly installed.",
-    },
   },
   duration: {
     days: "{count, plural, one {# day} other {# days}}",
@@ -35,15 +31,12 @@ const en = {
   footer: {},
   login: {
     title: "Log in",
+    setupTitle: "Initial setup",
+    setupWelcome1: "Welcome to Ilmomasiina!",
+    setupWelcome2: "Sign in to create the first admin user. Anyone can sign in at this stage.",
     submit: "Sign in with Google",
     notAllowed: "Your email is not authorized. Ask an existing admin to add your email.",
     failed: "Login failed",
-  },
-  initialSetup: {
-    title: "Initial setup",
-    welcome1: "Welcome to Ilmomasiina!",
-    welcome2: "Sign in to create the first admin user. Anyone can sign in at this stage.",
-    submit: "Sign in with Google",
   },
   events: {
     title: "Events",

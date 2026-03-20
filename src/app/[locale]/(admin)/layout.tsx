@@ -1,7 +1,7 @@
 import AdminHeader from "@/components/AdminHeader";
 import Footer from "@/components/Footer";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: LayoutProps<"/[locale]">) {
   return (
     <div className="flex min-h-screen flex-col">
       <AdminHeader />

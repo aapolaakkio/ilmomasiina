@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function LocaleLayout({ children }: { children: React.ReactNode }) {
+export default async function LocaleLayout({ children }: LayoutProps<"/[locale]">) {
   const locale = await rootLocale();
   if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
     notFound();

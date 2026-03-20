@@ -13,13 +13,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("titleNew") };
 }
 
-export default async function CopyEventPage({ params }: { params: Promise<{ id: EventID }> }) {
+export default async function CopyEventPage({ params }: PageProps<"/[locale]/admin/copy/[id]">) {
   await requireAdmin();
 
   const { id } = await params;
 
   try {
-    const [event, categories] = await Promise.all([getEventByIdForAdmin(id), getCategories()]);
+    const [event, categories] = await Promise.all([getEventByIdForAdmin(id as EventID), getCategories()]);
     return <EventEditor event={event} isNew copy categories={categories} editors={[]} />;
   } catch {
     notFound();

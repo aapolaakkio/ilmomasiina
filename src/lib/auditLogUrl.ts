@@ -1,12 +1,11 @@
 import { auditLogQuery, type AuditLogQuery } from "@/db/zod";
 
+import { firstSearchParam } from "@/lib/nextSearchParams";
+
 export const AUDIT_LOG_PAGE_SIZE = 100;
 
 function firstParam(raw: Record<string, string | string[] | undefined>, key: string): string | undefined {
-  const v = raw[key];
-  if (v === undefined) return undefined;
-  const s = Array.isArray(v) ? v[0] : v;
-  return s === "" ? undefined : s;
+  return firstSearchParam(raw[key]);
 }
 
 /** Build {@link AuditLogQuery} from URL search params (GET form / pagination links). */

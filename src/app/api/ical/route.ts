@@ -1,4 +1,5 @@
 import { type DateArray, createEvents } from "ics";
+import type { NextRequest } from "next/server";
 
 import { env } from "@/env";
 import { db } from "@/db";
@@ -7,7 +8,7 @@ function dateToArray(date: Date): DateArray {
   return [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes()];
 }
 
-export async function GET() {
+export async function GET(_request: NextRequest, _context: RouteContext<"/api/ical">) {
   const uidDomain = env.ICAL_UID_DOMAIN ?? new URL(env.BASE_URL).hostname;
 
   const eventRows = await db.query.events.findMany({

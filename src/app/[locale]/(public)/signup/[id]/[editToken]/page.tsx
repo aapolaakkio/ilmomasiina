@@ -13,17 +13,14 @@ export function generateStaticParams() {
   return [];
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: SignupID; editToken: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/[locale]/signup/[id]/[editToken]">): Promise<Metadata> {
   const { id, editToken } = await params;
   const locale = await getLocale();
   const t = await getTranslations("editSignup");
-  if (!verifyToken(id, editToken)) return {};
+  const signupId = id as SignupID;
+  if (!verifyToken(signupId, editToken)) return {};
   try {
-    const data = await getSignupForEdit(id);
+    const data = await getSignupForEdit(signupId);
     const localized = getLocalizedEvent(data.event, locale);
     const isConfirmed = data.signup.confirmed;
     return {
@@ -34,22 +31,20 @@ export async function generateMetadata({
   }
 }
 
-export default async function EditSignupPage({
-  params,
-}: {
-  params: Promise<{ locale: string; id: SignupID; editToken: string }>;
-}) {
-  const { locale: language, id, editToken } = await params;
+export default async function EditSignupPage({ params }: PageProps<"/[locale]/signup/[id]/[editToken]">) {
+  const { id, editToken } = await params;
+  const locale = await getLocale();
+  const signupId = id as SignupID;
 
-  if (!verifyToken(id, editToken)) {
+  if (!verifyToken(signupId, editToken)) {
     notFound();
   }
 
   try {
-    const data = await getSignupForEdit(id);
+    const data = await getSignupForEdit(signupId);
 
-    const localizedEvent = getLocalizedEvent(data.event, language);
-    const localizedSignup = getLocalizedSignup(data, language);
+    const localizedEvent = getLocalizedEvent(data.event, locale);
+    const localizedSignup = getLocalizedSignup(data, locale);
 
     const localizedData = {
       ...data,

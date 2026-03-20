@@ -14,7 +14,7 @@ function formatDateTime(date: Date, bcp47Locale: string): string {
 
 function getSignupStateText(
   state: SignupStateInfo,
-  locale: string,
+  bcp47locale: string,
   tState: (key: string, values?: Record<string, string>) => string,
 ) {
   switch (state.state) {
@@ -22,17 +22,17 @@ function getSignupStateText(
       return { label: "", className: "" };
     case SignupState.not_opened:
       return {
-        label: tState("notOpenedShort", { date: formatDateTime(state.opens, locale) }),
+        label: tState("notOpenedShort", { date: formatDateTime(state.opens, bcp47locale) }),
         className: "text-yellow-600",
       };
     case SignupState.open:
       return {
-        label: tState("openShort", { date: formatDateTime(state.closes, locale) }),
+        label: tState("openShort", { date: formatDateTime(state.closes, bcp47locale) }),
         className: "text-green-600",
       };
     case SignupState.closed:
       return {
-        label: tState("closedShort", { date: formatDateTime(state.closed, locale) }),
+        label: tState("closedShort", { date: formatDateTime(state.closed, bcp47locale) }),
         className: "text-gray-500",
       };
     default:
@@ -42,12 +42,12 @@ function getSignupStateText(
 
 type EventListViewProps = {
   tableRows: TableRow[];
-  locale: string;
+  bcp47Locale: string;
   t: (key: string, values?: Record<string, string>) => string;
   tState: (key: string, values?: Record<string, string>) => string;
 };
 
-export function EventListTable({ tableRows, locale, t, tState }: EventListViewProps) {
+export function EventListTable({ tableRows, bcp47Locale, t, tState }: EventListViewProps) {
   return (
     <div className="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white sm:block">
       <table className="w-full text-left text-sm">
@@ -62,7 +62,7 @@ export function EventListTable({ tableRows, locale, t, tState }: EventListViewPr
         <tbody>
           {tableRows.map((row) => {
             if (row.type === "event") {
-              const stateText = getSignupStateText(row.signupState, locale, tState);
+              const stateText = getSignupStateText(row.signupState, bcp47Locale, tState);
               return (
                 <tr key={row.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50">
                   <td className="min-w-[300px] px-4 py-3">
@@ -73,7 +73,7 @@ export function EventListTable({ tableRows, locale, t, tState }: EventListViewPr
                       {row.title}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-700">{row.date ? formatDate(row.date, locale) : ""}</td>
+                  <td className="px-4 py-3 text-gray-700">{row.date ? formatDate(row.date, bcp47Locale) : ""}</td>
                   <td className={`px-4 py-3 text-sm ${stateText.className}`}>{stateText.label}</td>
                   {row.signupState.state !== SignupState.disabled && (
                     <td className="px-4 py-3 text-gray-700">
@@ -104,18 +104,18 @@ export function EventListTable({ tableRows, locale, t, tState }: EventListViewPr
   );
 }
 
-export function EventListCards({ tableRows, locale, t, tState }: EventListViewProps) {
+export function EventListCards({ tableRows, bcp47Locale, t, tState }: EventListViewProps) {
   return (
     <div className="space-y-0 sm:hidden">
       {tableRows.map((row) => {
         if (row.type === "event") {
-          const stateText = getSignupStateText(row.signupState, locale, tState);
+          const stateText = getSignupStateText(row.signupState, bcp47Locale, tState);
           return (
             <div key={row.id} className="border-b border-gray-200 py-3">
               <Link href={`/event/${row.slug}`} className="font-semibold text-brand-600 hover:underline">
                 {row.title}
               </Link>
-              {row.date && <p className="text-sm text-gray-600">{formatDate(row.date, locale)}</p>}
+              {row.date && <p className="text-sm text-gray-600">{formatDate(row.date, bcp47Locale)}</p>}
               {stateText.label && <p className={`text-sm ${stateText.className}`}>{stateText.label}</p>}
             </div>
           );

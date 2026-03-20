@@ -17,10 +17,6 @@ const fi = {
       title: "Hups, jotain meni pieleen",
       description: "Tuntematon virhe.",
     },
-    initialSetupNeeded: {
-      title: "Käyttöönotto kesken",
-      description: "Palvelin vaikuttaa vasta asennetulta.",
-    },
   },
   duration: {
     days: "{count, plural, one {# päivä} other {# päivää}}",
@@ -35,15 +31,13 @@ const fi = {
   footer: {},
   login: {
     title: "Kirjaudu",
+    setupTitle: "Alkuasetukset",
+    setupWelcome1: "Tervetuloa käyttämään Ilmomasiinaa!",
+    setupWelcome2:
+      "Kirjaudu sisään luodaksesi ensimmäisen ylläpitäjäkäyttäjän. Kuka tahansa voi kirjautua tässä vaiheessa.",
     submit: "Kirjaudu Google-tilillä",
     notAllowed: "Sähköpostiosoitteellasi ei ole käyttöoikeutta. Pyydä ylläpitäjää lisäämään osoitteesi.",
     failed: "Kirjautuminen epäonnistui",
-  },
-  initialSetup: {
-    title: "Alkuasetukset",
-    welcome1: "Tervetuloa käyttämään Ilmomasiinaa!",
-    welcome2: "Kirjaudu sisään luodaksesi ensimmäisen ylläpitäjäkäyttäjän. Kuka tahansa voi kirjautua tässä vaiheessa.",
-    submit: "Kirjaudu Google-tilillä",
   },
   events: {
     title: "Tapahtumat",

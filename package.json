@@ -15,7 +15,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --build",
+    "typecheck": "next typegen && tsc --build",
     "lint": "oxlint src tests",
     "lint:fix": "oxlint --fix src tests",
     "format": "oxfmt \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",

@@ -17,10 +17,6 @@ const sv = {
       title: "Något gick fel",
       description: "Ett okänt fel inträffade.",
     },
-    initialSetupNeeded: {
-      title: "Initial setup krävs",
-      description: "Servern verkar vara nyinstallerad.",
-    },
   },
   duration: {
     days: "{count, plural, one {# dag} other {# dagar}}",
@@ -35,15 +31,12 @@ const sv = {
   footer: {},
   login: {
     title: "Logga in",
+    setupTitle: "Inledande inställningar",
+    setupWelcome1: "Välkommen till Ilmomasiina!",
+    setupWelcome2: "Logga in för att skapa den första admin-användaren. Vem som helst kan logga in i detta skede.",
     submit: "Logga in med Google",
     notAllowed: "Din e-postadress har inte behörighet. Be en administratör att lägga till din e-post.",
     failed: "Inloggningen misslyckades",
-  },
-  initialSetup: {
-    title: "Inledande inställningar",
-    welcome1: "Välkommen till Ilmomasiina!",
-    welcome2: "Logga in för att skapa den första admin-användaren. Vem som helst kan logga in i detta skede.",
-    submit: "Logga in med Google",
   },
   events: {
     title: "Evenemang",

@@ -27,7 +27,7 @@ function formatSignupTime(date: Date, bcp47Locale: string): string {
   return formatAppDateTime(date, bcp47Locale, "dateTimeSeconds");
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/[locale]/event/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const locale = await getLocale();
   try {
@@ -39,8 +39,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function SingleEventPage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
-  const { locale: language, slug } = await params;
+export default async function SingleEventPage({ params }: PageProps<"/[locale]/event/[slug]">) {
+  const { slug } = await params;
+  const locale = await getLocale();
 
   let event;
   try {
@@ -51,9 +52,9 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
 
   const t = await getTranslations("singleEvent");
 
-  const localizedEvent = getLocalizedEvent(event, language);
+  const localizedEvent = getLocalizedEvent(event, locale);
   const signupsByQuota = getSignupsByQuota(localizedEvent);
-  const locale = appLocaleToBcp47(language);
+  const bcp47Locale = appLocaleToBcp47(locale);
   const publicQuestions = localizedEvent.questions.filter((q) => q.public);
   const adminSession = await getAdminSession();
 
@@ -83,7 +84,7 @@ export default async function SingleEventPage({ params }: { params: Promise<{ lo
             {localizedEvent.date && (
               <p>
                 <span className="font-semibold">{localizedEvent.endDate ? t("startDate") : t("date")}</span>{" "}
-                {formatDateTime(localizedEvent.date, locale)}
+                {formatDateTime(localizedEvent.date, bcp47Locale)}
               </p>
             )}
             {localizedEvent.endDate && (

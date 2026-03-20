@@ -7,10 +7,32 @@ import { signInAction } from "@/actions/signIn";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 
-export default function LoginForm() {
+type Props = { initialSetup: boolean };
+
+export default function LoginForm({ initialSetup }: Props) {
   const t = useTranslations("login");
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+
+  if (initialSetup) {
+    return (
+      <div className="mx-auto max-w-lg">
+        <h1 className="mb-4 text-2xl font-bold">{t("setupTitle")}</h1>
+        <p className="mb-1 font-semibold">{t("setupWelcome1")}</p>
+        <p className="mb-6 text-gray-600">{t("setupWelcome2")}</p>
+        {error && (
+          <Alert variant="danger" className="mb-4">
+            {error === "AccessDenied" ? t("notAllowed") : t("failed")}
+          </Alert>
+        )}
+        <form action={signInAction}>
+          <Button type="submit" variant="secondary">
+            {t("submit")}
+          </Button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center">

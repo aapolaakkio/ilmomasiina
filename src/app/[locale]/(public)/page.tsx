@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { appLocaleToBcp47 } from "@/i18n/intlLocale";
 import { redirect } from "@/i18n/navigation";
@@ -16,25 +16,15 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("title") };
 }
 
-export default async function EventListPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ locale: string }>;
-  searchParams: Promise<{ category?: string; maxAge?: string }>;
-}) {
-  const { locale: language } = await params;
-  const paramsResolved = await searchParams;
+export default async function EventListPage(_props: PageProps<"/[locale]">) {
+  const locale = await getLocale();
 
   let events;
   try {
-    events = await getEventsListForUser(
-      { category: paramsResolved.category, maxAge: paramsResolved.maxAge ? Number(paramsResolved.maxAge) : undefined },
-      false,
-    );
+    events = await getEventsListForUser({}, false);
   } catch (err) {
     if (err instanceof CustomError && err.code === ErrorCode.INITIAL_SETUP_NEEDED) {
-      redirect({ href: "/setup", locale: language });
+      redirect({ href: "/login", locale });
     }
     throw err;
   }
@@ -42,9 +32,9 @@ export default async function EventListPage({
   const t = await getTranslations("events");
   const tState = await getTranslations("signupState");
 
-  const localizedEvents = events.map((event) => getLocalizedEventListItem(event, language));
+  const localizedEvents = events.map((event) => getLocalizedEventListItem(event, locale));
   const tableRows = eventsToRows(localizedEvents).filter((row) => row.type !== "waitlist");
-  const locale = appLocaleToBcp47(language);
+  const bcp47Locale = appLocaleToBcp47(locale);
 
   return (
     <>
@@ -53,8 +43,8 @@ export default async function EventListPage({
         <h1 className="text-2xl font-extrabold tracking-wider">{t("title")}</h1>
       </div>
 
-      <EventListTable tableRows={tableRows} locale={locale} t={t} tState={tState} />
-      <EventListCards tableRows={tableRows} locale={locale} t={t} tState={tState} />
+      <EventListTable tableRows={tableRows} bcp47Locale={bcp47Locale} t={t} tState={tState} />
+      <EventListCards tableRows={tableRows} bcp47Locale={bcp47Locale} t={t} tState={tState} />
     </>
   );
 }

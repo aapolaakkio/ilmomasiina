@@ -11,13 +11,13 @@ import { getEventByIdForAdmin, getEventByIdForViewer } from "@/services/events/g
 import { getEventEditors } from "@/services/admin/events/eventEditors";
 import { hasEventAccess } from "@/auth/eventAccess";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: EventID }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/[locale]/admin/edit/[id]">): Promise<Metadata> {
   const { id } = await params;
   const t = await getTranslations("editor");
   if (id === "new") return { title: t("titleNew") };
   const locale = await getLocale();
   try {
-    const event = await getEventByIdForAdmin(id);
+    const event = await getEventByIdForAdmin(id as EventID);
     const localized = getLocalizedEvent(event, locale);
     return { title: `${t("titleEdit")} – ${localized.title}` };
   } catch {
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: Event
   }
 }
 
-export default async function EditEventPage({ params }: { params: Promise<{ id: EventID }> }) {
+export default async function EditEventPage({ params }: Pick<PageProps<"/[locale]/admin/edit/[id]">, "params">) {
   const session = await requireAdmin();
 
   const { id } = await params;
@@ -36,12 +36,14 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
     return <EventEditor event={null} isNew categories={categories} editors={[]} />;
   }
 
+  const eventId = id as EventID;
+
   try {
-    const canEdit = await hasEventAccess(session, id);
+    const canEdit = await hasEventAccess(session, eventId);
     const [event, categories, editors] = await Promise.all([
-      canEdit ? getEventByIdForAdmin(id) : getEventByIdForViewer(id),
+      canEdit ? getEventByIdForAdmin(eventId) : getEventByIdForViewer(eventId),
       getCategories(),
-      getEventEditors(id),
+      getEventEditors(eventId),
     ]);
     return <EventEditor event={event} isNew={false} categories={categories} editors={editors} readOnly={!canEdit} />;
   } catch {

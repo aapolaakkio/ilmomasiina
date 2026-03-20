@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("title") };
 }
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage(_props: PageProps<"/[locale]/admin/users">) {
   const session = await requireAdmin();
   if (session.role !== "admin") notFound();
 

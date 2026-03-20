@@ -11,8 +11,8 @@ export function proxy(request: NextRequest) {
     : request.nextUrl.pathname;
   const withoutLocale = pathname.replace(/^\/(fi|en|sv)(?=\/|$)/, "") || "/";
 
-  // Skip login and setup pages — they don't require auth
-  if (withoutLocale === "/login" || withoutLocale === "/setup") {
+  // Skip login page — it doesn't require auth
+  if (withoutLocale === "/login") {
     return i18nResponse;
   }
 

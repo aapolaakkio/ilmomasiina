@@ -9,17 +9,14 @@ import { completePayment } from "@/services/payment/completePayment";
 import { verifyToken } from "@/services/signups/editTokens";
 import { getSignupForEdit } from "@/services/signups/getSignupForEdit";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: SignupID; editToken: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/[locale]/payment/[id]/[editToken]">): Promise<Metadata> {
   const { id, editToken } = await params;
-  if (!verifyToken(id, editToken)) return {};
+  const signupId = id as SignupID;
+  if (!verifyToken(signupId, editToken)) return {};
   const locale = await getLocale();
   const t = await getTranslations("editSignup");
   try {
-    const data = await getSignupForEdit(id);
+    const data = await getSignupForEdit(signupId);
     const localized = getLocalizedEvent(data.event, locale);
     return { title: `${t("titleView")} – ${localized.title}` };
   } catch {
@@ -27,22 +24,20 @@ export async function generateMetadata({
   }
 }
 
-export default async function PaymentCompletionPage({
-  params,
-}: {
-  params: Promise<{ locale: string; id: SignupID; editToken: string }>;
-}) {
-  const { locale: language, id, editToken } = await params;
+export default async function PaymentCompletionPage({ params }: PageProps<"/[locale]/payment/[id]/[editToken]">) {
+  const { id, editToken } = await params;
+  const locale = await getLocale();
+  const signupId = id as SignupID;
 
-  if (!verifyToken(id, editToken)) {
+  if (!verifyToken(signupId, editToken)) {
     notFound();
   }
 
   try {
-    const data = await completePayment(id);
+    const data = await completePayment(signupId);
 
-    const localizedEvent = getLocalizedEvent(data.event, language);
-    const localizedSignup = getLocalizedSignup(data, language);
+    const localizedEvent = getLocalizedEvent(data.event, locale);
+    const localizedSignup = getLocalizedSignup(data, locale);
 
     const localizedData = {
       ...data,
