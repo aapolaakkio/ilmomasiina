@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useAction } from "next-safe-action/hooks";
 
 import { deleteSignupAsAdminAction } from "@/actions/deleteSignupAsAdmin";
 import { getAdminEventAction } from "@/actions/getAdminEvent";
@@ -9,6 +10,7 @@ import { SignupStatus } from "@/db/schema";
 import type { AdminEventResponse, AdminSignupSchema } from "@/db/zod";
 import { appLocaleToBcp47 } from "@/i18n/intlLocale";
 import { rowsToCsv } from "@/lib/csv";
+import { isHookActionPending } from "@/lib/safeActionHook";
 import { createAppDateTimeFormatter } from "@/lib/intlDateTime";
 import { stringifyAnswer } from "@/lib/signupUtils";
 import { Badge } from "@/components/ui/Badge";
@@ -112,10 +114,16 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
     }
   };
 
-  const handleDelete = async (signupId: string) => {
+  const { execute: executeDeleteAdminSignup, status: deleteAdminSignupStatus } = useAction(deleteSignupAsAdminAction, {
+    onSuccess: () => {
+      void refreshEvent();
+    },
+  });
+
+  const handleDelete = (signupId: string) => {
     if (!window.confirm(t("deleteConfirm"))) return;
-    await deleteSignupAsAdminAction({ signupId });
-    await refreshEvent();
+    if (isHookActionPending(deleteAdminSignupStatus)) return;
+    executeDeleteAdminSignup({ signupId });
   };
 
   const headerCells = (
@@ -186,7 +194,12 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
                 <Button variant="outline" size="small" onClick={() => setEditingSignup(signup)}>
                   {t("edit")}
                 </Button>
-                <Button variant="danger" size="small" onClick={() => handleDelete(signup.id)}>
+                <Button
+                  variant="danger"
+                  size="small"
+                  actionStatus={deleteAdminSignupStatus}
+                  onClick={() => handleDelete(signup.id)}
+                >
                   {t("delete")}
                 </Button>
               </>

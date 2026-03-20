@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useTranslations } from "next-intl";
+import { useAction } from "next-safe-action/hooks";
 
 import { createEventAction } from "@/actions/createEvent";
 import { updateEventAction } from "@/actions/updateEvent";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { UserID } from "@/db/schema";
 import type { AdminEventResponse } from "@/db/zod";
+import { firstAmongHookErrors } from "@/lib/safeActionHook";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
@@ -29,7 +31,7 @@ import { mapEditorSchemaIssue } from "./editor/mapEditorSchemaIssue";
 import PreviewTab from "./editor/PreviewTab";
 import QuestionsTab from "./editor/QuestionsTab";
 import QuotasTab from "./editor/QuotasTab";
-import { consumeSaveErrorResult } from "./editor/saveResultHelpers";
+import { isSaveErrorResult, isSuccessfulPlainEventSavePayload } from "./editor/saveResultHelpers";
 import SignupsTab from "./editor/SignupsTab";
 import { syncQuestionsAcrossLanguages, syncQuotasAcrossLanguages } from "./editor/syncLanguageVersions";
 import { TabWithErrorDot } from "./editor/TabWithErrorDot";
@@ -59,9 +61,8 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
 
   const [form, setForm] = useState(() => mountSeed().form);
   const [selectedLanguage, setSelectedLanguage] = useState(() => mountSeed().selectedLanguage);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  /** Client-side validation and non-hook failures (e.g. unexpected empty result). Server/action errors use `useAction` `status` + `result`. */
+  const [localError, setLocalError] = useState<string | null>(null);
   const [savedEvent, setSavedEvent] = useState(initialEvent);
   const [editConflict, setEditConflict] = useState<EditorEditConflictState | null>(null);
   const [moveToQueueWarning, setMoveToQueueWarning] = useState<{
@@ -69,6 +70,38 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
     draft: boolean;
   } | null>(null);
   const { fieldErrors, validate } = useFormValidation();
+
+  const {
+    executeAsync: runCreate,
+    status: createEventSaveStatus,
+    result: createSaveHookResult,
+    reset: resetCreateSave,
+  } = useAction(createEventAction);
+  const {
+    executeAsync: runUpdate,
+    status: updateEventSaveStatus,
+    result: updateSaveHookResult,
+    reset: resetUpdateSave,
+  } = useAction(updateEventAction);
+  const activeSaveStatus = effectiveIsNew ? createEventSaveStatus : updateEventSaveStatus;
+  const activeSaveResult = effectiveIsNew ? createSaveHookResult : updateSaveHookResult;
+
+  const invalidLabel = t("saveInvalid");
+  const saveFailedLabel = t("saveFailed");
+  const saveHookError = firstAmongHookErrors([
+    {
+      status: activeSaveStatus,
+      result: activeSaveResult,
+      fallback: saveFailedLabel,
+      validationFallback: invalidLabel,
+    },
+  ]);
+  const displayError = localError ?? saveHookError;
+
+  const saveSuccessMessage =
+    updateEventSaveStatus === "hasSucceeded" && isSuccessfulPlainEventSavePayload(updateSaveHookResult?.data)
+      ? t("saveSuccess")
+      : null;
 
   /**
    * After edit-conflict overwrite we `setForm` / `setSavedEvent` synchronously, then save on a later
@@ -101,41 +134,41 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
     readOnly,
   };
 
-  const invalidLabel = t("saveInvalid");
-
   const handleSaveRef = useRef<(asDraft: boolean) => Promise<void>>(async () => {});
 
   async function handleSave(asDraft: boolean) {
-    setError(null);
-    setSuccess(null);
+    setLocalError(null);
+    resetCreateSave();
+    resetUpdateSave();
 
     const valid = validate(editorSchema, editorValidationPayload(form), (_field, msg) => mapEditorSchemaIssue(msg, t));
     if (!valid) {
-      setError(invalidLabel);
+      setLocalError(invalidLabel);
       return;
     }
 
-    setSubmitting(true);
     try {
       const body = buildEventUpdateBody(form, asDraft);
 
       if (effectiveIsNew) {
-        const result = await createEventAction(body);
-        if (consumeSaveErrorResult(result, { invalid: invalidLabel }, setError)) {
-          /* handled */
-        } else if (result?.data) {
+        const result = await runCreate(body);
+        if (isSaveErrorResult(result)) {
+          return;
+        }
+        if (result?.data) {
           router.push(`/admin/edit/${result.data.id}`);
         } else {
-          setError(t("saveFailed"));
+          setLocalError(saveFailedLabel);
         }
       } else if (savedEvent) {
-        const result = await updateEventAction({
+        const result = await runUpdate({
           eventId: savedEvent.id,
           body: { ...body, updatedAt: savedEvent.updatedAt },
         });
-        if (consumeSaveErrorResult(result, { invalid: invalidLabel }, setError)) {
-          /* handled */
-        } else if (result?.data && "editConflict" in result.data) {
+        if (isSaveErrorResult(result)) {
+          return;
+        }
+        if (result?.data && "editConflict" in result.data) {
           const d = result.data;
           setEditConflict({
             updatedAt: d.updatedAt ?? new Date(),
@@ -149,15 +182,12 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
           });
         } else if (result?.data && "id" in result.data) {
           applySavedAdminEventToEditor(result.data, setSavedEvent, setForm);
-          setSuccess(t("saveSuccess"));
         } else {
-          setError(t("saveFailed"));
+          setLocalError(saveFailedLabel);
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("saveFailed"));
-    } finally {
-      setSubmitting(false);
+      setLocalError(err instanceof Error ? err.message : saveFailedLabel);
     }
   }
 
@@ -215,14 +245,14 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
         </Alert>
       )}
 
-      {error && (
+      {displayError && (
         <Alert variant="danger" className="mb-4">
-          {error}
+          {displayError}
         </Alert>
       )}
-      {success && (
+      {saveSuccessMessage && (
         <Alert variant="success" className="mb-4">
-          {success}
+          {saveSuccessMessage}
         </Alert>
       )}
 
@@ -262,16 +292,17 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
       {moveToQueueWarning && (
         <EditorMoveToQueueAlert
           labels={moveToQueueLabels}
-          submitting={submitting}
+          proceedActionStatus={activeSaveStatus}
           onCancel={() => setMoveToQueueWarning(null)}
           onProceed={async () => {
             const draft = moveToQueueWarning.draft;
             setMoveToQueueWarning(null);
-            setSubmitting(true);
-            setError(null);
+            setLocalError(null);
+            resetCreateSave();
+            resetUpdateSave();
             if (!savedEvent) return;
             try {
-              const result = await updateEventAction({
+              const result = await runUpdate({
                 eventId: savedEvent.id,
                 body: {
                   ...buildEventUpdateBody(form, draft),
@@ -279,18 +310,16 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
                   updatedAt: savedEvent.updatedAt,
                 },
               });
-              if (consumeSaveErrorResult(result, { invalid: invalidLabel }, setError)) {
-                /* handled */
-              } else if (result?.data && "id" in result.data) {
+              if (isSaveErrorResult(result)) {
+                return;
+              }
+              if (result?.data && "id" in result.data) {
                 applySavedAdminEventToEditor(result.data, setSavedEvent, setForm);
-                setSuccess(t("saveSuccess"));
               } else {
-                setError(t("saveFailed"));
+                setLocalError(saveFailedLabel);
               }
             } catch (err) {
-              setError(err instanceof Error ? err.message : t("saveFailed"));
-            } finally {
-              setSubmitting(false);
+              setLocalError(err instanceof Error ? err.message : saveFailedLabel);
             }
           }}
         />
@@ -359,40 +388,25 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
           <nav className="flex gap-2">
             {effectiveIsNew ? (
               <>
-                <Button
-                  variant="secondary"
-                  disabled={submitting}
-                  loading={submitting}
-                  onClick={() => void handleSave(true)}
-                >
+                <Button variant="secondary" actionStatus={activeSaveStatus} onClick={() => void handleSave(true)}>
                   {t("saveDraft")}
                 </Button>
-                <Button
-                  variant="primary"
-                  disabled={submitting}
-                  loading={submitting}
-                  onClick={() => void handleSave(false)}
-                >
+                <Button variant="primary" actionStatus={activeSaveStatus} onClick={() => void handleSave(false)}>
                   {t("publish")}
                 </Button>
               </>
             ) : (
               <>
                 {!form.draft && (
-                  <Button variant="outline" disabled={submitting} onClick={() => void handleSave(true)}>
+                  <Button variant="outline" actionStatus={activeSaveStatus} onClick={() => void handleSave(true)}>
                     {t("convertToDraft")}
                   </Button>
                 )}
-                <Button
-                  variant="primary"
-                  disabled={submitting}
-                  loading={submitting}
-                  onClick={() => void handleSave(form.draft)}
-                >
+                <Button variant="primary" actionStatus={activeSaveStatus} onClick={() => void handleSave(form.draft)}>
                   {t("saveChanges")}
                 </Button>
                 {form.draft && (
-                  <Button variant="success" disabled={submitting} onClick={() => void handleSave(false)}>
+                  <Button variant="success" actionStatus={activeSaveStatus} onClick={() => void handleSave(false)}>
                     {t("publish")}
                   </Button>
                 )}

@@ -1,5 +1,7 @@
 "use client";
 
+import type { HookActionStatus } from "next-safe-action/hooks";
+
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 
@@ -12,12 +14,12 @@ type Labels = {
 
 type Props = {
   labels: Labels;
-  submitting: boolean;
+  proceedActionStatus: HookActionStatus;
   onCancel: () => void;
   onProceed: () => void | Promise<void>;
 };
 
-export function EditorMoveToQueueAlert({ labels, submitting, onCancel, onProceed }: Props) {
+export function EditorMoveToQueueAlert({ labels, proceedActionStatus, onCancel, onProceed }: Props) {
   return (
     <Alert variant="danger" className="mb-4">
       <p className="mb-2 font-semibold">{labels.title}</p>
@@ -26,7 +28,7 @@ export function EditorMoveToQueueAlert({ labels, submitting, onCancel, onProceed
         <Button variant="outline" size="small" onClick={onCancel}>
           {labels.cancel}
         </Button>
-        <Button variant="danger" size="small" disabled={submitting} onClick={() => void onProceed()}>
+        <Button variant="danger" size="small" actionStatus={proceedActionStatus} onClick={() => void onProceed()}>
           {labels.proceed}
         </Button>
       </div>

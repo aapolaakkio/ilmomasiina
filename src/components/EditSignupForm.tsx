@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useAction, type HookActionStatus } from "next-safe-action/hooks";
 import { z } from "zod";
 
 import { deleteSignupAction } from "@/actions/deleteSignup";
@@ -17,6 +18,7 @@ import {
   type SignupForEditResponse,
   type SignupUpdateBody,
 } from "@/db/zod";
+import { firstAmongHookErrors, isHookActionPending } from "@/lib/safeActionHook";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -84,7 +86,15 @@ function buildSignupSchema(event: SignupForEditResponse["event"]) {
   return z.object(shape);
 }
 
-function DeleteConfirmButton({ onDelete, disabled }: { onDelete: () => void; disabled: boolean }) {
+function DeleteConfirmButton({
+  onDelete,
+  disabled,
+  actionStatus,
+}: {
+  onDelete: () => void;
+  disabled: boolean;
+  actionStatus: HookActionStatus;
+}) {
   const t = useTranslations("editSignup");
   const [confirming, setConfirming] = useState(false);
 
@@ -98,6 +108,7 @@ function DeleteConfirmButton({ onDelete, disabled }: { onDelete: () => void; dis
     <Button
       variant={confirming ? "danger" : "outline"}
       disabled={disabled}
+      actionStatus={actionStatus}
       onClick={() => {
         if (confirming) {
           onDelete();
@@ -117,8 +128,6 @@ export default function EditSignupForm({ data, editToken }: Props) {
   const tDuration = useTranslations("duration");
   const { signup, event } = data;
   const [values, setValues] = useState<FormValues>(() => signupToFormValues(signup));
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { fieldErrors, validate, clearError } = useFormValidation();
 
   const signupSchema = buildSignupSchema(event);
@@ -131,6 +140,58 @@ export default function EditSignupForm({ data, editToken }: Props) {
   const showPayment = (signup.price ?? 0) > 0;
   const isInQuota = signup.status === SignupStatus.IN_QUOTA || signup.status === SignupStatus.IN_OPEN_QUOTA;
   const canPayOnline = event.payments === "online" && signup.paymentStatus === SignupPaymentStatus.PENDING;
+
+  const {
+    execute: executeUpdate,
+    status: updateSignupActionStatus,
+    result: updateSignupResult,
+    reset: resetUpdateSignup,
+  } = useAction(updateSignupAction, {
+    onSuccess: () => {
+      if (isNew && !showPayment) router.push(`/event/${event.slug}`);
+    },
+  });
+
+  const {
+    execute: executeDelete,
+    status: deleteSignupActionStatus,
+    result: deleteSignupResult,
+    reset: resetDeleteSignup,
+  } = useAction(deleteSignupAction, {
+    onSuccess: () => {
+      router.push(`/event/${event.slug}`);
+    },
+  });
+
+  const {
+    execute: executePay,
+    status: payActionStatus,
+    result: paySignupResult,
+    reset: resetPaySignup,
+  } = useAction(startPaymentAction, {
+    onSuccess: ({ data }) => {
+      if (data?.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      }
+    },
+  });
+
+  function resetAllSignupActions() {
+    resetUpdateSignup();
+    resetDeleteSignup();
+    resetPaySignup();
+  }
+
+  const actionError = firstAmongHookErrors([
+    { status: updateSignupActionStatus, result: updateSignupResult, fallback: t("signupError.failed") },
+    { status: deleteSignupActionStatus, result: deleteSignupResult, fallback: t("deleteError.failed") },
+    { status: payActionStatus, result: paySignupResult, fallback: t("paymentError.failed") },
+  ]);
+
+  const actionBusy =
+    isHookActionPending(updateSignupActionStatus) ||
+    isHookActionPending(deleteSignupActionStatus) ||
+    isHookActionPending(payActionStatus);
 
   // Countdown timer
   const [timeLeft, setTimeLeft] = useState(isNew ? confirmableForMillis : editableForMillis);
@@ -176,12 +237,11 @@ export default function EditSignupForm({ data, editToken }: Props) {
     return t("fieldError.missing");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canEdit || submitting) return;
-    setError(null);
+    if (!canEdit || actionBusy) return;
+    resetAllSignupActions();
 
-    // Build validation data from form values
     const validationData: Record<string, unknown> = {};
     if (event.nameQuestion) {
       validationData.firstName = values.firstName ?? "";
@@ -198,63 +258,21 @@ export default function EditSignupForm({ data, editToken }: Props) {
     const valid = validate(signupSchema, validationData, mapFieldError);
     if (!valid) return;
 
-    setSubmitting(true);
-    try {
-      const update = formValuesToUpdate(values, event);
-      const result = await updateSignupAction({
-        signupId: signup.id,
-        editToken,
-        body: update,
-      });
-      if (result?.serverError) {
-        setError(result.serverError);
-      } else if (isNew && !showPayment) {
-        router.push(`/event/${event.slug}`);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("signupError.failed"));
-    } finally {
-      setSubmitting(false);
-    }
+    executeUpdate({
+      signupId: signup.id,
+      editToken,
+      body: formValuesToUpdate(values, event),
+    });
   };
 
-  const handleDelete = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      const result = await deleteSignupAction({
-        signupId: signup.id,
-        editToken,
-      });
-      if (result?.serverError) {
-        setError(result.serverError);
-        setSubmitting(false);
-      } else {
-        router.push(`/event/${event.slug}`);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("deleteError.failed"));
-      setSubmitting(false);
-    }
+  const handleDelete = () => {
+    resetAllSignupActions();
+    executeDelete({ signupId: signup.id, editToken });
   };
 
-  const handlePay = async () => {
-    setSubmitting(true);
-    try {
-      const result = await startPaymentAction({
-        signupId: signup.id,
-        editToken,
-      });
-      if (result?.data?.paymentUrl) {
-        window.location.href = result.data.paymentUrl;
-      } else {
-        setError(result?.serverError ?? t("paymentError.failed"));
-        setSubmitting(false);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("paymentError.failed"));
-      setSubmitting(false);
-    }
+  const handlePay = () => {
+    resetAllSignupActions();
+    executePay({ signupId: signup.id, editToken });
   };
 
   // Position display
@@ -324,7 +342,7 @@ export default function EditSignupForm({ data, editToken }: Props) {
             </tfoot>
           </table>
           {canPayOnline && isInQuota && (
-            <Button variant="primary" onClick={handlePay} disabled={submitting}>
+            <Button variant="primary" onClick={handlePay} disabled={actionBusy} actionStatus={payActionStatus}>
               {t("payment.pay")}
             </Button>
           )}
@@ -353,9 +371,9 @@ export default function EditSignupForm({ data, editToken }: Props) {
       {!canEdit && <p className="mb-3 text-sm text-gray-500">{t("editable.closed")}</p>}
 
       {/* Error */}
-      {error && (
+      {actionError && (
         <Alert variant="danger" className="mb-4">
-          {error}
+          {actionError}
         </Alert>
       )}
 
@@ -549,7 +567,7 @@ export default function EditSignupForm({ data, editToken }: Props) {
             </Link>
           )}
           {canEdit && (
-            <Button type="submit" variant="primary" disabled={submitting} loading={submitting}>
+            <Button type="submit" variant="primary" disabled={actionBusy} actionStatus={updateSignupActionStatus}>
               {isNew ? t("save") : t("update")}
             </Button>
           )}
@@ -560,7 +578,7 @@ export default function EditSignupForm({ data, editToken }: Props) {
       {canEdit && !isNew && (
         <div className="mt-8 border-t border-gray-200 pt-4 text-center">
           <p className="mb-3 text-sm text-gray-500">{t("delete.warning")}</p>
-          <DeleteConfirmButton onDelete={handleDelete} disabled={submitting} />
+          <DeleteConfirmButton onDelete={handleDelete} disabled={actionBusy} actionStatus={deleteSignupActionStatus} />
         </div>
       )}
     </div>

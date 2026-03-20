@@ -7,19 +7,18 @@ type SaveErrorResult = {
  * Handles `serverError` and `validationErrors` from next-safe-action results.
  * @returns true if the result was an error (caller should not interpret `data`).
  */
-export function consumeSaveErrorResult(
-  result: SaveErrorResult | undefined,
-  labels: { invalid: string },
-  setError: (message: string) => void,
-): boolean {
-  if (result?.serverError) {
-    setError(result.serverError);
-    return true;
-  }
+export function isSaveErrorResult(result: SaveErrorResult | undefined): boolean {
   if (result?.validationErrors) {
     console.error("Validation errors:", result.validationErrors);
-    setError(labels.invalid);
     return true;
   }
+  if (result?.serverError != null && result.serverError !== "") return true;
   return false;
+}
+
+/** `updateEventAction` success body: persisted event, not edit-conflict / move-to-queue. */
+export function isSuccessfulPlainEventSavePayload(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  if ("editConflict" in data || "wouldMoveToQueue" in data) return false;
+  return "id" in data;
 }

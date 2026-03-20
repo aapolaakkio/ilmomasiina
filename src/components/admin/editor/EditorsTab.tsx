@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useAction } from "next-safe-action/hooks";
 
 import { addEventEditorAction } from "@/actions/addEventEditor";
 import { removeEventEditorAction } from "@/actions/removeEventEditor";
 import type { EventID, UserID } from "@/db/schema";
+import { firstAmongHookErrors, isHookActionPending } from "@/lib/safeActionHook";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { inputClassName } from "@/components/ui/Field";
@@ -22,62 +24,69 @@ export default function EditorsTab({ eventId, initialEditors, readOnly }: Props)
   const t = useTranslations("editor.editors");
   const [editors, setEditors] = useState<Editor[]>(initialEditors);
   const [email, setEmail] = useState("");
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const lastRemoveEmailRef = useRef("");
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || processing) return;
-    setError(null);
-    setSuccess(null);
-    setProcessing(true);
-    try {
-      const result = await addEventEditorAction({
-        eventId,
-        email: email.trim(),
-      });
-      if (result?.serverError) {
-        setError(result.serverError);
-      } else if (result?.data) {
-        const data = result.data;
+  const {
+    execute: executeRemove,
+    status: removeEditorActionStatus,
+    result: removeEditorResult,
+    reset: resetRemoveEditor,
+  } = useAction(removeEventEditorAction, {
+    onSuccess: ({ input }) => {
+      setEditors((prev) => prev.filter((ed) => ed.userId !== input.userId));
+    },
+  });
+
+  const {
+    execute: executeAdd,
+    status: addEditorActionStatus,
+    result: addEditorResult,
+    reset: resetAddEditor,
+  } = useAction(addEventEditorAction, {
+    onSuccess: ({ data }) => {
+      if (data) {
         setEditors((prev) => [...prev, data]);
         setEmail("");
-        setSuccess(t("addSuccess", { email: email.trim() }));
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("addFailed"));
-    } finally {
-      setProcessing(false);
-    }
+    },
+  });
+
+  const actionError = firstAmongHookErrors([
+    { status: addEditorActionStatus, result: addEditorResult, fallback: t("addFailed") },
+    { status: removeEditorActionStatus, result: removeEditorResult, fallback: t("removeFailed") },
+  ]);
+
+  const editorsBusy = isHookActionPending(addEditorActionStatus) || isHookActionPending(removeEditorActionStatus);
+
+  const actionSuccess =
+    addEditorActionStatus === "hasSucceeded" && addEditorResult?.data
+      ? t("addSuccess", { email: addEditorResult.data.email })
+      : removeEditorActionStatus === "hasSucceeded"
+        ? t("removeSuccess", { email: lastRemoveEmailRef.current })
+        : null;
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || isHookActionPending(addEditorActionStatus)) return;
+    resetAddEditor();
+    resetRemoveEditor();
+    executeAdd({ eventId, email: email.trim() });
   };
 
-  const handleRemove = async (userId: UserID, editorEmail: string) => {
-    if (processing) return;
-    setError(null);
-    setSuccess(null);
-    setProcessing(true);
-    try {
-      const result = await removeEventEditorAction({ eventId, userId });
-      if (result?.serverError) {
-        setError(result.serverError);
-      } else {
-        setEditors((prev) => prev.filter((ed) => ed.userId !== userId));
-        setSuccess(t("removeSuccess", { email: editorEmail }));
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("removeFailed"));
-    } finally {
-      setProcessing(false);
-    }
+  const handleRemove = (userId: UserID, editorEmail: string) => {
+    if (isHookActionPending(removeEditorActionStatus)) return;
+    lastRemoveEmailRef.current = editorEmail;
+    resetAddEditor();
+    resetRemoveEditor();
+    executeRemove({ eventId, userId });
   };
 
   return (
     <div className="space-y-4 py-4">
       {!readOnly && <p className="text-sm text-gray-600">{t("info")}</p>}
 
-      {error && <Alert variant="danger">{error}</Alert>}
-      {success && <Alert variant="success">{success}</Alert>}
+      {actionError && <Alert variant="danger">{actionError}</Alert>}
+      {actionSuccess && <Alert variant="success">{actionSuccess}</Alert>}
 
       {editors.length > 0 ? (
         <table className="w-full text-left text-sm">
@@ -96,7 +105,8 @@ export default function EditorsTab({ eventId, initialEditors, readOnly }: Props)
                     <Button
                       variant="danger"
                       size="small"
-                      disabled={processing}
+                      disabled={editorsBusy}
+                      actionStatus={removeEditorActionStatus}
                       onClick={() => handleRemove(editor.userId, editor.email)}
                     >
                       {t("remove")}
@@ -120,7 +130,7 @@ export default function EditorsTab({ eventId, initialEditors, readOnly }: Props)
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <Button type="submit" variant="secondary" disabled={processing}>
+          <Button type="submit" variant="secondary" disabled={editorsBusy} actionStatus={addEditorActionStatus}>
             {t("add")}
           </Button>
         </form>

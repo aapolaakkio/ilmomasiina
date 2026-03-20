@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAction } from "next-safe-action/hooks";
 
@@ -9,6 +9,7 @@ import { inviteUserAction } from "@/actions/inviteUser";
 import { Link, useRouter } from "@/i18n/navigation";
 import { UserID, UserRole } from "@/db/schema";
 import { inviteEmailOnlySchema, type UserListResponse } from "@/db/zod";
+import { firstAmongHookErrors, isHookActionPending } from "@/lib/safeActionHook";
 import { useFormValidation } from "@/lib/useFormValidation";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -22,32 +23,60 @@ type Props = {
 export default function AdminUsersClient({ users }: Props) {
   const router = useRouter();
   const t = useTranslations("adminUsers");
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  // Invite form
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<UserRole>(UserRole.USER);
   const inviteValidation = useFormValidation();
 
-  const { execute: executeInvite, isPending: invitePending } = useAction(inviteUserAction, {
+  const lastDeletedEmailRef = useRef("");
+
+  const {
+    execute: executeInvite,
+    status: inviteUserStatus,
+    result: inviteUserResult,
+    input: inviteUserInput,
+    reset: resetInviteUser,
+  } = useAction(inviteUserAction, {
     onSuccess: () => {
-      setSuccess(t("createSuccess", { email: inviteEmail }));
       setInviteEmail("");
       inviteValidation.clearErrors();
       router.refresh();
     },
-    onError: ({ error: err }) => {
-      setError(err.serverError ?? t("createFailed"));
+  });
+
+  const {
+    execute: executeDelete,
+    status: deleteUserActionStatus,
+    result: deleteUserResult,
+    reset: resetDeleteUser,
+  } = useAction(deleteUserAction, {
+    onSuccess: () => {
+      router.refresh();
     },
   });
 
+  const actionSuccess =
+    inviteUserStatus === "hasSucceeded" && inviteUserInput?.email != null
+      ? t("createSuccess", { email: inviteUserInput.email })
+      : deleteUserActionStatus === "hasSucceeded"
+        ? t("deleteSuccess", { user: lastDeletedEmailRef.current })
+        : null;
+
+  const actionError = firstAmongHookErrors([
+    { status: inviteUserStatus, result: inviteUserResult, fallback: t("createFailed") },
+    {
+      status: deleteUserActionStatus,
+      result: deleteUserResult,
+      fallback: t("deleteFailed", { user: lastDeletedEmailRef.current }),
+    },
+  ]);
+
+  const adminUsersBusy = isHookActionPending(inviteUserStatus) || isHookActionPending(deleteUserActionStatus);
+
   const handleInvite = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (invitePending) return;
-    setError(null);
-    setSuccess(null);
+    if (isHookActionPending(inviteUserStatus)) return;
+    resetInviteUser();
+    resetDeleteUser();
 
     const valid = inviteValidation.validate(inviteEmailOnlySchema, { email: inviteEmail }, (field) => {
       if (field === "email") return t("errors.required");
@@ -58,22 +87,14 @@ export default function AdminUsersClient({ users }: Props) {
     executeInvite({ email: inviteEmail, role: inviteRole });
   };
 
-  const handleDelete = async (userId: UserID, email: string) => {
+  const handleDelete = (userId: UserID, email: string) => {
     if (!window.confirm(t("deleteConfirm", { user: email }))) return;
-    setProcessing(true);
-    setError(null);
-    setSuccess(null);
-    const result = await deleteUserAction({ userId });
-    if (result?.serverError) {
-      setError(result.serverError);
-    } else {
-      setSuccess(t("deleteSuccess", { user: email }));
-      router.refresh();
-    }
-    setProcessing(false);
+    if (isHookActionPending(deleteUserActionStatus)) return;
+    lastDeletedEmailRef.current = email;
+    resetInviteUser();
+    resetDeleteUser();
+    executeDelete({ userId });
   };
-
-  const isProcessing = processing || invitePending;
 
   return (
     <>
@@ -84,18 +105,17 @@ export default function AdminUsersClient({ users }: Props) {
         </Button>
       </Link>
 
-      {error && (
+      {actionError && (
         <Alert variant="danger" className="mb-4">
-          {error}
+          {actionError}
         </Alert>
       )}
-      {success && (
+      {actionSuccess && (
         <Alert variant="success" className="mb-4">
-          {success}
+          {actionSuccess}
         </Alert>
       )}
 
-      {/* User list */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
@@ -114,7 +134,8 @@ export default function AdminUsersClient({ users }: Props) {
                   <Button
                     variant="danger"
                     size="small"
-                    disabled={isProcessing}
+                    disabled={adminUsersBusy}
+                    actionStatus={deleteUserActionStatus}
                     onClick={() => handleDelete(user.id, user.email)}
                   >
                     {t("deleteUser")}
@@ -126,7 +147,6 @@ export default function AdminUsersClient({ users }: Props) {
         </table>
       </div>
 
-      {/* Invite form */}
       <h2 className="mb-2 mt-8 text-xl font-bold">{t("createUser")}</h2>
       <p className="mb-4 text-sm text-gray-600">{t("createUserInfo")}</p>
       <form onSubmit={handleInvite} className="mb-8">
@@ -153,7 +173,13 @@ export default function AdminUsersClient({ users }: Props) {
               <option value="user">{t("role_user")}</option>
               <option value="admin">{t("role_admin")}</option>
             </select>
-            <Button type="submit" variant="secondary" className="w-full shrink-0 sm:w-auto" disabled={isProcessing}>
+            <Button
+              type="submit"
+              variant="secondary"
+              className="w-full shrink-0 sm:w-auto"
+              disabled={adminUsersBusy}
+              actionStatus={inviteUserStatus}
+            >
               {t("createSubmit")}
             </Button>
           </div>

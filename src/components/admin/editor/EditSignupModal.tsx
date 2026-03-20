@@ -2,14 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useAction } from "next-safe-action/hooks";
 
 import { createSignupAsAdminAction } from "@/actions/createSignupAsAdmin";
 import { updateSignupAsAdminAction } from "@/actions/updateSignupAsAdmin";
 import { type QuestionID, ManualPaymentStatus, QuestionType } from "@/db/schema";
 import type { AdminEventResponse, AdminSignupSchema } from "@/db/zod";
+import { firstAmongHookErrors } from "@/lib/safeActionHook";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName, selectClassName } from "@/components/ui/Field";
+
+import { isSaveErrorResult } from "./saveResultHelpers";
 
 type Props = {
   event: AdminEventResponse;
@@ -46,8 +50,25 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
   );
   const [sendEmail, setSendEmail] = useState(true);
   const [keepEditing, setKeepEditing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+
+  const {
+    executeAsync: runCreateSignup,
+    status: createSignupModalStatus,
+    result: createSignupModalResult,
+    reset: resetCreateSignup,
+  } = useAction(createSignupAsAdminAction);
+  const {
+    executeAsync: runUpdateSignup,
+    status: updateSignupModalStatus,
+    result: updateSignupModalResult,
+    reset: resetUpdateSignup,
+  } = useAction(updateSignupAsAdminAction);
+
+  const activeSaveStatus = isCreate ? createSignupModalStatus : updateSignupModalStatus;
+  const activeSaveResult = isCreate ? createSignupModalResult : updateSignupModalResult;
+  const modalActionError = firstAmongHookErrors([
+    { status: activeSaveStatus, result: activeSaveResult, fallback: t("saveFailed") },
+  ]);
 
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -76,10 +97,10 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
     });
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSaving(true);
-    setError(null);
+    resetCreateSignup();
+    resetUpdateSignup();
 
     const body = {
       firstName: event.nameQuestion ? firstName : null,
@@ -97,29 +118,24 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
 
     try {
       const result = isCreate
-        ? await createSignupAsAdminAction({ quotaId, ...body })
-        : await updateSignupAsAdminAction({ signupId: signup.id, body });
+        ? await runCreateSignup({ quotaId, ...body })
+        : await runUpdateSignup({ signupId: signup!.id, body });
 
-      if (result?.serverError) {
-        setError(t("saveFailed"));
-        setSaving(false);
+      if (isSaveErrorResult(result)) {
         return;
       }
 
       await onSave();
       if (isCreate && keepEditing) {
-        // Reset form for next signup
         setFirstName("");
         setLastName("");
         setEmail("");
         setAnswers(buildEmptyAnswers());
-        setSaving(false);
         return;
       }
       onClose();
     } catch {
-      setError(t("saveFailed"));
-      setSaving(false);
+      /* Hook records failure via `status` / `result` when the action rejects. */
     }
   }
 
@@ -136,9 +152,9 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
     >
       <h2 className="mb-4 text-lg font-semibold">{isCreate ? t("titleCreate") : t("titleEdit")}</h2>
 
-      {error && (
+      {modalActionError && (
         <Alert variant="danger" className="mb-4">
-          {error}
+          {modalActionError}
         </Alert>
       )}
 
@@ -330,7 +346,7 @@ export default function EditSignupModal({ event, signup, onClose, onSave }: Prop
           <Button type="button" variant="outline" onClick={onClose}>
             {t("cancel")}
           </Button>
-          <Button type="submit" loading={saving}>
+          <Button type="submit" actionStatus={activeSaveStatus}>
             {t("save")}
           </Button>
         </div>

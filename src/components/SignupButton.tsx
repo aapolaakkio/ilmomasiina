@@ -6,6 +6,7 @@ import { useAction } from "next-safe-action/hooks";
 
 import { createSignupAction } from "@/actions/createSignup";
 import { useRouter } from "@/i18n/navigation";
+import { isHookActionPending } from "@/lib/safeActionHook";
 import type { QuotaID } from "@/db/schema";
 import type { UserEventResponse } from "@/db/zod";
 import { Button } from "@/components/ui/Button";
@@ -22,7 +23,7 @@ export default function SignupButton({ event, registrationClosed, millisTillOpen
   const [countdown, setCountdown] = useState(millisTillOpening ?? 0);
   const [isOpen, setIsOpen] = useState(!registrationClosed && (millisTillOpening ?? 0) <= 0);
 
-  const { execute, isPending } = useAction(createSignupAction, {
+  const { execute, status: createSignupActionStatus } = useAction(createSignupAction, {
     onSuccess: ({ data }) => {
       if (data) {
         router.push(`/signup/${data.id}/${data.editToken}`);
@@ -48,7 +49,7 @@ export default function SignupButton({ event, registrationClosed, millisTillOpen
   const isDisabled = event.registrationStartDate == null || event.registrationEndDate == null;
 
   const onClick = (quotaId: QuotaID) => {
-    if (!isOpen || isPending) return;
+    if (!isOpen || isHookActionPending(createSignupActionStatus)) return;
     execute({ quotaId });
   };
 
@@ -74,7 +75,8 @@ export default function SignupButton({ event, registrationClosed, millisTillOpen
             key={quota.id}
             variant="secondary"
             className="mb-2 w-full"
-            disabled={!isOpen || isPending}
+            disabled={!isOpen}
+            actionStatus={createSignupActionStatus}
             onClick={() => onClick(quota.id)}
           >
             {event.quotas.length === 1 ? t("signupNow") : t("signupQuota", { quota: quota.title })}
