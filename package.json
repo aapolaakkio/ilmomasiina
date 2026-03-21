@@ -20,6 +20,8 @@
     "lint:fix": "oxlint --fix src tests",
     "format": "oxfmt \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
     "format:check": "oxfmt --check \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
+    "db:migrate": "npx tsx src/db/migrate.ts",
+    "db:generate": "drizzle-kit generate",
     "test": "playwright test",
     "test:e2e": "playwright test --project=e2e",
     "prepare": "simple-git-hooks"
