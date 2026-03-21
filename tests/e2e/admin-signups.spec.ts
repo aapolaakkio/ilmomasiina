@@ -4,7 +4,7 @@ import { PaymentMode } from "../../src/db/schema";
 import { resetDb } from "../helpers/resetDb";
 import { seedAdminUser, seedFullEvent, seedSignup } from "../helpers/seed";
 
-// Uses admin storageState from auth.setup.ts.
+// Authenticated as admin via `storageState` in playwright.config.ts (auth.setup.ts).
 
 test.beforeEach(async () => {
   await resetDb();
@@ -23,8 +23,8 @@ test.describe("view signups", () => {
     await page.goto(`/en/admin/edit/${event.id}`);
     await page.getByRole("tab", { name: /signups/i }).click();
 
-    await expect(page.getByText("Alice")).toBeVisible();
-    await expect(page.getByText("Bob")).toBeVisible();
+    await expect(page.getByText("Alice", { exact: true })).toBeVisible();
+    await expect(page.getByText("Bob", { exact: true })).toBeVisible();
   });
 });
 
@@ -50,8 +50,8 @@ test.describe("create signup as admin", () => {
     // Save
     await modal.getByRole("button", { name: /save/i }).click();
 
-    // Verify signup appears in the list
-    await expect(page.getByText("New")).toBeVisible();
+    // Verify signup appears in the list ("new@test.com" matches substring "new" without exact)
+    await expect(page.getByText("New", { exact: true })).toBeVisible();
   });
 });
 
@@ -105,8 +105,13 @@ test.describe("manual payment status", () => {
     await modal.locator('select[name="manualPaymentStatus"]').selectOption("paid");
     await modal.getByRole("button", { name: /save/i }).click();
 
-    // Payment status should be updated in the table
-    await expect(page.getByText(/paid/i)).toBeVisible();
+    // Badge text in the table (avoid matching hidden <option> elements)
+    await expect(
+      page
+        .getByRole("row")
+        .filter({ hasText: "Payer" })
+        .getByText(/^Paid$/i),
+    ).toBeVisible();
   });
 });
 

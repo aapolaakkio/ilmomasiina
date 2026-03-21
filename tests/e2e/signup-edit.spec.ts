@@ -12,7 +12,7 @@ test.beforeEach(async () => {
   await seedAdminUser();
 });
 
-test("user can edit their signup via edit token", async ({ page }) => {
+test("confirmed signup shows name and email read-only on edit link", async ({ page }) => {
   const { quota } = await seedFullEvent(
     { title: "Editable Event", slug: "editable-event" },
     { title: "Default", size: 10 },
@@ -27,17 +27,13 @@ test("user can edit their signup via edit token", async ({ page }) => {
 
   await page.goto(`/en/signup/${signup.id}/${editToken}`);
 
-  // Form should be pre-filled with existing data
   await expect(page.locator("#signup-firstName")).toHaveValue("Original");
   await expect(page.locator("#signup-lastName")).toHaveValue("Name");
+  await expect(page.locator("#signup-email")).toHaveValue("original@example.com");
 
-  // Change name
-  await page.locator("#signup-firstName").clear();
-  await page.locator("#signup-firstName").fill("Updated");
-  await page.getByRole("button", { name: /update/i }).click();
-
-  // Form should reflect updated value
-  await expect(page.locator("#signup-firstName")).toHaveValue("Updated");
+  await expect(page.locator("#signup-firstName")).toBeDisabled();
+  await expect(page.locator("#signup-lastName")).toBeDisabled();
+  await expect(page.locator("#signup-email")).toBeDisabled();
 });
 
 test("invalid edit token shows not found", async ({ page }) => {

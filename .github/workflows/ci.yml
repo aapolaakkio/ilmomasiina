@@ -87,7 +87,6 @@ jobs:
       SKIP_ENV_VALIDATION: "true"
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ilmomasiina_test
-      THIS_IS_A_TEST_DB_AND_CAN_BE_WIPED: 1
       NEW_EDIT_TOKEN_SECRET: ci-test-edit-token-secret
       AUTH_SECRET: ci-test-auth-secret
       AUTH_GOOGLE_ID: ci-test-google-id

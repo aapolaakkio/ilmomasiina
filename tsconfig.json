@@ -34,7 +34,8 @@
     "playwright.config.ts",
     "drizzle.config.ts",
     "postcss.config.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    ".next/dev/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules", ".next"]
 }

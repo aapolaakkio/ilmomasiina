@@ -1,23 +1,22 @@
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
 import { test as setup } from "@playwright/test";
 
 import { resetDb } from "./helpers/resetDb";
 import { seedAdminUser } from "./helpers/seed";
+import { signInAsTestUser } from "./helpers/testSession";
 
 const ADMIN_AUTH_FILE = "tests/.auth/admin.json";
 
 setup("authenticate as admin", async ({ page }) => {
-  // Reset DB and seed an admin user
   await resetDb();
   await seedAdminUser("admin@test.com");
 
-  // Log in via the test credentials form
-  await page.goto("/login");
-  await page.locator("#test-credentials-email").fill("admin@test.com");
-  await page.locator("#test-credentials-email").press("Enter");
-
-  // Wait for redirect to admin page
+  await signInAsTestUser(page, "admin@test.com");
+  await page.goto("/admin");
   await page.waitForURL("**/admin");
 
-  // Save the authenticated state
+  mkdirSync(dirname(ADMIN_AUTH_FILE), { recursive: true });
   await page.context().storageState({ path: ADMIN_AUTH_FILE });
 });

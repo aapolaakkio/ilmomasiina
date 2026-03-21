@@ -22,7 +22,8 @@ test("home page shows seeded events", async ({ page }) => {
   await seedEvent({ title: "Draft Event", slug: "draft-event", draft: true });
 
   await page.goto("/");
-  await expect(page.getByText("Visible Event")).toBeVisible();
+  // Title can appear twice (e.g. card link + secondary link).
+  await expect(page.getByRole("link", { name: "Visible Event" }).first()).toBeVisible();
   // Draft events should not be shown to public users.
   await expect(page.getByText("Draft Event")).not.toBeVisible();
 });

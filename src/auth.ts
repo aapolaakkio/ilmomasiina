@@ -1,5 +1,4 @@
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { db } from "@/db";
@@ -15,22 +14,8 @@ declare module "next-auth" {
   }
 }
 
-const testCredentialsProvider = Credentials({
-  credentials: { email: { type: "email" } },
-  async authorize(credentials) {
-    const email = credentials.email as string;
-    if (!email) return null;
-    const dbUser = await db.query.users.findFirst({
-      where: { email },
-      columns: { id: true },
-    });
-    if (!dbUser) return null;
-    return { id: String(dbUser.id), email };
-  },
-});
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [Google, ...(env.THIS_IS_A_TEST_DB_AND_CAN_BE_WIPED ? [testCredentialsProvider] : [])],
+  providers: [Google],
   session: { strategy: "jwt", maxAge: env.SESSION_TTL },
   pages: {
     signIn: "/login",

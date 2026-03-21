@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { resetDb } from "../helpers/resetDb";
 import { seedAdminUser, seedEditorUser, seedEvent, seedEventEditor } from "../helpers/seed";
+import { signInAsTestUser } from "../helpers/testSession";
 
 test.describe("unauthenticated access", () => {
   // No auth — clear storageState.
@@ -20,10 +21,12 @@ test.describe("unauthenticated access", () => {
 });
 
 test.describe("editor role access", () => {
-  // Editor logs in with their own credentials — no storageState.
+  // Editor signs in via test session API — no storageState.
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("editor can only see events they have access to", async ({ page }) => {
+  test("editor sees all events in the list; edit and delete only for events they can edit; read-only for others", async ({
+    page,
+  }) => {
     await resetDb();
     await seedAdminUser("admin@test.com");
     const editor = await seedEditorUser("editor@test.com");
@@ -31,17 +34,24 @@ test.describe("editor role access", () => {
     const ownEvent = await seedEvent({ title: "Editor's Event", slug: "editor-event" });
     await seedEventEditor(ownEvent.id, editor.id);
 
-    await seedEvent({ title: "Admin Only Event", slug: "admin-only" });
+    const otherEvent = await seedEvent({ title: "Admin Only Event", slug: "admin-only" });
 
-    // Login as editor
-    await page.goto("/en/login");
-    await page.locator("#test-credentials-email").fill("editor@test.com");
-    await page.locator("#test-credentials-email").press("Enter");
-    await page.waitForURL("**/admin");
+    await signInAsTestUser(page, "editor@test.com");
+    await page.goto("/en/admin");
 
-    // Editor should see their event
     await expect(page.getByText("Editor's Event")).toBeVisible();
-    // Editor should not see admin-only event
-    await expect(page.getByText("Admin Only Event")).not.toBeVisible();
+    await expect(page.getByText("Admin Only Event")).toBeVisible();
+
+    const assignedRow = page.getByRole("row").filter({ hasText: "Editor's Event" });
+
+    await expect(assignedRow.getByRole("link", { name: "Edit", exact: true })).toBeVisible();
+    await expect(assignedRow.getByRole("button", { name: "Delete" })).toBeVisible();
+
+    const readOnlyListRow = page.getByRole("row").filter({ hasText: "Admin Only Event" });
+    await expect(readOnlyListRow.getByRole("link", { name: "View" })).toBeVisible();
+    await expect(readOnlyListRow.getByRole("button", { name: "Delete" })).toHaveCount(0);
+
+    await page.goto(`/en/admin/edit/${otherEvent.id}`);
+    await expect(page.getByText(/read-only mode/i)).toBeVisible();
   });
 });

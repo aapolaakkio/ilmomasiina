@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { resetDb } from "../helpers/resetDb";
 import { seedAdminUser, seedEvent, seedFullEvent } from "../helpers/seed";
 
-// Uses admin storageState from auth.setup.ts (default in config).
+// Authenticated as admin via `storageState` in playwright.config.ts (auth.setup.ts).
 
 test.beforeEach(async () => {
   await resetDb();
@@ -49,11 +49,10 @@ test.describe("create event", () => {
     await page.locator('[id^="quota-title-"]').first().fill("General Admission");
     await page.locator('[id^="quota-size-"]').first().fill("50");
 
-    // Save as draft
+    // Save as draft — create flow redirects to the new event editor (no in-place success toast).
     await page.getByRole("button", { name: /save as draft/i }).click();
-
-    // Should show success message
-    await expect(page.getByText(/saved successfully/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/edit\/[^/]+$/, { timeout: 15_000 });
+    await expect(page).not.toHaveURL(/\/new$/);
   });
 });
 
@@ -72,7 +71,9 @@ test.describe("edit event", () => {
 
     // Save changes
     await page.getByRole("button", { name: /save changes/i }).click();
-    await expect(page.getByText(/saved successfully/i)).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: /saved successfully|tallennettiin/i })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });
 

@@ -16,26 +16,27 @@ both for [production](#production) and [development](#development).
 If you want to change any of the following, you'll need to modify the code slightly and
 build your own Docker image (if using Docker):
 
-| What to customize | Where |
-|-|-|
-| Hosting in a subfolder instead of directly at `https://ilmo.your.domain/` | build args |
-| Colors | CSS variables (`--color-brand-*`) in your Tailwind config |
-| Favicon | `src/app/favicon.ico` and related files |
-| Header title | `NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT` env variable |
-| Footer links | `NEXT_PUBLIC_BRANDING_FOOTER_*` env variables |
-| Translations | `src/i18n/fi.ts` and `src/i18n/en.ts` |
-| Timezone | build args |
-| Default language | build args |
-| Payment currency | build args |
+| What to customize                                                         | Where                                                     |
+| ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Hosting in a subfolder instead of directly at `https://ilmo.your.domain/` | build args                                                |
+| Colors                                                                    | CSS variables (`--color-brand-*`) in your Tailwind config |
+| Favicon                                                                   | `src/app/favicon.ico` and related files                   |
+| Header title                                                              | `NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT` env variable     |
+| Footer links                                                              | `NEXT_PUBLIC_BRANDING_FOOTER_*` env variables             |
+| Translations                                                              | `src/i18n/fi.ts` and `src/i18n/en.ts`                     |
+| Timezone                                                                  | build args                                                |
+| Default language                                                          | build args                                                |
+| Payment currency                                                          | build args                                                |
 
 You can of course make further UI changes, but that is not documented.
 
 How build arguments are passed depends on your build method:
+
 - [GitHub Actions](#github-actions): Workflow YAML file
 - [Docker Compose](#docker-compose): Compose YAML file
 - [Local Docker build](#local-docker-build): build command
 
-**Note:** If you fix bugs or add functionality, it would be *very* appreciated to
+**Note:** If you fix bugs or add functionality, it would be _very_ appreciated to
 create a pull request to the Tietokilta repository so we can potentially integrate them
 in our version. That also reduces your maintenance work when upgrading.
 
@@ -62,7 +63,7 @@ for your fork and modify `docker-build.yml` as instructed in comments:
 You can of course also build images locally.
 
 Variables in `.env.example` can be passed as build args, though don't include secrets there.
-Anything that *requires frontend rebuild* needs to be passed as a build arg and won't work as a normal env variable.
+Anything that _requires frontend rebuild_ needs to be passed as a build arg and won't work as a normal env variable.
 
 ```
 docker build \
@@ -119,16 +120,16 @@ Especially for development, running PostgreSQL with Docker may be the easiest op
 1. Create the data directory: `mkdir data`
 2. Start a container for PostgreSQL. You can change the values for user/password/DB name; you'll need to put
    those in `.env` later.
-    ```shell
-    docker run -d \
-      --name ilmo_postgres \
-      -p 5432:5432 \
-      -e POSTGRES_USER=ilmo_user \
-      -e POSTGRES_PASSWORD=<add a password here> \
-      -e POSTGRES_DB=ilmomasiina \
-      -v ./data:/var/lib/postgresql/data \
-      postgres
-    ```
+   ```shell
+   docker run -d \
+     --name ilmo_postgres \
+     -p 5432:5432 \
+     -e POSTGRES_USER=ilmo_user \
+     -e POSTGRES_PASSWORD=<add a password here> \
+     -e POSTGRES_DB=ilmomasiina \
+     -v ./data:/var/lib/postgresql/data \
+     postgres
+   ```
 3. If you have the PostgreSQL client installed, try signing in: `psql -h localhost -U ilmo_user ilmomasiina`
 
 #### Ubuntu/Debian PostgreSQL installation
@@ -137,13 +138,13 @@ Especially for development, running PostgreSQL with Docker may be the easiest op
 2. PostgreSQL should start automatically. Run `sudo systemctl start postgresql` if necessary.
 3. Open a PostgreSQL session with `sudo -u postgres psql`.
 4. Create a new user for Ilmomasiina:
-    ```sql
-    CREATE USER ilmo_user WITH PASSWORD '<add a password here>';
-    ```
+   ```sql
+   CREATE USER ilmo_user WITH PASSWORD '<add a password here>';
+   ```
 5. Create the `ilmomasiina` database:
-    ```sql
-    CREATE DATABASE ilmomasiina WITH OWNER ilmo_user;
-    ```
+   ```sql
+   CREATE DATABASE ilmomasiina WITH OWNER ilmo_user;
+   ```
 6. Exit the PostgreSQL session with `exit`.
 7. Try signing in with your new user: `psql -h localhost -U ilmo_user ilmomasiina`.
 
@@ -165,7 +166,7 @@ You can configure SMTP servers via env variables.
 - `SMTP_USER` = SMTP username
 - `SMTP_PASSWORD` = SMTP password
 - `SMTP_TLS` = typically `true` if using TLS (port 465), `false` otherwise
-    - Requiring STARTTLS is not currently supported - PRs welcome
+  - Requiring STARTTLS is not currently supported - PRs welcome
 
 **Note:** Using your own mail server gets you labelled as spam easily and should be avoided in production. User-facing email providers like Google might also not want you sending automatic email via them.
 
@@ -177,75 +178,76 @@ Azure recently reduced free credits to $2000, which is barely enough to run a pr
 B-tier App Service Plans have been tried and at least B1 doesn't seem to handle load well.
 
 1. **Optional:** Build and push a [customized Docker image](#customization), if necessary.
-2. Create an *Azure Database for PostgreSQL Flexible Server* (resource category *Databases*).
-    - *Basics* step: ([screenshot](./screenshots/db-basics.png))
-        - *Server name:* Choose freely.
-        - *Region:* Choose freely, but probably Europe.
-        - *PostgreSQL version:* 15
-        - *Workload type:* Development
-        - *Compute + storage:* Choosing Development should pick you a B-tier SKU. We're not entirely sure if these have enough performance in practice.
-        - *Authentication method:* PostgreSQL authentication only
-        - *Admin username:* Choose freely.
-        - *Admin password:* Choose freely & save for later.
-    - *Networking* step:
-        - *Connectivity method:* Public
-        - Check *Allow public access from any Azure service within Azure to this server*
-    - *Security* and *Tags* can be skipped
-2. From the *Databases* page, create a database on that server.
-    - The name can be chosen freely.
-3. **Recommended:** Create a user on the server and grant access to the database.
-    - You can technically also use the PostgreSQL admin user if you don't use the database for anything else.
-    - This requires connecting to the database manually:
-        1. From the *Networking* page, under *Firewall rules*, add a rule for *current client IP address* and save. Wait a bit for the changes to apply.
-        2. From the *Connect* tab, copy the `psql` command to your shell:
-           ```shell
-           psql -h {postgres-server-name}.postgres.database.azure.com -p 5432 -U {admin_user_name} {db_name}
-           ```
-           - This all-in-one command is under *Connect from browser or locally*. You can also use the variant with environment variables.
-           - The portal was a bit buggy for me and I needed to add the database name manually.
-        3. Create a new user for Ilmomasiina:
-            ```sql
-            CREATE USER ilmo_user WITH PASSWORD '<add a password here>';
-            ```
-        4. Grant access to the database for the new user:
-            ```sql
-            GRANT ALL PRIVILEGES ON SCHEMA public TO ilmo_user;
-            ```
-        5. Exit the PostgreSQL session with `exit`.
-        6. Try signing in with your new user: replace your admin username in the `psql`
-           command with the new user (above: `ilmo_user`).
-5. Create an *Azure Web App* (resource category *Web*).
-    - *Basics* step: ([screenshot](./screenshots/web-app-basics.png))
-        - *Web App name:* Choose freely, will appear in your URLs as `https://{your-app-name}.azurewebsites.net/`.
-        - *Publish:* Docker Container
-        - *Operating System:* Linux
-        - *Region:* Choose freely, but probably same as your database.
-        - *Linux Plan:* Reuse an existing one or create a new one.
-        - *Pricing plan:* B2 has been tested and isn't very performant. You may want to go for P1v2/P0v3 if your budget allows.
-    - *Database* step can be skipped
-    - *Docker* step: ([screenshot](./screenshots/web-app-docker.png))
-        - *Options:* Single Container
-        - *Image Source:* Private Registry
-        - *Server URL:* `https://ghcr.io`
-        - *Image and tag:*
-          - Non-customized Tietokilta image, latest stable version: `tietokilta/ilmomasiina:latest`
-          - Non-customized Tietokilta image, pinned version: `tietokilta/ilmomasiina:2.0.0` (example)
-          - Customized image, built in CI or uploaded by you: `yourorg/ilmomasiina:latest` (example)
-        - If you use Docker Hub or Azure Container Registry, change these accordingly
-    - *Networking* step:
-        - *Enable public access:* On
-    - *Monitoring* and *Tags* can be skipped
-6. Read [.env.example](../.env.example). Set relevant variables as *Application settings* on the *Configuration* page. You'll need at least:
-    - `PORT` and `WEBSITES_PORT` must match (you can set both to 3000)
-    - `DATABASE_URL` = PostgreSQL connection string (e.g. `postgresql://ilmo_user:password@host:5432/ilmomasiina?sslmode=require`)
-    - `NEW_EDIT_TOKEN_SECRET` = secure random string (see [_Generating secrets_](#generating-secrets))
-    - `FEATHERS_AUTH_SECRET` = secure random string (see [_Generating secrets_](#generating-secrets))
-    - `MAIL_FROM` = "From" email for system messages
-    - `SMTP_*` for email credentials (see [_Email sending_](#email-sending))
-    - `BASE_URL` = `https://{your-app-name}.azurewebsites.net/`
-    - `BRANDING_MAIL_FOOTER_TEXT` and `BRANDING_MAIL_FOOTER_LINK` (may be empty)
+2. Create an _Azure Database for PostgreSQL Flexible Server_ (resource category _Databases_).
+   - _Basics_ step: ([screenshot](./screenshots/db-basics.png))
+     - _Server name:_ Choose freely.
+     - _Region:_ Choose freely, but probably Europe.
+     - _PostgreSQL version:_ 15
+     - _Workload type:_ Development
+     - _Compute + storage:_ Choosing Development should pick you a B-tier SKU. We're not entirely sure if these have enough performance in practice.
+     - _Authentication method:_ PostgreSQL authentication only
+     - _Admin username:_ Choose freely.
+     - _Admin password:_ Choose freely & save for later.
+   - _Networking_ step:
+     - _Connectivity method:_ Public
+     - Check _Allow public access from any Azure service within Azure to this server_
+   - _Security_ and _Tags_ can be skipped
+3. From the _Databases_ page, create a database on that server.
+   - The name can be chosen freely.
+4. **Recommended:** Create a user on the server and grant access to the database.
+   - You can technically also use the PostgreSQL admin user if you don't use the database for anything else.
+   - This requires connecting to the database manually:
+     1. From the _Networking_ page, under _Firewall rules_, add a rule for _current client IP address_ and save. Wait a bit for the changes to apply.
+     2. From the _Connect_ tab, copy the `psql` command to your shell:
+        ```shell
+        psql -h {postgres-server-name}.postgres.database.azure.com -p 5432 -U {admin_user_name} {db_name}
+        ```
+
+        - This all-in-one command is under _Connect from browser or locally_. You can also use the variant with environment variables.
+        - The portal was a bit buggy for me and I needed to add the database name manually.
+     3. Create a new user for Ilmomasiina:
+        ```sql
+        CREATE USER ilmo_user WITH PASSWORD '<add a password here>';
+        ```
+     4. Grant access to the database for the new user:
+        ```sql
+        GRANT ALL PRIVILEGES ON SCHEMA public TO ilmo_user;
+        ```
+     5. Exit the PostgreSQL session with `exit`.
+     6. Try signing in with your new user: replace your admin username in the `psql`
+        command with the new user (above: `ilmo_user`).
+5. Create an _Azure Web App_ (resource category _Web_).
+   - _Basics_ step: ([screenshot](./screenshots/web-app-basics.png))
+     - _Web App name:_ Choose freely, will appear in your URLs as `https://{your-app-name}.azurewebsites.net/`.
+     - _Publish:_ Docker Container
+     - _Operating System:_ Linux
+     - _Region:_ Choose freely, but probably same as your database.
+     - _Linux Plan:_ Reuse an existing one or create a new one.
+     - _Pricing plan:_ B2 has been tested and isn't very performant. You may want to go for P1v2/P0v3 if your budget allows.
+   - _Database_ step can be skipped
+   - _Docker_ step: ([screenshot](./screenshots/web-app-docker.png))
+     - _Options:_ Single Container
+     - _Image Source:_ Private Registry
+     - _Server URL:_ `https://ghcr.io`
+     - _Image and tag:_
+       - Non-customized Tietokilta image, latest stable version: `tietokilta/ilmomasiina:latest`
+       - Non-customized Tietokilta image, pinned version: `tietokilta/ilmomasiina:2.0.0` (example)
+       - Customized image, built in CI or uploaded by you: `yourorg/ilmomasiina:latest` (example)
+     - If you use Docker Hub or Azure Container Registry, change these accordingly
+   - _Networking_ step:
+     - _Enable public access:_ On
+   - _Monitoring_ and _Tags_ can be skipped
+6. Read [.env.example](../.env.example). Set relevant variables as _Application settings_ on the _Configuration_ page. You'll need at least:
+   - `PORT` and `WEBSITES_PORT` must match (you can set both to 3000)
+   - `DATABASE_URL` = PostgreSQL connection string (e.g. `postgresql://ilmo_user:password@host:5432/ilmomasiina?sslmode=require`)
+   - `NEW_EDIT_TOKEN_SECRET` = secure random string (see [_Generating secrets_](#generating-secrets))
+   - `FEATHERS_AUTH_SECRET` = secure random string (see [_Generating secrets_](#generating-secrets))
+   - `MAIL_FROM` = "From" email for system messages
+   - `SMTP_*` for email credentials (see [_Email sending_](#email-sending))
+   - `BASE_URL` = `https://{your-app-name}.azurewebsites.net/`
+   - `BRANDING_MAIL_FOOTER_TEXT` and `BRANDING_MAIL_FOOTER_LINK` (may be empty)
 7. Access the app at `https://{your-app-name}.azurewebsites.net/`.
-    - If something is broken, check the *Log stream* page or read logs via `https://{your-app-name}.scm.azurewebsites.net/`.
+   - If something is broken, check the _Log stream_ page or read logs via `https://{your-app-name}.scm.azurewebsites.net/`.
 
 ### Docker Compose
 
@@ -264,17 +266,18 @@ If you don't want to use Docker Compose, or already have a database, you can run
 
 1. Create a `.env` file at the root of this repository. You can copy [.env.example](../.env.example) to begin and read the instructions within.
 2. **Optional:** Make [customizations](#customization) in other files if necessary.
-    - After this, build your customized image via [GitHub Actions](#github-actions) or [locally](#local-docker-build).
+   - After this, build your customized image via [GitHub Actions](#github-actions) or [locally](#local-docker-build).
 3. Run the container manually or with e.g. `systemd`.
-      ```
-      docker run -it --rm --init --env-file=.env -p 3000:3000 ghcr.io/tietokilta/ilmomasiina:latest
-      ```
-    - You might have to add stuff here to e.g. allow database connections.
-      - In particular, `--network host` allows connecting to a database running on `localhost` on the host machine. Remove `-p 3000:3000` when using this.
-    - This runs a non-customized Tietokilta image from the latest stable version. For other options, replace `ghcr.io/tietokilta/ilmomasiina:latest` with:
-      - Non-customized Tietokilta image, pinned version: `ghcr.io/tietokilta/ilmomasiina:2.0.0` (example)
-      - Customized image, built in CI or uploaded by you: `ghcr.io/yourorg/ilmomasiina:latest` (example)
-      - Locally built image: `ilmomasiina` (what was after `-t` in `docker build`)
+   ```
+   docker run -it --rm --init --env-file=.env -p 3000:3000 ghcr.io/tietokilta/ilmomasiina:latest
+   ```
+
+   - You might have to add stuff here to e.g. allow database connections.
+     - In particular, `--network host` allows connecting to a database running on `localhost` on the host machine. Remove `-p 3000:3000` when using this.
+   - This runs a non-customized Tietokilta image from the latest stable version. For other options, replace `ghcr.io/tietokilta/ilmomasiina:latest` with:
+     - Non-customized Tietokilta image, pinned version: `ghcr.io/tietokilta/ilmomasiina:2.0.0` (example)
+     - Customized image, built in CI or uploaded by you: `ghcr.io/yourorg/ilmomasiina:latest` (example)
+     - Locally built image: `ilmomasiina` (what was after `-t` in `docker build`)
 4. Access the app at <http://localhost:3000>.
 
 ### Running without Docker
@@ -287,9 +290,9 @@ You can also set up a production deployment without Docker. **This method is not
 4. **Optional:** Make [customizations](#customization) in other files if necessary.
 5. Run `pnpm build` to build the Next.js application.
 6. Use e.g. `systemd` or `pm2` to run the server process:
-    ```
-    pnpm start
-    ```
+   ```
+   pnpm start
+   ```
 7. Access the app at <http://localhost:3000>.
 
 ### Reverse proxy
@@ -341,7 +344,7 @@ RewriteRule ^ilmo/(.*)$ http://127.0.0.1:3000/$1 [P,L]
 
 ## Development
 
-In development, we recommend [running *without* Docker](#running-without-docker-1). It's easier to use in most cases,
+In development, we recommend [running _without_ Docker](#running-without-docker-1). It's easier to use in most cases,
 but you'll need to [set up your own database](#database-setup). That is easiest to do [with Docker](#postgresql-with-docker).
 
 There's also a [Docker Compose setup](#docker-compose-1) with some significant drawbacks.
@@ -350,8 +353,8 @@ There's also a [Docker Compose setup](#docker-compose-1) with some significant d
 
 1. Install a suitable Node version (e.g. using nvm).
 2. Install a database.
-    - See [_Database setup_](#database-setup) for instructions on setting up PostgreSQL.
-    - You can also use Docker for a database.
+   - See [_Database setup_](#database-setup) for instructions on setting up PostgreSQL.
+   - You can also use Docker for a database.
 3. Create a `.env` file at the root of this repository. You can copy [.env.example](../.env.example) to begin and read the instructions within.
 4. Run `corepack enable`, then `pnpm install` to install dependencies.
 5. Run `pnpm dev` to start the Next.js development server.
@@ -376,10 +379,5 @@ dependencies or package.json. You'll also need Node.js and pnpm installed locall
 To run tests, you'll likely want another test database so test data doesn't clutter your manual development database.
 
 1. Follow the same steps as in [the usual database setup](#database-setup), but name the database something different. This example uses `ilmo_test`.
-2. Create a `.env.test` file at the root of this repository. Assuming your test database runs on the same PostgreSQL server, set `DATABASE_URL` to point to the test database and add:
-    ```shell
-    DATABASE_URL=postgresql://ilmo_user:password@localhost:5432/ilmo_test
-    THIS_IS_A_TEST_DB_AND_CAN_BE_WIPED=1
-    ```
-    - The latter line is required to avoid accidental loss of data, because the test suite truncates all database
-      tables whenever you run `pnpm test`. **Make absolutely sure you're not using an important database for testing.**
+2. Create a `.env.test` file at the root of this repository (you can start from `.env.test.example`). Assuming your test database runs on the same PostgreSQL server, set `DATABASE_URL` to point to the test database. Copy the same secrets as in `.env` (including `AUTH_SECRET`). Playwright calls `POST /api/test/session` to mint a real Auth.js session cookie for seeded users (not available when `NODE_ENV=production`).
+   - **Make absolutely sure you're not pointing `DATABASE_URL` at an important database.**

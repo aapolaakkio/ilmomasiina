@@ -20,7 +20,7 @@ test.describe("signup happy path", () => {
     );
 
     await page.goto(`/en/event/${event.slug}`);
-    await expect(page.getByText("Summer Party")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Summer Party" })).toBeVisible();
 
     // Click signup button
     await page.getByRole("button", { name: /sign up/i }).click();
@@ -121,7 +121,7 @@ test.describe("signup registration window", () => {
     );
 
     await page.goto("/en/event/closed-event");
-    await expect(page.getByText(/closed/i)).toBeVisible();
+    await expect(page.getByText("Signup closed.")).toBeVisible();
   });
 });
 

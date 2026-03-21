@@ -63,7 +63,12 @@ interface QuestionLangRow {
 }
 
 /** Validates and gathers basic fields. */
-function validateBasicFields(signup: SignupData, event: EventData, body: SignupUpdateBody, admin: boolean) {
+function validateBasicFields(
+  signup: SignupData,
+  event: EventData,
+  body: SignupUpdateBody | AdminSignupUpdateBody,
+  admin: boolean,
+) {
   const fields: Record<string, unknown> = {};
   const errors: SignupValidationErrors = {};
 
@@ -73,6 +78,9 @@ function validateBasicFields(signup: SignupData, event: EventData, body: SignupU
     if (body.namePublic != null) fields.namePublic = body.namePublic;
     if (body.email != null) fields.email = body.email;
     if (body.language != null) fields.language = body.language;
+    if ("manualPaymentStatus" in body && body.manualPaymentStatus != null) {
+      fields.manualPaymentStatus = body.manualPaymentStatus;
+    }
     return { fields, errors };
   }
 

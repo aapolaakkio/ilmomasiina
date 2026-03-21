@@ -4,7 +4,11 @@ import { editorQuestionRowSchema, editorQuotaRowSchema, eventPrimaryTitle, event
 
 import type { EditorFormState } from "./types";
 
-const optionalDateOrEmpty = z.union([z.string().min(1), z.date(), z.null()]);
+/** Form stores unset dates as empty strings; coerce to null before validating. */
+const optionalDateOrEmpty = z.preprocess(
+  (val) => (val === "" ? null : val),
+  z.union([z.string().min(1), z.date(), z.null()]),
+);
 
 /** Client-side validation for fields shared with the server event body. */
 export const editorSchema = z

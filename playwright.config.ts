@@ -19,6 +19,7 @@ export default defineConfig({
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
+    /* Browser projects set `storageState` after the `setup` project (see `auth.setup.ts`). Specs that must be logged out override with `test.use({ storageState: { cookies: [], origins: [] } })`. */
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: "http://localhost:3000/en/",
 
@@ -27,71 +28,86 @@ export default defineConfig({
   },
 
   /* Configure projects for major browsers */
-  projects: process.env.CI
-    ? [
-        // In CI, only run Chromium for faster test execution
-        {
-          name: "chromium",
-          use: {
-            ...devices["Desktop Chrome"],
-            contextOptions: {
-              permissions: ["clipboard-read", "clipboard-write"],
+  projects: [
+    { name: "setup", testMatch: "**/auth.setup.ts" },
+    ...(process.env.CI
+      ? [
+          // In CI, only run Chromium for faster test execution
+          {
+            name: "chromium",
+            dependencies: ["setup"],
+            testIgnore: "**/auth.setup.ts",
+            use: {
+              ...devices["Desktop Chrome"],
+              storageState: "tests/.auth/admin.json",
+              contextOptions: {
+                permissions: ["clipboard-read", "clipboard-write"],
+              },
             },
           },
-        },
-      ]
-    : [
-        // Local development: run all browsers
-        {
-          name: "chromium",
-          use: {
-            ...devices["Desktop Chrome"],
-            contextOptions: {
-              permissions: ["clipboard-read", "clipboard-write"],
+        ]
+      : [
+          // Local development: run all browsers
+          {
+            name: "chromium",
+            dependencies: ["setup"],
+            testIgnore: "**/auth.setup.ts",
+            use: {
+              ...devices["Desktop Chrome"],
+              storageState: "tests/.auth/admin.json",
+              contextOptions: {
+                permissions: ["clipboard-read", "clipboard-write"],
+              },
             },
           },
-        },
 
-        {
-          name: "firefox",
-          use: {
-            ...devices["Desktop Firefox"],
-            contextOptions: {
-              permissions: ["clipboard-read", "clipboard-write"],
+          {
+            name: "firefox",
+            dependencies: ["setup"],
+            testIgnore: "**/auth.setup.ts",
+            use: {
+              ...devices["Desktop Firefox"],
+              storageState: "tests/.auth/admin.json",
+              contextOptions: {
+                permissions: ["clipboard-read", "clipboard-write"],
+              },
             },
           },
-        },
 
-        {
-          name: "webkit",
-          use: {
-            ...devices["Desktop Safari"],
-            contextOptions: {
-              permissions: ["clipboard-read", "clipboard-write"],
+          {
+            name: "webkit",
+            dependencies: ["setup"],
+            testIgnore: "**/auth.setup.ts",
+            use: {
+              ...devices["Desktop Safari"],
+              storageState: "tests/.auth/admin.json",
+              contextOptions: {
+                permissions: ["clipboard-read", "clipboard-write"],
+              },
             },
           },
-        },
 
-        /* Test against mobile viewports. */
-        // {
-        //   name: 'Mobile Chrome',
-        //   use: { ...devices['Pixel 5'] },
-        // },
-        // {
-        //   name: 'Mobile Safari',
-        //   use: { ...devices['iPhone 12'] },
-        // },
+          /* Test against mobile viewports. */
+          // {
+          //   name: 'Mobile Chrome',
+          //   use: { ...devices['Pixel 5'] },
+          // },
+          // {
+          //   name: 'Mobile Safari',
+          //   use: { ...devices['iPhone 12'] },
+          // },
 
-        /* Test against branded browsers. */
-        // {
-        //   name: 'Microsoft Edge',
-        //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-        // },
-        // {
-        //   name: 'Google Chrome',
-        //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-        // },
-      ],
+          /* Test against branded browsers. */
+          // {
+          //   name: 'Microsoft Edge',
+          //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+          // },
+          // {
+          //   name: 'Google Chrome',
+          //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+          // },
+        ]),
+  ],
 
   /* Run your local dev server before starting the tests */
   webServer: {
