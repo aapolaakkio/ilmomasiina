@@ -7,16 +7,12 @@ import { db } from "../../db";
 import { activeSignupCutoff } from "../../db/filters";
 import { events, quotas, signups } from "../../db/schema";
 import { checkForConflictingPaymentsForSignupUpdate, expireExistingPaymentsForSignupUpdate } from "../payment/stripe";
-import {
-  fetchActiveQuotasForEvent,
-  fetchActiveSignupsForEvent,
-  handlePositionSideEffects,
-} from "./computeSignupPosition";
+import { handlePositionSideEffects } from "./computeSignupPosition";
 import { NoSuchSignup, SignupsClosed } from "./errors";
 import { signupEditable } from "./helpers";
 
 /** Delete a signup. Set `admin` to true to bypass editability checks and payment restrictions. */
-export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin: boolean = false): Promise<void> {
+export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin: boolean = false) {
   await expireExistingPaymentsForSignupUpdate(id);
 
   const cutoff = activeSignupCutoff();
@@ -75,11 +71,31 @@ export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin
       throw new SignupsClosed("Signups closed for this event.");
     }
 
-    // Snapshot current state before delete (parallel)
-    const [previousSignups, previousQuotas] = await Promise.all([
-      fetchActiveSignupsForEvent(event.id, tx),
-      fetchActiveQuotasForEvent(event.id, tx),
-    ]);
+    // Snapshot current state before delete (single relational query)
+    const eventRow = await tx.query.events.findFirst({
+      where: { id: { eq: event.id } },
+      columns: { openQuotaSize: true },
+      with: {
+        quotas: {
+          where: { deletedAt: { isNull: true } },
+          columns: { id: true, size: true },
+          with: {
+            signups: {
+              where: {
+                deletedAt: { isNull: true },
+                OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: cutoff } }],
+              },
+              orderBy: { createdAt: "asc" },
+              columns: { id: true, quotaId: true },
+            },
+          },
+        },
+      },
+    });
+    if (!eventRow) throw new Error("event missing from DB");
+
+    const previousQuotas = eventRow.quotas.map((q) => ({ id: q.id, size: q.size }));
+    const previousSignups = eventRow.quotas.flatMap((q) => q.signups.map((s) => ({ id: s.id, quotaId: s.quotaId })));
 
     // Soft delete
     await tx.update(signups).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(signups.id, id));
@@ -91,7 +107,7 @@ export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin
 
     // Detect promotions after delete
     await handlePositionSideEffects(event.id, tx, {
-      previousSignups: previousSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
+      previousSignups,
       previousQuotas,
       previousOpenQuotaSize: event.openQuotaSize,
     });

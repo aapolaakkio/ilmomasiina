@@ -1,5 +1,5 @@
 import { AuditEvent } from "@/db/schema";
-import type { SignupCreateBody, SignupCreateResponse } from "@/db/zod";
+import type { SignupCreateBody } from "@/db/zod";
 
 import type { AuditLogger } from "../../auditlog";
 import { env } from "@/env";
@@ -15,7 +15,7 @@ function isUserVisibleEvent(event: {
   registrationEndDate: Date | null;
   date: Date | null;
   endDate: Date | null;
-}): boolean {
+}) {
   if (event.draft) return false;
   const cutoff = new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000);
   return (
@@ -26,12 +26,24 @@ function isUserVisibleEvent(event: {
 }
 
 /** Create a new signup for a quota. Returns the signup ID and edit token. */
-export async function createSignup(body: SignupCreateBody, auditLogger: AuditLogger): Promise<SignupCreateResponse> {
+export async function createSignup(body: SignupCreateBody, auditLogger: AuditLogger) {
   const { newSignup } = await db.transaction(async (tx) => {
     // Find the quota with its event
     const quotaData = await tx.query.quotas.findFirst({
       where: { id: { eq: body.quotaId }, deletedAt: { isNull: true } },
-      with: { event: true },
+      with: {
+        event: {
+          columns: {
+            id: true,
+            title: true,
+            draft: true,
+            date: true,
+            endDate: true,
+            registrationStartDate: true,
+            registrationEndDate: true,
+          },
+        },
+      },
     });
 
     if (!quotaData?.event || !isUserVisibleEvent(quotaData.event)) {

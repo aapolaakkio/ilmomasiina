@@ -10,7 +10,7 @@ interface SignupLike {
 }
 
 /** Checks whether signups can still be created for an event. */
-export function signupsAllowed(event: EventLike): boolean {
+export function signupsAllowed(event: EventLike) {
   if (event.registrationStartDate === null || event.registrationEndDate === null) {
     return false;
   }
@@ -19,6 +19,6 @@ export function signupsAllowed(event: EventLike): boolean {
 }
 
 /** Checks whether a signup is still editable. */
-export function signupEditable(event: EventLike, signup: SignupLike): boolean {
+export function signupEditable(event: EventLike, signup: SignupLike) {
   return signupsAllowed(event) || new Date() <= getEditableAtLeastUntil(signup);
 }

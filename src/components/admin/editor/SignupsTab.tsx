@@ -38,7 +38,7 @@ export default function SignupsTab({ savedEvent, onEventChange }: Props) {
 
   const { signups, quotaGroups } = signupsAndQuotaGroups(savedEvent);
 
-  function formatStatus(signup: FlatSignup): string {
+  function formatStatus(signup: FlatSignup) {
     switch (signup.status) {
       case SignupStatus.IN_QUOTA:
         return t("statusInQuota");

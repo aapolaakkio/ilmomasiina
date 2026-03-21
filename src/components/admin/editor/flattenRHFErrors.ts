@@ -5,7 +5,7 @@ import type { FieldErrors } from "react-hook-form";
  * by paths like "title", "quotas[0].title", "dateInverted".
  * Applies an optional message mapper (e.g. for translation).
  */
-export function flattenRHFErrors(errors: FieldErrors, mapMessage?: (msg: string) => string): Record<string, string> {
+export function flattenRHFErrors(errors: FieldErrors, mapMessage?: (msg: string) => string) {
   const flat: Record<string, string> = {};
 
   function walk(obj: unknown, prefix: string) {

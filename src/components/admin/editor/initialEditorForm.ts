@@ -1,7 +1,7 @@
 import { PaymentMode } from "@/db/schema";
 import type { AdminEventResponse } from "@/db/zod";
 
-import { type EditorFormState, generateKey } from "./types";
+import { generateKey } from "./types";
 
 function stripIdsForCopy(event: AdminEventResponse) {
   return {
@@ -17,7 +17,7 @@ function stripIdsForCopy(event: AdminEventResponse) {
 /** Event row as returned from the API or from {@link stripIdsForCopy} for duplicate flow. */
 type AdminEventSourceForEditor = AdminEventResponse | ReturnType<typeof stripIdsForCopy>;
 
-function mapAdminEventToEditorForm(src: AdminEventSourceForEditor): EditorFormState {
+function mapAdminEventToEditorForm(src: AdminEventSourceForEditor) {
   return {
     title: src.title ?? "",
     slug: src.slug ?? "",
@@ -61,7 +61,7 @@ function mapAdminEventToEditorForm(src: AdminEventSourceForEditor): EditorFormSt
   };
 }
 
-function emptyEditorForm(): EditorFormState {
+function emptyEditorForm() {
   return {
     title: "",
     slug: "",
@@ -90,10 +90,7 @@ function emptyEditorForm(): EditorFormState {
 }
 
 /** Build editor state from server event (or empty template for a new event). */
-export function getInitialEditorForm(
-  initialEvent: AdminEventResponse | null,
-  copy: boolean | undefined,
-): EditorFormState {
+export function getInitialEditorForm(initialEvent: AdminEventResponse | null, copy: boolean | undefined) {
   if (!initialEvent) {
     return emptyEditorForm();
   }
@@ -102,10 +99,7 @@ export function getInitialEditorForm(
 }
 
 /** One-time mount snapshot so lazy `useState` initializers share a single `getInitialEditorForm` result. */
-export function createInitialEditorSession(
-  initialEvent: AdminEventResponse | null,
-  copy: boolean | undefined,
-): { form: EditorFormState; selectedLanguage: string } {
+export function createInitialEditorSession(initialEvent: AdminEventResponse | null, copy: boolean | undefined) {
   const form = getInitialEditorForm(initialEvent, copy);
   return { form, selectedLanguage: form.defaultLanguage || "fi" };
 }

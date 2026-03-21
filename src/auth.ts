@@ -66,11 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 });
 
 /** Get admin user info from the current Auth.js session. Returns null if not authenticated. */
-export async function getAdminSession(): Promise<{
-  user: UserID;
-  email: string;
-  role: UserRole;
-} | null> {
+export async function getAdminSession() {
   const session = await auth();
   if (!session?.user?.email) return null;
 

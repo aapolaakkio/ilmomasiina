@@ -6,7 +6,7 @@ export type EditorEditConflictState = Pick<EditConflictError, "updatedAt" | "del
 export type { EditorFormState, EditorQuestion, EditorQuota } from "@/db/zod";
 
 let nextKey = 0;
-export function generateKey(): string {
+export function generateKey() {
   nextKey += 1;
   return `k${nextKey}`;
 }
@@ -33,7 +33,7 @@ export type LocalizableFields = Pick<
 export type LocalizableFieldKey = keyof LocalizableFields;
 
 /** True when editing the default locale or a language without its own version yet. */
-export function isDefaultLanguageView(form: EditorFormState, selectedLanguage: string): boolean {
+export function isDefaultLanguageView(form: EditorFormState, selectedLanguage: string) {
   return selectedLanguage === form.defaultLanguage || !form.languages[selectedLanguage];
 }
 
@@ -42,7 +42,7 @@ export function getLocalizedValue<K extends LocalizableFieldKey>(
   form: EditorFormState,
   field: K,
   selectedLanguage: string,
-): string {
+) {
   if (isDefaultLanguageView(form, selectedLanguage)) {
     const v = form[field];
     return v == null ? "" : String(v);
@@ -59,7 +59,7 @@ export function setLocalizedValue<K extends LocalizableFieldKey>(
   field: K,
   value: string,
   selectedLanguage: string,
-): void {
+) {
   if (isDefaultLanguageView(form, selectedLanguage)) {
     updateField(field, value as EditorFormState[K]);
   } else {
@@ -72,7 +72,7 @@ export function setLocalizedValue<K extends LocalizableFieldKey>(
 }
 
 /** Create an empty language version matching current quotas/questions structure. */
-export function createEmptyLanguageVersion(form: EditorFormState): AdminEventLanguage {
+export function createEmptyLanguageVersion(form: EditorFormState) {
   return {
     title: "",
     description: null,

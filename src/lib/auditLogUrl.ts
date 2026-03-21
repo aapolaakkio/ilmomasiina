@@ -4,12 +4,12 @@ import { firstSearchParam } from "@/lib/nextSearchParams";
 
 export const AUDIT_LOG_PAGE_SIZE = 100;
 
-function firstParam(raw: Record<string, string | string[] | undefined>, key: string): string | undefined {
+function firstParam(raw: Record<string, string | string[] | undefined>, key: string) {
   return firstSearchParam(raw[key]);
 }
 
 /** Build {@link AuditLogQuery} from URL search params (GET form / pagination links). */
-export function parseAuditLogSearchParams(raw: Record<string, string | string[] | undefined>): AuditLogQuery {
+export function parseAuditLogSearchParams(raw: Record<string, string | string[] | undefined>) {
   const offsetRaw = firstParam(raw, "offset");
   const offsetParsed = offsetRaw !== undefined ? Number.parseInt(offsetRaw, 10) : 0;
   const actionVal = firstParam(raw, "action");
@@ -29,7 +29,7 @@ export function parseAuditLogSearchParams(raw: Record<string, string | string[] 
 }
 
 /** Serialize query for pagination / filter links (omit defaults). */
-export function auditLogQueryToSearchParams(query: AuditLogQuery): URLSearchParams {
+export function auditLogQueryToSearchParams(query: AuditLogQuery) {
   const p = new URLSearchParams();
   if (query.user) p.set("user", query.user);
   if (query.ip) p.set("ip", query.ip);
@@ -40,7 +40,7 @@ export function auditLogQueryToSearchParams(query: AuditLogQuery): URLSearchPara
   return p;
 }
 
-export function auditLogSearchSuffix(query: AuditLogQuery): string {
+export function auditLogSearchSuffix(query: AuditLogQuery) {
   const s = auditLogQueryToSearchParams(query).toString();
   return s ? `?${s}` : "";
 }

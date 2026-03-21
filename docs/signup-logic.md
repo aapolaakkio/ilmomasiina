@@ -10,8 +10,8 @@ In addition, the event may have an **open quota** which is specified by its size
 
 When a user signs up, their **Signup** is attached to a single **Quota** instance (never the open quota).
 
-- The first *size* signups in a Quota (ordered by creation timestamp) are assigned to that Quota.
-- The first *openQuotaSize* signups that did not fit in their respective Quotas, ordered together by creation
+- The first _size_ signups in a Quota (ordered by creation timestamp) are assigned to that Quota.
+- The first _openQuotaSize_ signups that did not fit in their respective Quotas, ordered together by creation
   timestamp, are assigned to the open quota.
 - The rest of the signups are assigned to the queue.
 
@@ -21,12 +21,12 @@ The quota assignment and position of signups is computed on-the-fly using `assig
 `src/services/signups/assignSignupPositions.ts`. This pure function takes all active signups and quotas
 and returns a position map.
 
-`computeSignupPosition.ts` contains helpers for detecting position changes after mutations:
-- `fetchActiveSignupsForEvent()` — fetches active signups using `activeSignupCutoff()` from `src/db/filters.ts`
-- `fetchActiveQuotasForEvent()` — fetches active quotas
-- `handlePositionSideEffects()` — compares old vs new positions and sends promotion emails
+`computeSignupPosition.ts` contains `handlePositionSideEffects()`, which compares old vs new positions
+and sends promotion emails. Callers snapshot state before mutations using a relational event query
+that fetches quotas with nested active signups, then pass the snapshot to `handlePositionSideEffects()`.
 
 The following actions trigger position side effects:
+
 - Deletion of signups by user or admin
 - Expiration of unconfirmed signups (`deleteUnconfirmedSignups.ts` cron job)
 - Modifications to event quotas (via `updateEvent`)

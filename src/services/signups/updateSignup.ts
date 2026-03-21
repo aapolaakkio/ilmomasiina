@@ -1,13 +1,7 @@
 import { and, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
 
 import { AuditEvent, type SignupID } from "@/db/schema";
-import type {
-  AdminSignupCreateBody,
-  AdminSignupSchema,
-  AdminSignupUpdateBody,
-  SignupUpdateBody,
-  SignupUpdateResponse,
-} from "@/db/zod";
+import type { AdminSignupCreateBody, AdminSignupUpdateBody, SignupUpdateBody } from "@/db/zod";
 
 import type { AuditLogger } from "../../auditlog";
 import { type DrizzleDb, db } from "../../db";
@@ -69,19 +63,53 @@ async function getSignupAndEventForUpdate(id: SignupID, tx: DrizzleDb) {
   };
 }
 
-/** Re-fetch a signup with answers, payments, and compute its position from all event signups. */
+/** Re-fetch a signup with answers, payments, position, and mail-related data (quota/event/questions with languages). */
 async function refetchSignupWithPosition(signupId: SignupID) {
   const signup = await db.query.signups.findFirst({
     where: { id: { eq: signupId } },
+    columns: {
+      id: true,
+      quotaId: true,
+      firstName: true,
+      lastName: true,
+      namePublic: true,
+      email: true,
+      language: true,
+      manualPaymentStatus: true,
+      createdAt: true,
+      confirmedAt: true,
+      deletedAt: true,
+      price: true,
+      currency: true,
+      products: true,
+    },
     with: {
       answers: true,
       payments: { columns: { status: true } },
       quota: {
-        columns: {},
+        columns: { title: true },
         with: {
+          languages: { columns: { language: true, title: true } },
           event: {
-            columns: { openQuotaSize: true },
+            columns: {
+              deletedAt: true,
+              title: true,
+              date: true,
+              location: true,
+              verificationEmail: true,
+              payments: true,
+              openQuotaSize: true,
+            },
             with: {
+              languages: {
+                columns: { language: true, title: true, location: true, verificationEmail: true },
+              },
+              questions: {
+                where: { deletedAt: { isNull: true } },
+                orderBy: { order: "asc" },
+                columns: { id: true, question: true, options: true },
+                with: { languages: { columns: { language: true, question: true, options: true } } },
+              },
               quotas: {
                 where: { deletedAt: { isNull: true } },
                 columns: { id: true, size: true },
@@ -111,17 +139,15 @@ async function refetchSignupWithPosition(signupId: SignupID) {
 
   return {
     ...signup,
+    quota: signup.quota,
+    event,
     status: pos?.status ?? null,
     position: pos?.position ?? null,
   };
 }
 
 /** Update a signup as the user who created it. */
-export async function updateSignupAsUser(
-  signupId: SignupID,
-  body: SignupUpdateBody,
-  auditLogger: AuditLogger,
-): Promise<SignupUpdateResponse> {
+export async function updateSignupAsUser(signupId: SignupID, body: SignupUpdateBody, auditLogger: AuditLogger) {
   await expireExistingPaymentsForSignupUpdate(signupId);
 
   const { updatedSignupId, wasConfirmed } = await db.transaction(async (tx) => {
@@ -148,7 +174,12 @@ export async function updateSignupAsUser(
 
   const updated = await refetchSignupWithPosition(updatedSignupId);
 
-  await sendSignupConfirmationMail({ ...updated, payments: updated.payments }, wasConfirmed ? "edit" : "signup", false);
+  await sendSignupConfirmationMail(
+    { ...updated, payments: updated.payments },
+    wasConfirmed ? "edit" : "signup",
+    false,
+    { quota: updated.quota, event: updated.event },
+  );
 
   const response = {
     ...updated,
@@ -165,7 +196,7 @@ export async function updateSignupAsAdmin(
   body: AdminSignupUpdateBody,
   auditLogger: AuditLogger,
   sendEmail: boolean = true,
-): Promise<AdminSignupSchema> {
+) {
   await expireExistingPaymentsForSignupUpdate(signupId);
 
   await db.transaction(async (tx) => {
@@ -185,7 +216,10 @@ export async function updateSignupAsAdmin(
   const updated = await refetchSignupWithPosition(signupId);
 
   if (sendEmail) {
-    await sendSignupConfirmationMail({ ...updated, payments: updated.payments }, "edit", true);
+    await sendSignupConfirmationMail({ ...updated, payments: updated.payments }, "edit", true, {
+      quota: updated.quota,
+      event: updated.event,
+    });
   }
 
   return formatSignupForAdmin(updated, updated.answers, updated.payments);
@@ -196,7 +230,7 @@ export async function createSignupAsAdmin(
   body: AdminSignupCreateBody,
   auditLogger: AuditLogger,
   sendEmail: boolean = true,
-): Promise<AdminSignupSchema> {
+) {
   const signupId = await db.transaction(async (tx) => {
     // Single relational query for quota + event + questions + languages
     const quotaData = await tx.query.quotas.findFirst({
@@ -242,7 +276,10 @@ export async function createSignupAsAdmin(
   const updated = await refetchSignupWithPosition(signupId);
 
   if (sendEmail) {
-    await sendSignupConfirmationMail({ ...updated, payments: updated.payments }, "signup", true);
+    await sendSignupConfirmationMail({ ...updated, payments: updated.payments }, "signup", true, {
+      quota: updated.quota,
+      event: updated.event,
+    });
   }
 
   return formatSignupForAdmin(updated, updated.answers, updated.payments);

@@ -18,7 +18,6 @@ import {
   signupFormEmail,
   signupPersonNameRequired,
   type SignupForEditResponse,
-  type SignupUpdateBody,
 } from "@/db/zod";
 import { firstAmongHookErrors, isHookActionPending } from "@/lib/safeActionHook";
 import { useCountdown } from "@/lib/useCountdown";
@@ -36,10 +35,7 @@ type Props = {
 
 type FormValues = Record<string, any>;
 
-function signupToFormValues(
-  signup: SignupForEditResponse["signup"],
-  event: SignupForEditResponse["event"],
-): FormValues {
+function signupToFormValues(signup: SignupForEditResponse["signup"], event: SignupForEditResponse["event"]) {
   const values: FormValues = {
     firstName: signup.firstName ?? "",
     lastName: signup.lastName ?? "",
@@ -55,7 +51,7 @@ function signupToFormValues(
   return values;
 }
 
-function formValuesToUpdate(values: FormValues, event: SignupForEditResponse["event"]): SignupUpdateBody {
+function formValuesToUpdate(values: FormValues, event: SignupForEditResponse["event"]) {
   return {
     firstName: values.firstName || undefined,
     lastName: values.lastName || undefined,
@@ -91,7 +87,7 @@ function buildSignupSchema(event: SignupForEditResponse["event"]) {
   return z.object(shape);
 }
 
-function translateFieldError(msg: string | undefined, t: (key: string) => string): string | undefined {
+function translateFieldError(msg: string | undefined, t: (key: string) => string) {
   if (!msg) return undefined;
   if (msg === "notANumber") return t("fieldError.notANumber");
   if (/email/i.test(msg)) return t("fieldError.invalidEmail");

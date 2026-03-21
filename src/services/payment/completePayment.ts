@@ -1,5 +1,4 @@
 import { PaymentStatus, type SignupID } from "@/db/schema";
-import type { SignupForEditResponse } from "@/db/zod";
 
 import { db } from "../../db";
 import { getSignupForEdit } from "../signups/getSignupForEdit";
@@ -7,8 +6,9 @@ import { PaymentNotComplete, PaymentNotFound } from "./errors";
 import { refreshCheckoutSession } from "./stripe";
 
 /** Complete a payment and return the updated signup info. */
-export async function completePayment(signupId: SignupID): Promise<SignupForEditResponse> {
+export async function completePayment(signupId: SignupID) {
   const payment = await db.query.payments.findFirst({
+    columns: { id: true, status: true, signupId: true, stripeCheckoutSessionId: true },
     where: {
       signupId: { eq: signupId },
       status: {

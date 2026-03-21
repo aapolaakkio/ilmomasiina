@@ -22,7 +22,7 @@ const sizeClasses = {
   small: "px-3 py-1.5 text-xs",
 } as const;
 
-function hasErrorStatus(s: HookActionStatus | undefined): boolean {
+function hasErrorStatus(s: HookActionStatus | undefined) {
   return s === "hasErrored";
 }
 

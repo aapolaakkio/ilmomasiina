@@ -7,7 +7,7 @@ import { db } from "../../../db";
 import { eventEditors, UserRole } from "../../../db/schema";
 
 /** List editors of an event (excluding admins, who always have access). */
-export async function getEventEditors(eventId: EventID): Promise<{ userId: UserID; email: string }[]> {
+export async function getEventEditors(eventId: EventID) {
   const rows = await db.query.eventEditors.findMany({
     where: {
       eventId: { eq: eventId },
@@ -49,6 +49,6 @@ export async function addEventEditor(
 }
 
 /** Remove a user from the editors of an event. */
-export async function removeEventEditor(eventId: EventID, userId: UserID, _auditLogger: AuditLogger): Promise<void> {
+export async function removeEventEditor(eventId: EventID, userId: UserID, _auditLogger: AuditLogger) {
   await db.delete(eventEditors).where(and(eq(eventEditors.eventId, eventId), eq(eventEditors.userId, userId)));
 }

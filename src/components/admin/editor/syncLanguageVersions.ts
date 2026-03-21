@@ -5,7 +5,7 @@ import type { EditorFormState } from "./types";
 type LangQuestionRow = AdminEventLanguage["questions"][number];
 type EditorQuestionRow = EditorFormState["questions"][number];
 
-function mergeLangQuestionRow(q: EditorQuestionRow, existing: LangQuestionRow | undefined): LangQuestionRow {
+function mergeLangQuestionRow(q: EditorQuestionRow, existing: LangQuestionRow | undefined) {
   if (!existing) {
     return {
       question: "",

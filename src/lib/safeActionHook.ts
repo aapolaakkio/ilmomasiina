@@ -5,11 +5,11 @@ type ResultSlice = {
   validationErrors?: unknown;
 };
 
-export function isHookActionPending(status: HookActionStatus): boolean {
+export function isHookActionPending(status: HookActionStatus) {
   return status === "executing" || status === "transitioning";
 }
 
-function errorText(result: ResultSlice | undefined, fallback: string, validationFallback: string): string {
+function errorText(result: ResultSlice | undefined, fallback: string, validationFallback: string) {
   const se = result?.serverError;
   if (se != null && String(se) !== "") return String(se);
   if (result?.validationErrors) return validationFallback;
@@ -24,7 +24,7 @@ export function firstAmongHookErrors(
     fallback: string;
     validationFallback?: string;
   }>,
-): string | null {
+) {
   for (const e of entries) {
     if (e.status !== "hasErrored") continue;
     return errorText(e.result, e.fallback, e.validationFallback ?? e.fallback);

@@ -17,7 +17,7 @@ export function validateEventDates(event: {
   endDate: Date | null;
   registrationStartDate: Date | null;
   registrationEndDate: Date | null;
-}): void {
+}) {
   if (event.date != null && event.endDate != null && event.date > event.endDate) {
     throw new EventValidationError("endDate must be after or equal to date");
   }

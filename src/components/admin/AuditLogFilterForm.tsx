@@ -18,13 +18,13 @@ const filterSelectClass =
 const filterSubmitClass =
   "box-border inline-flex min-h-[2.5rem] w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60";
 
-function trimmedField(fd: FormData, name: string): string | undefined {
+function trimmedField(fd: FormData, name: string) {
   const v = fd.get(name);
   const s = typeof v === "string" ? v.trim() : "";
   return s || undefined;
 }
 
-function queryFromFormData(fd: FormData): AuditLogQuery {
+function queryFromFormData(fd: FormData) {
   const actionRaw = fd.get("action");
   const actionStr = typeof actionRaw === "string" ? actionRaw.trim() : "";
   return {

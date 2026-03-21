@@ -677,6 +677,49 @@ export const removeEventEditorSchema = eventIdInput.extend({
   userId: userID,
 });
 
+// --- Mail Data Schemas ---
+
+/** Event fields needed for all email types (localization, date, basic info). */
+const mailEventBase = eventSelect
+  .pick({ deletedAt: true, title: true, date: true, location: true, verificationEmail: true, payments: true })
+  .extend({
+    languages: z.array(
+      adminEventLanguage.pick({ title: true, location: true, verificationEmail: true }).extend({
+        language: z.string(),
+      }),
+    ),
+  });
+
+/** Pre-fetched data for "promoted from queue" emails. */
+export const promotedMailData = z.object({
+  event: mailEventBase,
+});
+
+export type PromotedMailData = z.infer<typeof promotedMailData>;
+
+/** Pre-fetched data for payment confirmation emails. */
+export const paymentMailData = z.object({
+  event: mailEventBase,
+});
+
+export type PaymentMailData = z.infer<typeof paymentMailData>;
+
+/** Pre-fetched data for signup confirmation emails (quota with languages, event with languages/questions). */
+export const confirmationMailData = z.object({
+  quota: quotaSelect.pick({ title: true }).extend({
+    languages: z.array(quotaLanguage.extend({ language: z.string() })),
+  }),
+  event: mailEventBase.extend({
+    questions: z.array(
+      questionSelect.pick({ id: true, question: true, options: true }).extend({
+        languages: z.array(questionLanguage.extend({ language: z.string() })),
+      }),
+    ),
+  }),
+});
+
+export type ConfirmationMailData = z.infer<typeof confirmationMailData>;
+
 /** Service return types not tied to a single Zod object. */
 export type CheckSlugResponse = {
   id: EventID | null;

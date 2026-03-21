@@ -3,10 +3,8 @@ import Stripe from "stripe";
 import { env } from "@/env";
 import { checkoutSessionStatusUpdated, getStripe } from "./stripe";
 
-type WebhookResult = { ok: true } | { ok: false; error: string; status: number };
-
 /** Handle an incoming Stripe webhook event. */
-export async function handleStripeWebhook(rawBody: string | Buffer, signature: string): Promise<WebhookResult> {
+export async function handleStripeWebhook(rawBody: string | Buffer, signature: string) {
   const stripe = getStripe();
 
   if (!env.STRIPE_WEBHOOK_SECRET) {

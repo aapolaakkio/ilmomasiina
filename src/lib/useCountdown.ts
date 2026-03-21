@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /** Counts down from `initialMs` to 0. Returns the remaining time in milliseconds. */
-export function useCountdown(initialMs: number): number {
+export function useCountdown(initialMs: number) {
   const [timeLeft, setTimeLeft] = useState(initialMs);
 
   useEffect(() => {

@@ -17,7 +17,7 @@ export default function QuotasTab({ form, updateField, fieldErrors, selectedLang
   const t = useTranslations("editor");
   const isDefaultLang = isDefaultLanguageView(form, selectedLanguage);
 
-  const getQuotaTitle = (index: number): string => {
+  const getQuotaTitle = (index: number) => {
     if (isDefaultLang) return form.quotas[index].title;
     return form.languages[selectedLanguage]?.quotas?.[index]?.title ?? "";
   };

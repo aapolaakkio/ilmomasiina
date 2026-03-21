@@ -1,5 +1,5 @@
 import type { EventID, SignupStatus } from "@/db/schema";
-import type { AdminEventResponse, AdminSignupSchema, EventSlug, UserEventResponse } from "@/db/zod";
+import type { EventSlug } from "@/db/zod";
 
 import { env } from "@/env";
 import { db } from "../../db";
@@ -14,6 +14,29 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
 
   // Single query: fetch the event with all related data in one go
   const fullEvent = await db.query.events.findFirst({
+    columns: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      price: true,
+      location: true,
+      webpageUrl: true,
+      verificationEmail: true,
+      date: true,
+      endDate: true,
+      registrationStartDate: true,
+      registrationEndDate: true,
+      openQuotaSize: true,
+      category: true,
+      draft: true,
+      listed: true,
+      signupsPublic: true,
+      nameQuestion: true,
+      emailQuestion: true,
+      payments: true,
+      defaultLanguage: true,
+    },
     where: {
       slug: eventSlug,
       deletedAt: { isNull: true },
@@ -32,6 +55,15 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
         with: {
           languages: true,
           signups: {
+            columns: {
+              id: true,
+              quotaId: true,
+              createdAt: true,
+              firstName: true,
+              lastName: true,
+              namePublic: true,
+              confirmedAt: true,
+            },
             where: {
               deletedAt: { isNull: true },
               OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: activeSignupCutoff() } }],
@@ -117,7 +149,7 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
 }
 
 /** Slugs for published events within the same visibility window as `getEventDetailsForUser` (for `generateStaticParams`). */
-export async function getPublicEventSlugsForStaticParams(): Promise<{ slug: string }[]> {
+export async function getPublicEventSlugsForStaticParams() {
   const hideBeforeDate = new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000);
   return db.query.events.findMany({
     where: {
@@ -133,7 +165,7 @@ export async function getPublicEventSlugsForStaticParams(): Promise<{ slug: stri
   });
 }
 
-export async function getEventBySlug(eventSlug: EventSlug): Promise<UserEventResponse> {
+export async function getEventBySlug(eventSlug: EventSlug) {
   const { event, registrationStartDate, registrationEndDate } = await getEventDetailsForUser(eventSlug);
 
   let registrationClosed = true;
@@ -150,23 +182,71 @@ export async function getEventBySlug(eventSlug: EventSlug): Promise<UserEventRes
 
 /** Converts a signup with answers to JSON for the admin API. */
 export function formatSignupForAdmin(
-  signup: typeof signups.$inferSelect & {
+  signup: Pick<
+    typeof signups.$inferSelect,
+    | "id"
+    | "firstName"
+    | "lastName"
+    | "namePublic"
+    | "email"
+    | "manualPaymentStatus"
+    | "createdAt"
+    | "confirmedAt"
+    | "deletedAt"
+    | "price"
+    | "currency"
+  > & {
     status: SignupStatus | null;
     position: number | null;
   },
   signupAnswers: (typeof answers.$inferSelect)[],
   signupPayments: { status: string }[],
-): AdminSignupSchema {
+) {
   return {
-    ...signup,
+    id: signup.id,
+    firstName: signup.firstName,
+    lastName: signup.lastName,
+    namePublic: signup.namePublic,
+    email: signup.email,
+    manualPaymentStatus: signup.manualPaymentStatus,
+    status: signup.status,
+    position: signup.position,
+    createdAt: signup.createdAt,
     confirmed: isConfirmed(signup),
+    deletedAt: signup.deletedAt,
+    price: signup.price,
+    currency: signup.currency,
     answers: signupAnswers,
     paymentStatus: getEffectivePaymentStatus(signup, signupPayments),
   };
 }
 
-export async function getEventByIdForAdmin(eventID: EventID): Promise<AdminEventResponse> {
+export async function getEventByIdForAdmin(eventID: EventID) {
   const event = await db.query.events.findFirst({
+    columns: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      price: true,
+      location: true,
+      webpageUrl: true,
+      verificationEmail: true,
+      date: true,
+      endDate: true,
+      registrationStartDate: true,
+      registrationEndDate: true,
+      openQuotaSize: true,
+      category: true,
+      draft: true,
+      listed: true,
+      signupsPublic: true,
+      nameQuestion: true,
+      emailQuestion: true,
+      payments: true,
+      defaultLanguage: true,
+      updatedAt: true,
+    },
     where: { id: { eq: eventID } },
     with: {
       languages: true,
@@ -191,9 +271,23 @@ export async function getEventByIdForAdmin(eventID: EventID): Promise<AdminEvent
               ],
             },
             orderBy: { createdAt: "asc" },
+            columns: {
+              id: true,
+              quotaId: true,
+              firstName: true,
+              lastName: true,
+              namePublic: true,
+              email: true,
+              manualPaymentStatus: true,
+              createdAt: true,
+              confirmedAt: true,
+              deletedAt: true,
+              price: true,
+              currency: true,
+            },
             with: {
               answers: { where: { deletedAt: { isNull: true } } },
-              payments: true,
+              payments: { columns: { status: true } },
             },
           },
         },
@@ -244,8 +338,32 @@ export async function getEventByIdForAdmin(eventID: EventID): Promise<AdminEvent
 }
 
 /** Get event details without signups (for users who can view but not edit). */
-export async function getEventByIdForViewer(eventId: EventID): Promise<AdminEventResponse> {
+export async function getEventByIdForViewer(eventId: EventID) {
   const event = await db.query.events.findFirst({
+    columns: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      price: true,
+      location: true,
+      webpageUrl: true,
+      verificationEmail: true,
+      date: true,
+      endDate: true,
+      registrationStartDate: true,
+      registrationEndDate: true,
+      openQuotaSize: true,
+      category: true,
+      draft: true,
+      listed: true,
+      signupsPublic: true,
+      nameQuestion: true,
+      emailQuestion: true,
+      payments: true,
+      defaultLanguage: true,
+      updatedAt: true,
+    },
     where: { id: { eq: eventId } },
     with: {
       languages: true,

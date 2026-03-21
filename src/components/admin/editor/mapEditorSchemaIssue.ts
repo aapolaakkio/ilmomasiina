@@ -1,5 +1,5 @@
 /** Map Zod / editor schema issue codes to localized strings (`editor.*` namespace). */
-export function mapEditorSchemaIssue(msg: string, t: (key: string) => string): string {
+export function mapEditorSchemaIssue(msg: string, t: (key: string) => string) {
   switch (msg) {
     case "dateInverted":
       return t("errors.dateInverted");

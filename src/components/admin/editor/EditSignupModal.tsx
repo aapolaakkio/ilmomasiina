@@ -38,7 +38,7 @@ type ModalFormValues = {
   keepEditing: boolean;
 };
 
-function buildDefaults(event: AdminEventResponse, signup?: AdminSignupSchema): ModalFormValues {
+function buildDefaults(event: AdminEventResponse, signup?: AdminSignupSchema) {
   const answers: Record<string, string | string[]> = {};
   for (const q of event.questions) {
     const existing = signup?.answers?.find((a) => a.questionId === q.id);

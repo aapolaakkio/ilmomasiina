@@ -18,7 +18,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
   const t = useTranslations("editor");
   const isDefaultLang = isDefaultLanguageView(form, selectedLanguage);
 
-  const getQuestionText = (index: number): string => {
+  const getQuestionText = (index: number) => {
     if (isDefaultLang) return form.questions[index].question;
     return form.languages[selectedLanguage]?.questions?.[index]?.question ?? "";
   };
@@ -37,7 +37,7 @@ export default function QuestionsTab({ form, updateField, fieldErrors, selectedL
     }
   };
 
-  const getOptionText = (qIndex: number, oIndex: number): string => {
+  const getOptionText = (qIndex: number, oIndex: number) => {
     if (isDefaultLang) return form.questions[qIndex].options?.[oIndex] ?? "";
     return form.languages[selectedLanguage]?.questions?.[qIndex]?.options?.[oIndex] ?? "";
   };

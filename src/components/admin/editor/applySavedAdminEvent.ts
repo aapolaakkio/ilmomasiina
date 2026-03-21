@@ -10,7 +10,7 @@ export function applySavedAdminEventToEditor(
   eventData: AdminEventResponse,
   setSavedEvent: Dispatch<SetStateAction<AdminEventResponse | null>>,
   setDraft: UseFormSetValue<EditorFormState>,
-): void {
+) {
   setSavedEvent(eventData);
   setDraft("draft", eventData.draft);
 }

@@ -10,10 +10,7 @@ export type FlatSignup = AdminSignupSchema & {
 export type QuotaGroup = { key: string; title: string; signups: FlatSignup[] };
 
 /** Flat list + grouped view model for the signups tab. */
-export function signupsAndQuotaGroups(savedEvent: AdminEventResponse | null): {
-  signups: FlatSignup[];
-  quotaGroups: QuotaGroup[];
-} {
+export function signupsAndQuotaGroups(savedEvent: AdminEventResponse | null) {
   if (!savedEvent) {
     return { signups: [], quotaGroups: [] };
   }
@@ -36,7 +33,7 @@ export function signupsAndQuotaGroups(savedEvent: AdminEventResponse | null): {
   return { signups, quotaGroups };
 }
 
-export function formatSignupPrice(signup: Pick<FlatSignup, "price" | "currency">): string {
+export function formatSignupPrice(signup: Pick<FlatSignup, "price" | "currency">) {
   if (signup.price == null) return "\u2014";
   return `${(signup.price / 100).toFixed(2)} ${signup.currency ?? ""}`.trim();
 }

@@ -12,7 +12,7 @@ export type KnownLanguage = keyof typeof resources;
 export const knownLanguages = Object.keys(resources) as KnownLanguage[];
 
 /** Navigate a nested object by a dot-separated key path. */
-function getNestedValue(obj: Record<string, unknown>, keyPath: string): string | undefined {
+function getNestedValue(obj: Record<string, unknown>, keyPath: string) {
   let current: unknown = obj;
   for (const part of keyPath.split(".")) {
     if (current == null || typeof current !== "object") return undefined;
@@ -22,7 +22,7 @@ function getNestedValue(obj: Record<string, unknown>, keyPath: string): string |
 }
 
 /** Simple translation function replacing i18next. */
-export function t(key: string, options?: { lng?: string; [key: string]: string | number | undefined }): string {
+export function t(key: string, options?: { lng?: string; [key: string]: string | number | undefined }) {
   const lng = (options?.lng ?? "fi") as KnownLanguage;
   const translations = resources[lng] ?? resources.fi;
   let value = getNestedValue(translations, key) ?? key;

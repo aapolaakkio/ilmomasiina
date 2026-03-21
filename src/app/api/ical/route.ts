@@ -12,6 +12,16 @@ export async function GET(_request: NextRequest, _context: RouteContext<"/api/ic
   const uidDomain = env.ICAL_UID_DOMAIN ?? new URL(env.BASE_URL).hostname;
 
   const eventRows = await db.query.events.findMany({
+    columns: {
+      id: true,
+      title: true,
+      description: true,
+      location: true,
+      category: true,
+      slug: true,
+      date: true,
+      endDate: true,
+    },
     where: {
       deletedAt: { isNull: true },
       draft: false,

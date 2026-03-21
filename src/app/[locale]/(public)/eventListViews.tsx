@@ -3,12 +3,12 @@ import type { TableRow } from "@/lib/eventListUtils";
 import { formatAppDateTime } from "@/lib/intlDateTime";
 import { SignupState, type SignupStateInfo } from "@/lib/signupState";
 
-function formatDate(date: Date | null, bcp47Locale: string): string {
+function formatDate(date: Date | null, bcp47Locale: string) {
   if (!date) return "";
   return formatAppDateTime(date, bcp47Locale, "date");
 }
 
-function formatDateTime(date: Date, bcp47Locale: string): string {
+function formatDateTime(date: Date, bcp47Locale: string) {
   return formatAppDateTime(date, bcp47Locale, "dateTimeWeekday");
 }
 

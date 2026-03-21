@@ -23,7 +23,7 @@ import { SignupValidationError } from "./errors";
 const MAX_NAME_LENGTH = 255;
 const MAX_EMAIL_LENGTH = 255;
 
-function isEmail(value: string): boolean {
+function isEmail(value: string) {
   return z.email().safeParse(value).success;
 }
 
@@ -111,7 +111,7 @@ function validateBasicFields(signup: SignupData, event: EventData, body: SignupU
 }
 
 /** Computes product lines for a given quota. */
-function getQuotaProducts(quota: QuotaData, event: { payments: string }): ProductSchema[] {
+function getQuotaProducts(quota: QuotaData, event: { payments: string }) {
   if (paymentsEnabled(event) && quota.price) {
     return [{ name: quota.title, amount: 1, unitPrice: quota.price }];
   }

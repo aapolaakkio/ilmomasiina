@@ -2,28 +2,21 @@ import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 
 import { buildEventLanguageRows, buildQuestionLanguageRows, buildQuotaLanguageRows } from "@/db/helpers";
 import { AuditEvent, type EventID, type QuestionID, type QuotaID } from "@/db/schema";
-import type { AdminEventResponse, EditConflictError, EventUpdateBody, WouldMoveSignupsToQueueError } from "@/db/zod";
+import type { EventUpdateBody } from "@/db/zod";
 
 import type { AuditLogger } from "../../../auditlog";
 import { db } from "../../../db";
+import { activeSignupCutoff } from "../../../db/filters";
 import { eventLanguages, events, questionLanguages, questions, quotaLanguages, quotas } from "../../../db/schema";
 import { validateEventDates } from "../../../db/validators";
 import { getEventByIdForAdmin } from "../../events/getEventDetails";
-import {
-  fetchActiveQuotasForEvent,
-  fetchActiveSignupsForEvent,
-  handlePositionSideEffects,
-} from "../../signups/computeSignupPosition";
+import { handlePositionSideEffects } from "../../signups/computeSignupPosition";
 import { toDate } from "../../utils";
 import { EditConflict } from "./errors";
 import { normalizeQuestionOptions } from "./normalizeQuestionOptions";
 
 /** Update an event including its quotas and questions. */
-export async function updateEvent(
-  eventId: EventID,
-  body: EventUpdateBody,
-  auditLogger: AuditLogger,
-): Promise<AdminEventResponse | EditConflictError | WouldMoveSignupsToQueueError> {
+export async function updateEvent(eventId: EventID, body: EventUpdateBody, auditLogger: AuditLogger) {
   await db.transaction(async (tx) => {
     // Lock the event
     const [event] = await tx.select().from(events).where(eq(events.id, eventId)).for("update");
@@ -31,10 +24,30 @@ export async function updateEvent(
 
     const previousOpenQuotaSize = event.openQuotaSize;
 
-    // Snapshot state and lock quotas/questions in parallel
-    const [previousSignupsRaw, previousQuotas, existingQuotas, existingQuestions] = await Promise.all([
-      fetchActiveSignupsForEvent(eventId, tx),
-      fetchActiveQuotasForEvent(eventId, tx),
+    const cutoff = activeSignupCutoff();
+
+    // Snapshot state (single relational query) and lock quotas/questions in parallel
+    const [eventSnapshot, existingQuotas, existingQuestions] = await Promise.all([
+      tx.query.events.findFirst({
+        where: { id: { eq: eventId } },
+        columns: { openQuotaSize: true },
+        with: {
+          quotas: {
+            where: { deletedAt: { isNull: true } },
+            columns: { id: true, size: true },
+            with: {
+              signups: {
+                where: {
+                  deletedAt: { isNull: true },
+                  OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: cutoff } }],
+                },
+                orderBy: { createdAt: "asc" },
+                columns: { id: true, quotaId: true },
+              },
+            },
+          },
+        },
+      }),
       tx
         .select({ id: quotas.id })
         .from(quotas)
@@ -46,10 +59,12 @@ export async function updateEvent(
         .where(and(eq(questions.eventId, eventId), isNull(questions.deletedAt)))
         .for("update"),
     ]);
-    const previousSignups = previousSignupsRaw.map((s) => ({
-      id: s.id,
-      quotaId: s.quotaId,
-    }));
+    if (!eventSnapshot) throw new Error("event missing from DB");
+
+    const previousQuotas = eventSnapshot.quotas.map((q) => ({ id: q.id, size: q.size }));
+    const previousSignups = eventSnapshot.quotas.flatMap((q) =>
+      q.signups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
+    );
 
     const updatedQuestions = body.questions?.map((question, order) => ({
       ...question,
@@ -117,6 +132,14 @@ export async function updateEvent(
 
       // Find new default's language row and copy to main table, then delete it
       const newDefaultLang = await tx.query.eventLanguages.findFirst({
+        columns: {
+          title: true,
+          description: true,
+          price: true,
+          location: true,
+          webpageUrl: true,
+          verificationEmail: true,
+        },
         where: { eventId: { eq: eventId }, language: body.defaultLanguage },
       });
       if (newDefaultLang) {

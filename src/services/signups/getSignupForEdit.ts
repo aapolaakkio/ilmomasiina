@@ -1,6 +1,4 @@
 import type { SignupID } from "@/db/schema";
-import type { SignupForEditResponse } from "@/db/zod";
-
 import { db } from "../../db";
 import {
   getConfirmableUntil,
@@ -14,11 +12,27 @@ import { computePositionsFromEvent } from "./assignSignupPositions";
 import { NoSuchSignup } from "./errors";
 
 /** Get a signup for editing by its ID. Caller must verify the edit token. */
-export async function getSignupForEdit(signupId: SignupID): Promise<SignupForEditResponse> {
+export async function getSignupForEdit(signupId: SignupID) {
   const cutoff = activeSignupCutoff();
 
-  // Query 1: signup with answers, payments, and quota
+  // Single round trip: signup (answers, payments) + full event graph for positions
   const signupRow = await db.query.signups.findFirst({
+    columns: {
+      id: true,
+      quotaId: true,
+      firstName: true,
+      lastName: true,
+      namePublic: true,
+      email: true,
+      language: true,
+      confirmedAt: true,
+      createdAt: true,
+      price: true,
+      currency: true,
+      products: true,
+      manualPaymentStatus: true,
+      deletedAt: true,
+    },
     where: {
       id: { eq: signupId },
       deletedAt: { isNull: true },
@@ -27,41 +41,64 @@ export async function getSignupForEdit(signupId: SignupID): Promise<SignupForEdi
     with: {
       answers: true,
       payments: { columns: { status: true } },
-      quota: true,
-    },
-  });
-
-  if (!signupRow?.quota) throw new NoSuchSignup("Signup expired or already deleted");
-
-  // Query 2: event with languages, questions, quotas, and signups (for position computation)
-  const eventRow = await db.query.events.findFirst({
-    where: { id: { eq: signupRow.quota.eventId } },
-    with: {
-      languages: true,
-      questions: {
-        where: { deletedAt: { isNull: true } },
-        orderBy: { order: "asc" },
-        with: { languages: true },
-      },
-      quotas: {
-        where: { deletedAt: { isNull: true } },
-        orderBy: { order: "asc" },
+      quota: {
         with: {
-          languages: true,
-          signups: {
-            where: {
-              deletedAt: { isNull: true },
-              OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: activeSignupCutoff() } }],
+          event: {
+            columns: {
+              id: true,
+              slug: true,
+              title: true,
+              description: true,
+              price: true,
+              location: true,
+              webpageUrl: true,
+              verificationEmail: true,
+              date: true,
+              endDate: true,
+              registrationStartDate: true,
+              registrationEndDate: true,
+              openQuotaSize: true,
+              category: true,
+              draft: true,
+              listed: true,
+              signupsPublic: true,
+              nameQuestion: true,
+              emailQuestion: true,
+              payments: true,
+              defaultLanguage: true,
             },
-            orderBy: { createdAt: "asc" },
-            columns: { id: true, quotaId: true, createdAt: true },
+            with: {
+              languages: true,
+              questions: {
+                where: { deletedAt: { isNull: true } },
+                orderBy: { order: "asc" },
+                with: { languages: true },
+              },
+              quotas: {
+                where: { deletedAt: { isNull: true } },
+                orderBy: { order: "asc" },
+                with: {
+                  languages: true,
+                  signups: {
+                    where: {
+                      deletedAt: { isNull: true },
+                      OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: activeSignupCutoff() } }],
+                    },
+                    orderBy: { createdAt: "asc" },
+                    columns: { id: true, quotaId: true, createdAt: true },
+                  },
+                },
+              },
+            },
           },
         },
       },
     },
   });
 
-  if (!eventRow) throw new NoSuchSignup("Signup expired or already deleted");
+  if (!signupRow?.quota?.event) throw new NoSuchSignup("Signup expired or already deleted");
+
+  const eventRow = signupRow.quota.event;
 
   // Reconstruct language fields
   const langFields = reconstructEventLanguages(

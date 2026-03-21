@@ -16,17 +16,17 @@ interface PaymentRow {
 }
 
 /** Whether the signup has been confirmed (filled in after creation). */
-export function isConfirmed(signup: Pick<SignupRow, "confirmedAt">): boolean {
+export function isConfirmed(signup: Pick<SignupRow, "confirmedAt">) {
   return signup.confirmedAt != null;
 }
 
 /** The time this signup must be confirmed by before it expires. */
-export function getConfirmableUntil(signup: Pick<SignupRow, "createdAt">): Date {
+export function getConfirmableUntil(signup: Pick<SignupRow, "createdAt">) {
   return new Date(signup.createdAt.getTime() + env.SIGNUP_CONFIRM_MINS * 60 * 1000);
 }
 
 /** The time this signup is editable until, regardless of signups closing. */
-export function getEditableAtLeastUntil(signup: Pick<SignupRow, "createdAt">): Date {
+export function getEditableAtLeastUntil(signup: Pick<SignupRow, "createdAt">) {
   if (env.SIGNUP_CONFIRM_AFTER_CLOSE) {
     return new Date(signup.createdAt.getTime() + env.SIGNUP_CONFIRM_MINS * 60 * 1000);
   }
@@ -34,7 +34,7 @@ export function getEditableAtLeastUntil(signup: Pick<SignupRow, "createdAt">): D
 }
 
 /** Whether the signup has a price greater than 0. */
-function hasPrice(signup: Pick<SignupRow, "price">): boolean {
+function hasPrice(signup: Pick<SignupRow, "price">) {
   return signup.price != null && signup.price > 0;
 }
 
@@ -46,7 +46,7 @@ export function getEffectiveEndDate(event: {
   date: Date | null;
   endDate: Date | null;
   registrationEndDate: Date | null;
-}): number | null {
+}) {
   const endDates = [event.endDate, event.date, event.registrationEndDate]
     .filter((date): date is Date => date != null)
     .map((date) => date.getTime());
@@ -55,7 +55,7 @@ export function getEffectiveEndDate(event: {
 }
 
 /** Whether payments are enabled for the event. */
-export function paymentsEnabled(event: { payments: string }): boolean {
+export function paymentsEnabled(event: { payments: string }) {
   return event.payments !== PaymentMode.DISABLED;
 }
 
@@ -66,7 +66,7 @@ export function paymentsEnabled(event: { payments: string }): boolean {
 export function getEffectivePaymentStatus(
   signup: Pick<SignupRow, "price" | "manualPaymentStatus">,
   signupPayments: PaymentRow[],
-): SignupPaymentStatus | null {
+) {
   const paidPayment = signupPayments.some((p) => p.status === PaymentStatus.PAID);
   const refundedPayment = signupPayments.some((p) => p.status === PaymentStatus.REFUNDED);
 

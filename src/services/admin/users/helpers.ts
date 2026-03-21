@@ -9,7 +9,7 @@ import { errorClass } from "../../../util/customError";
 export const InitialSetupNeeded = errorClass(418, ErrorCode.INITIAL_SETUP_NEEDED);
 export const InitialSetupAlreadyDone = errorClass(409, ErrorCode.INITIAL_SETUP_ALREADY_DONE);
 
-export async function isInitialSetupDone(db: DrizzleDb): Promise<boolean> {
+export async function isInitialSetupDone(db: DrizzleDb) {
   const result = await db.query.users.findFirst({
     columns: { id: true },
   });

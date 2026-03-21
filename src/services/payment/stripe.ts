@@ -17,7 +17,7 @@ const stripeClient: Stripe | null = env.STRIPE_SECRET_KEY
     })
   : null;
 
-export function getStripe(): Stripe {
+export function getStripe() {
   if (!stripeClient) throw new OnlinePaymentsDisabled("Online payments are not enabled on this server");
   return stripeClient;
 }
@@ -36,10 +36,7 @@ interface CheckoutPayment {
   expiresAt: Date;
 }
 
-export async function createCheckoutSession(
-  signup: CheckoutSignup,
-  payment: CheckoutPayment,
-): Promise<Stripe.Checkout.Session> {
+export async function createCheckoutSession(signup: CheckoutSignup, payment: CheckoutPayment) {
   const stripe = getStripe();
   const editToken = generateToken(signup.id);
   const returnUrl = `${env.BASE_URL}/payment/${signup.id}/${editToken}`;
@@ -75,7 +72,7 @@ export async function createCheckoutSession(
 export async function checkoutSessionStatusUpdated(
   sessionId: Stripe.Checkout.Session["id"],
   status: Stripe.Checkout.Session.Status | null,
-): Promise<void> {
+) {
   if (!sessionId) throw new Error("Invalid Stripe session ID");
 
   switch (status) {
@@ -90,7 +87,36 @@ export async function checkoutSessionStatusUpdated(
         .where(and(eq(payments.stripeCheckoutSessionId, sessionId), eq(payments.status, PaymentStatus.PENDING)))
         .returning();
       if (updated.length > 0) {
-        await sendPaymentConfirmationMail(updated[0]);
+        const payment = updated[0];
+        const signupRow = await db.query.signups.findFirst({
+          where: { id: { eq: payment.signupId } },
+          columns: { id: true, email: true, language: true },
+          with: {
+            quota: {
+              columns: {},
+              with: {
+                event: {
+                  columns: {
+                    deletedAt: true,
+                    title: true,
+                    date: true,
+                    location: true,
+                    verificationEmail: true,
+                    payments: true,
+                  },
+                  with: {
+                    languages: {
+                      columns: { language: true, title: true, location: true, verificationEmail: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (signupRow?.quota?.event) {
+          await sendPaymentConfirmationMail(payment, signupRow, signupRow.quota.event);
+        }
       }
       break;
     }
@@ -110,9 +136,7 @@ export async function checkoutSessionStatusUpdated(
   }
 }
 
-export async function refreshCheckoutSession(payment: {
-  stripeCheckoutSessionId: string | null;
-}): Promise<Stripe.Checkout.Session> {
+export async function refreshCheckoutSession(payment: { stripeCheckoutSessionId: string | null }) {
   const stripe = getStripe();
   let session: Stripe.Checkout.Session;
   try {
@@ -129,7 +153,7 @@ export async function expirePaymentForSignupUpdate(payment: {
   id: PaymentID;
   status: PaymentStatus;
   stripeCheckoutSessionId: string | null;
-}): Promise<void> {
+}) {
   const stripe = getStripe();
 
   switch (payment.status) {
@@ -179,7 +203,7 @@ export async function expirePaymentForSignupUpdate(payment: {
   }
 }
 
-export async function expireExistingPaymentsForSignupUpdate(signupId: SignupID): Promise<void> {
+export async function expireExistingPaymentsForSignupUpdate(signupId: SignupID) {
   const activePayments = await db.query.payments.findMany({
     where: {
       signupId: { eq: signupId },
@@ -197,7 +221,7 @@ export async function checkForConflictingPaymentsForSignupUpdate(
   signupId: SignupID,
   tx: DrizzleDb,
   ignorePaid = false,
-): Promise<void> {
+) {
   const conflicting = await tx.query.payments.findFirst({
     where: {
       signupId: { eq: signupId },

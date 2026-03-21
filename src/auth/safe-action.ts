@@ -8,7 +8,7 @@ import { verifyToken } from "@/services/signups/editTokens";
 export class ActionError extends Error {}
 
 /** Verifies a signup edit token, throwing an ActionError if invalid. */
-export function verifyEditToken(signupId: SignupID, editToken: string): void {
+export function verifyEditToken(signupId: SignupID, editToken: string) {
   if (!verifyToken(signupId, editToken)) {
     throw new ActionError("Invalid edit token");
   }

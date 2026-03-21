@@ -14,7 +14,7 @@ import type { EditorTabProps, LocalizableFieldKey } from "./types";
 import { getLocalizedValue, isDefaultLanguageView, setLocalizedValue } from "./types";
 
 /** Generate a URL slug from a title. */
-function generateSlug(title: string): string {
+function generateSlug(title: string) {
   return title
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -24,7 +24,7 @@ function generateSlug(title: string): string {
 }
 
 /** Convert an ISO string to a local datetime-local input value (YYYY-MM-DDTHH:mm). */
-function isoToLocal(iso: string): string {
+function isoToLocal(iso: string) {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -33,7 +33,7 @@ function isoToLocal(iso: string): string {
 }
 
 /** Convert a datetime-local input value to an ISO string. */
-function localToIso(value: string): string {
+function localToIso(value: string) {
   if (!value) return "";
   return new Date(value).toISOString();
 }

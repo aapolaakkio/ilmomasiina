@@ -5,11 +5,7 @@ import en from "@/i18n/en";
 import fi from "@/i18n/fi";
 import { SignupPaymentStatus } from "@/db/schema";
 
-type DeepStringify<T> = {
-  [K in keyof T]: T[K] extends object ? DeepStringify<T[K]> : string;
-};
-type EmailTranslations = DeepStringify<typeof en.emails>;
-function getEmailTranslations(lang: ResolvedLanguage): EmailTranslations {
+function getEmailTranslations(lang: ResolvedLanguage) {
   return lang === "fi" ? fi.emails : en.emails;
 }
 
@@ -91,13 +87,13 @@ interface BaseTemplateProps {
   children: ReactNode;
 }
 
-function resolveLanguage(language: string | null, defaultLanguage: string): ResolvedLanguage {
+function resolveLanguage(language: string | null, defaultLanguage: string) {
   if (language === "fi" || language === "en") return language;
   if (defaultLanguage === "fi" || defaultLanguage === "en") return defaultLanguage;
   return "en";
 }
 
-function eventString(event: MailEventData, key: string): string {
+function eventString(event: MailEventData, key: string) {
   const value = event[key];
   return typeof value === "string" ? value : "";
 }

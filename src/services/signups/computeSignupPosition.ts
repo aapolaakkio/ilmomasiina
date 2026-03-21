@@ -1,58 +1,16 @@
-import { and, asc, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
-
-import { AuditEvent, EventID, QuotaID, SignupID, SignupStatus } from "@/db/schema";
+import { AuditEvent, EventID, SignupStatus } from "@/db/schema";
 
 import { internalAuditLogger } from "../../auditlog";
-import { type DrizzleDb, db } from "../../db";
+import { type DrizzleDb } from "../../db";
 import { activeSignupCutoff } from "../../db/filters";
-import { quotas, signups } from "../../db/schema";
 import { sendPromotedFromQueueMail } from "../../mail/signups";
 import { WouldMoveSignupsToQueue } from "../admin/events/errors";
-import { type QuotaForPositioning, type SignupForPositioning, assignSignupPositions } from "./assignSignupPositions";
-
-interface ActiveSignupRow {
-  id: SignupID;
-  quotaId: QuotaID;
-  firstName: string | null;
-  lastName: string | null;
-  email: string | null;
-  language: string | null;
-}
-
-/** Fetches active signups for an event, ordered by (createdAt, id). */
-export async function fetchActiveSignupsForEvent(eventId: EventID, txOrDb: DrizzleDb = db): Promise<ActiveSignupRow[]> {
-  const cutoff = activeSignupCutoff();
-  return txOrDb
-    .select({
-      id: signups.id,
-      quotaId: signups.quotaId,
-      firstName: signups.firstName,
-      lastName: signups.lastName,
-      email: signups.email,
-      language: signups.language,
-    })
-    .from(signups)
-    .innerJoin(quotas, eq(signups.quotaId, quotas.id))
-    .where(
-      and(
-        eq(quotas.eventId, eventId),
-        isNull(signups.deletedAt),
-        or(isNotNull(signups.confirmedAt), gt(signups.createdAt, cutoff)),
-      ),
-    )
-    .orderBy(asc(signups.createdAt), asc(signups.id));
-}
-
-/** Fetches active quotas for an event. */
-export async function fetchActiveQuotasForEvent(
-  eventId: EventID,
-  txOrDb: DrizzleDb = db,
-): Promise<QuotaForPositioning[]> {
-  return txOrDb
-    .select({ id: quotas.id, size: quotas.size })
-    .from(quotas)
-    .where(and(eq(quotas.eventId, eventId), isNull(quotas.deletedAt)));
-}
+import {
+  type QuotaForPositioning,
+  type SignupForPositioning,
+  assignSignupPositions,
+  computePositionsFromEvent,
+} from "./assignSignupPositions";
 
 /**
  * Detects position changes (promotions, demotions) after a mutation and handles side effects.
@@ -67,7 +25,7 @@ export async function handlePositionSideEffects(
     previousQuotas: QuotaForPositioning[];
     previousOpenQuotaSize: number;
   },
-): Promise<void> {
+) {
   // Compute old positions from the snapshot
   const oldPositions = assignSignupPositions(
     options.previousSignups,
@@ -75,17 +33,82 @@ export async function handlePositionSideEffects(
     options.previousOpenQuotaSize,
   );
 
-  // Fetch current state
-  const currentSignups = await fetchActiveSignupsForEvent(eventId, tx);
-  const currentQuotas = await fetchActiveQuotasForEvent(eventId, tx);
-  const event = await tx.query.events.findFirst({
-    where: { id: { eq: eventId } },
-    columns: { openQuotaSize: true, title: true },
-  });
-  if (!event) throw new Error("event missing from DB");
+  const cutoff = activeSignupCutoff();
 
-  // Compute new positions
-  const newPositions = assignSignupPositions(currentSignups, currentQuotas, event.openQuotaSize);
+  // Single relational load: event + languages + active quotas + active signups with payments
+  const eventRow = await tx.query.events.findFirst({
+    where: { id: { eq: eventId } },
+    columns: {
+      openQuotaSize: true,
+      title: true,
+      deletedAt: true,
+      location: true,
+      verificationEmail: true,
+      date: true,
+      payments: true,
+    },
+    with: {
+      languages: {
+        columns: { language: true, title: true, location: true, verificationEmail: true },
+      },
+      quotas: {
+        where: { deletedAt: { isNull: true } },
+        orderBy: { order: "asc" },
+        columns: { id: true, size: true },
+        with: {
+          signups: {
+            where: {
+              deletedAt: { isNull: true },
+              OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: cutoff } }],
+            },
+            orderBy: { createdAt: "asc" },
+            columns: {
+              id: true,
+              quotaId: true,
+              createdAt: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              language: true,
+            },
+            with: {
+              payments: { columns: { status: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!eventRow) throw new Error("event missing from DB");
+
+  const newPositions = computePositionsFromEvent({
+    openQuotaSize: eventRow.openQuotaSize,
+    quotas: eventRow.quotas.map((q) => ({
+      id: q.id,
+      size: q.size,
+      signups: q.signups.map((s) => ({
+        id: s.id,
+        quotaId: s.quotaId,
+        createdAt: s.createdAt,
+      })),
+    })),
+  });
+
+  const currentSignups = eventRow.quotas
+    .flatMap((q) =>
+      q.signups.map((s) => ({
+        id: s.id,
+        quotaId: s.quotaId,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        email: s.email,
+        language: s.language,
+        payments: s.payments,
+        createdAt: s.createdAt,
+      })),
+    )
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
+    .map(({ createdAt: _c, ...row }) => row);
 
   // Check for demotions (moved to queue)
   if (options.moveSignupsToQueue === false) {
@@ -112,18 +135,21 @@ export async function handlePositionSideEffects(
     await Promise.all(
       promoted.map(async (signup) => {
         const pos = newPositions.get(signup.id)!;
-        await sendPromotedFromQueueMail({
-          ...signup,
-          status: pos.status,
-          position: pos.position,
-        });
+        await sendPromotedFromQueueMail(
+          {
+            ...signup,
+            status: pos.status,
+            position: pos.position,
+          },
+          eventRow,
+        );
         await internalAuditLogger(AuditEvent.PROMOTE_SIGNUP, {
           signup: {
             id: signup.id,
             firstName: signup.firstName,
             lastName: signup.lastName,
           },
-          event: { id: eventId, title: event.title },
+          event: { id: eventId, title: eventRow.title },
           tx,
         });
       }),

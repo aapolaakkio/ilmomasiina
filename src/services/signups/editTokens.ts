@@ -6,7 +6,7 @@ import { env } from "@/env";
 
 const BASE32_RFC4648_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-function encodeBase32Rfc4648(bytes: Uint8Array): string {
+function encodeBase32Rfc4648(bytes: Uint8Array) {
   let output = "";
   let buffer = 0;
   let bitsInBuffer = 0;
@@ -30,7 +30,7 @@ function encodeBase32Rfc4648(bytes: Uint8Array): string {
   return output;
 }
 
-function generateLegacyToken(signupId: SignupID): string {
+function generateLegacyToken(signupId: SignupID) {
   const data = Buffer.from(`${signupId}${env.EDIT_TOKEN_SALT}`, "utf-8");
   return createHash("md5").update(data).digest().toString("hex");
 }
@@ -42,7 +42,7 @@ export function generateToken(signupId: SignupID) {
   return encodeBase32Rfc4648(mac).substring(0, 13).toLowerCase();
 }
 
-export function verifyToken(signupId: SignupID, token: string): boolean {
+export function verifyToken(signupId: SignupID, token: string) {
   let expectedToken;
   if (token && env.EDIT_TOKEN_SALT && token.length === 32) {
     expectedToken = generateLegacyToken(signupId);

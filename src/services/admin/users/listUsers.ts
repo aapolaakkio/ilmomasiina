@@ -1,9 +1,7 @@
-import type { UserListResponse } from "@/db/zod";
-
 import { db } from "../../../db";
 
 /** List all admin users (without password hashes). */
-export async function listUsers(): Promise<UserListResponse> {
+export async function listUsers() {
   const rows = await db.query.users.findMany({
     columns: { id: true, email: true, role: true },
   });

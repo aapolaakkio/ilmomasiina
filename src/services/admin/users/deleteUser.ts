@@ -10,7 +10,7 @@ import { errorClass } from "../../../util/customError";
 const CannotDeleteSelf = errorClass(403, ErrorCode.CANNOT_DELETE_SELF);
 
 /** Delete an admin user by ID. */
-export async function deleteUser(userId: UserID, currentUserId: UserID, auditLogger: AuditLogger): Promise<void> {
+export async function deleteUser(userId: UserID, currentUserId: UserID, auditLogger: AuditLogger) {
   await db.transaction(async (tx) => {
     const existing = await tx.query.users.findFirst({
       where: { id: { eq: userId } },

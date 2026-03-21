@@ -5,7 +5,7 @@ import type { AdminTokenData } from "./adminAuth";
 import { ActionError } from "./safe-action";
 
 /** Check if the user has editor access to the given event. Admins always have access. */
-export async function hasEventAccess(session: AdminTokenData, eventId: EventID): Promise<boolean> {
+export async function hasEventAccess(session: AdminTokenData, eventId: EventID) {
   if (session.role === "admin") return true;
   const editor = await db.query.eventEditors.findFirst({
     where: { eventId: { eq: eventId }, userId: { eq: session.user } },
@@ -15,14 +15,14 @@ export async function hasEventAccess(session: AdminTokenData, eventId: EventID):
 }
 
 /** Ensure the user has access to the given event. Throws if not. */
-export async function requireEventAccess(session: AdminTokenData, eventId: EventID): Promise<void> {
+export async function requireEventAccess(session: AdminTokenData, eventId: EventID) {
   if (!(await hasEventAccess(session, eventId))) {
     throw new ActionError("Forbidden");
   }
 }
 
 /** Ensure the user has access to the event that owns the given quota. */
-export async function requireEventAccessByQuota(session: AdminTokenData, quotaId: QuotaID): Promise<void> {
+export async function requireEventAccessByQuota(session: AdminTokenData, quotaId: QuotaID) {
   const quota = await db.query.quotas.findFirst({
     where: { id: { eq: quotaId } },
     columns: { eventId: true },
@@ -32,7 +32,7 @@ export async function requireEventAccessByQuota(session: AdminTokenData, quotaId
 }
 
 /** Ensure the user has access to the event that owns the given signup. */
-export async function requireEventAccessBySignup(session: AdminTokenData, signupId: SignupID): Promise<void> {
+export async function requireEventAccessBySignup(session: AdminTokenData, signupId: SignupID) {
   const signup = await db.query.signups.findFirst({
     where: { id: { eq: signupId } },
     columns: {},

@@ -24,7 +24,7 @@ type Props = {
   userId: UserID;
 };
 
-function getEventStatus(event: AdminEventListResponse[number], t: (key: string) => string): string {
+function getEventStatus(event: AdminEventListResponse[number], t: (key: string) => string) {
   if (event.draft) return t("statusDraft");
   if (isEventInPast(event)) {
     return event.registrationEndDate && new Date(event.registrationEndDate) < new Date()
@@ -35,7 +35,7 @@ function getEventStatus(event: AdminEventListResponse[number], t: (key: string) 
   return t("statusPublished");
 }
 
-function formatEventListDate(date: string | null, bcp47Locale: string): string {
+function formatEventListDate(date: string | null, bcp47Locale: string) {
   if (!date) return "";
   return formatAppDateTime(new Date(date), bcp47Locale, "date");
 }

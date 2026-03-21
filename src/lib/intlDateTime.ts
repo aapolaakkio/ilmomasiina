@@ -1,6 +1,6 @@
 import { env } from "@/env";
 
-function withAppTimeZone(options: Omit<Intl.DateTimeFormatOptions, "timeZone">): Intl.DateTimeFormatOptions {
+function withAppTimeZone(options: Omit<Intl.DateTimeFormatOptions, "timeZone">) {
   return { ...options, timeZone: env.NEXT_PUBLIC_APP_TIMEZONE };
 }
 
@@ -43,11 +43,11 @@ const STYLE_OPTIONS: Record<AppDateTimeStyle, Intl.DateTimeFormatOptions> = {
 };
 
 /** Format a single instant using a BCP 47 locale (e.g. from {@link appLocaleToBcp47}). */
-export function formatAppDateTime(date: Date, bcp47Locale: string, style: AppDateTimeStyle): string {
+export function formatAppDateTime(date: Date, bcp47Locale: string, style: AppDateTimeStyle) {
   return new Intl.DateTimeFormat(bcp47Locale, STYLE_OPTIONS[style]).format(date);
 }
 
 /** Reuse for tight loops (e.g. long tables). */
-export function createAppDateTimeFormatter(bcp47Locale: string, style: AppDateTimeStyle): Intl.DateTimeFormat {
+export function createAppDateTimeFormatter(bcp47Locale: string, style: AppDateTimeStyle) {
   return new Intl.DateTimeFormat(bcp47Locale, STYLE_OPTIONS[style]);
 }

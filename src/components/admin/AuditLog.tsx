@@ -27,7 +27,7 @@ const ACTION_DESCRIPTIONS: Record<AuditEvent, { key: string; vars: "event" | "si
 function formatActionDescription(
   item: AuditLogResponse["rows"][number],
   t: (key: string, values?: Record<string, string | AuditEvent>) => string,
-): string {
+) {
   const desc = ACTION_DESCRIPTIONS[item.action as AuditEvent];
   if (!desc) return t("description.unknown", { action: item.action });
 

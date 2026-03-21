@@ -7,7 +7,7 @@ import { db } from "../../../db";
 import { events } from "../../../db/schema";
 
 /** Delete an event by ID. */
-export async function deleteEvent(eventId: EventID, auditLogger: AuditLogger): Promise<void> {
+export async function deleteEvent(eventId: EventID, auditLogger: AuditLogger) {
   await db.transaction(async (tx) => {
     const event = await tx.query.events.findFirst({
       where: { id: { eq: eventId } },

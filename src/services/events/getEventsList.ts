@@ -1,7 +1,7 @@
 import { and, count, gt, inArray, isNotNull, isNull, or } from "drizzle-orm";
 
 import type { QuotaID } from "@/db/schema";
-import type { AdminEventListResponse, EventListQuery, UserEventListResponse } from "@/db/zod";
+import type { EventListQuery, UserEventListResponse } from "@/db/zod";
 
 import { db } from "../../db";
 import { activeSignupCutoff } from "../../db/filters";
@@ -12,7 +12,7 @@ import { InitialSetupNeeded, isInitialSetupDone } from "../admin/users/helpers";
 const DEFAULT_MAX_AGE_DAYS = 7;
 
 /** Fetch signup counts per quota for the given quota IDs in a single aggregation query. */
-async function fetchSignupCounts(quotaIds: QuotaID[]): Promise<Map<QuotaID, number>> {
+async function fetchSignupCounts(quotaIds: QuotaID[]) {
   if (quotaIds.length === 0) return new Map();
   const rows = await db
     .select({ quotaId: signups.quotaId, count: count() })
@@ -50,17 +50,43 @@ function sortEvents<
   });
 }
 
+/** Shared column selection for event list queries (excludes timestamp metadata). */
+const eventListColumns = {
+  id: true,
+  slug: true,
+  title: true,
+  description: true,
+  price: true,
+  location: true,
+  webpageUrl: true,
+  verificationEmail: true,
+  date: true,
+  endDate: true,
+  registrationStartDate: true,
+  registrationEndDate: true,
+  openQuotaSize: true,
+  category: true,
+  draft: true,
+  listed: true,
+  signupsPublic: true,
+  nameQuestion: true,
+  emailQuestion: true,
+  payments: true,
+  defaultLanguage: true,
+} as const;
+
 /** Shared relational include for event list queries. */
 const eventListWith = {
   languages: true,
   quotas: {
     where: { deletedAt: { isNull: true } },
     orderBy: { order: "asc" as const },
+    columns: { id: true, title: true, size: true, price: true },
     with: { languages: true },
   },
   questions: {
     where: { deletedAt: { isNull: true } },
-    columns: { id: true, eventId: true, question: true, options: true },
+    columns: { id: true, question: true, options: true },
     with: { languages: true },
   },
 } as const;
@@ -79,6 +105,7 @@ export async function getEventsListForUser(
   const since = new Date(Date.now() - Math.round(maxAge) * 86_400_000);
 
   const eventRows = await db.query.events.findMany({
+    columns: eventListColumns,
     where: {
       deletedAt: { isNull: true },
       listed: true,
@@ -111,8 +138,9 @@ export async function getEventsListForUser(
 }
 
 /** Get the admin events list with editor user IDs per event. */
-export async function getEventsListForAdmin(): Promise<AdminEventListResponse> {
+export async function getEventsListForAdmin() {
   const eventRows = await db.query.events.findMany({
+    columns: eventListColumns,
     where: {
       deletedAt: { isNull: true },
     },

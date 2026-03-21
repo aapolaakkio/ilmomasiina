@@ -11,7 +11,7 @@ export type SignupWithQuota<Ev extends AnyEventSchema = AnyEventSchema> = Ev["qu
   quota: Ev["quotas"][number];
 };
 
-export function getSignupsAsList<Ev extends AnyEventSchema>(event: Ev): SignupWithQuota<Ev>[] {
+export function getSignupsAsList<Ev extends AnyEventSchema>(event: Ev) {
   return event.quotas.flatMap(
     (quota) =>
       quota.signups?.map((signup) => ({
@@ -43,7 +43,7 @@ export type QuotaSignups<Ev extends AnyEventSchema = AnyEventSchema> = Omit<
 };
 
 /** Gathers all signups of an event into their assigned quotas, the open quota, and the queue. */
-export function getSignupsByQuota(event: AnyEventSchema): QuotaSignups[] {
+export function getSignupsByQuota(event: AnyEventSchema) {
   const signupsDisabled =
     signupState(event.registrationStartDate, event.registrationEndDate).state === SignupState.disabled;
   const signups = getSignupsAsList(event);

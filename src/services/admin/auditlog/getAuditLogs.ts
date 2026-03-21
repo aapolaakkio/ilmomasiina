@@ -2,7 +2,7 @@ import type { SQL } from "drizzle-orm";
 import { and, count, desc, eq, inArray, like, or } from "drizzle-orm";
 
 import type { EventID, SignupID } from "@/db/schema";
-import { AUDIT_LOG_DEFAULT_LIMIT, type AuditLogResponse, type AuditLogQuery } from "@/db/zod";
+import { AUDIT_LOG_DEFAULT_LIMIT, type AuditLogQuery } from "@/db/zod";
 
 import { db } from "../../../db";
 import { auditlogs } from "../../../db/schema";
@@ -10,7 +10,7 @@ import { auditlogs } from "../../../db/schema";
 const MAX_LOGS = 100;
 
 /** Get audit log entries with optional filtering and pagination. */
-export async function getAuditLogItems(query: AuditLogQuery): Promise<AuditLogResponse> {
+export async function getAuditLogItems(query: AuditLogQuery) {
   const conditions: SQL[] = [];
 
   if (query.user) {
@@ -36,7 +36,24 @@ export async function getAuditLogItems(query: AuditLogQuery): Promise<AuditLogRe
   const offset = query.offset ?? 0;
 
   const [rows, [{ total }]] = await Promise.all([
-    db.select().from(auditlogs).where(whereClause).orderBy(desc(auditlogs.createdAt)).limit(limit).offset(offset),
+    db
+      .select({
+        id: auditlogs.id,
+        createdAt: auditlogs.createdAt,
+        action: auditlogs.action,
+        user: auditlogs.user,
+        ipAddress: auditlogs.ipAddress,
+        eventId: auditlogs.eventId,
+        eventName: auditlogs.eventName,
+        signupId: auditlogs.signupId,
+        signupName: auditlogs.signupName,
+        extra: auditlogs.extra,
+      })
+      .from(auditlogs)
+      .where(whereClause)
+      .orderBy(desc(auditlogs.createdAt))
+      .limit(limit)
+      .offset(offset),
     db.select({ total: count() }).from(auditlogs).where(whereClause),
   ]);
 

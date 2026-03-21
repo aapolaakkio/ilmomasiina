@@ -19,11 +19,11 @@ export async function generateStaticParams() {
   return getPublicEventSlugsForStaticParams();
 }
 
-function formatDateTime(date: Date, bcp47Locale: string): string {
+function formatDateTime(date: Date, bcp47Locale: string) {
   return formatAppDateTime(date, bcp47Locale, "dateTimeWeekday");
 }
 
-function formatSignupTime(date: Date, bcp47Locale: string): string {
+function formatSignupTime(date: Date, bcp47Locale: string) {
   return formatAppDateTime(date, bcp47Locale, "dateTimeSeconds");
 }
 

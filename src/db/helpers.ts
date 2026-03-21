@@ -34,15 +34,7 @@ export function reconstructEventLanguages(
     languages: QuestionLangRow[];
   }[],
   includeAdmin: boolean,
-): {
-  title: string;
-  description: string | null;
-  price: string | null;
-  location: string | null;
-  webpageUrl: string | null;
-  verificationEmail?: string | null;
-  languages: Record<string, AdminEventLanguage>;
-} {
+) {
   // Build languages map from non-default language rows
   const languages: Record<string, AdminEventLanguage> = {};
   for (const langRow of eventLangRows) {
@@ -85,7 +77,7 @@ export function getTitleForLanguage(
   defaultTitle: string,
   languages: { language: string; title: string }[],
   language: string,
-): string {
+) {
   const row = languages.find((r) => r.language === language);
   return row?.title ?? defaultTitle;
 }
@@ -96,7 +88,7 @@ export function getQuestionForLanguage(
   defaultOptions: string[] | null,
   languages: { language: string; question: string; options: string[] | null }[],
   language: string,
-): { question: string; options: string[] | null } {
+) {
   const row = languages.find((r) => r.language === language);
   return {
     question: row?.question ?? defaultQuestion,

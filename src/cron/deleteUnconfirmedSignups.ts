@@ -3,11 +3,7 @@ import { inArray } from "drizzle-orm";
 import { db } from "../db";
 import { activeSignupCutoff } from "../db/filters";
 import { EventID, signups } from "../db/schema";
-import {
-  fetchActiveQuotasForEvent,
-  fetchActiveSignupsForEvent,
-  handlePositionSideEffects,
-} from "../services/signups/computeSignupPosition";
+import { handlePositionSideEffects } from "../services/signups/computeSignupPosition";
 
 export default async function deleteUnconfirmedSignups() {
   const cutoff = activeSignupCutoff();
@@ -46,23 +42,41 @@ export default async function deleteUnconfirmedSignups() {
   try {
     // Snapshot per event before deleting
     // Snapshot all events in parallel before deleting
+    const cutoff = activeSignupCutoff();
     const snapshotEntries = await Promise.all(
       uniqueEventIds.map(async (eventId) => {
-        const [prevSignups, prevQuotas] = await Promise.all([
-          fetchActiveSignupsForEvent(eventId),
-          fetchActiveQuotasForEvent(eventId),
-        ]);
+        const eventRow = await db.query.events.findFirst({
+          where: { id: { eq: eventId } },
+          columns: { openQuotaSize: true },
+          with: {
+            quotas: {
+              where: { deletedAt: { isNull: true } },
+              columns: { id: true, size: true },
+              with: {
+                signups: {
+                  where: {
+                    deletedAt: { isNull: true },
+                    OR: [{ confirmedAt: { isNotNull: true } }, { createdAt: { gt: cutoff } }],
+                  },
+                  orderBy: { createdAt: "asc" },
+                  columns: { id: true, quotaId: true },
+                },
+              },
+            },
+          },
+        });
+        if (!eventRow) return null;
         return [
           eventId,
           {
-            signups: prevSignups.map((s) => ({ id: s.id, quotaId: s.quotaId })),
-            quotas: prevQuotas,
-            openQuotaSize: eventMap.get(eventId) ?? 0,
+            signups: eventRow.quotas.flatMap((q) => q.signups.map((s) => ({ id: s.id, quotaId: s.quotaId }))),
+            quotas: eventRow.quotas.map((q) => ({ id: q.id, size: q.size })),
+            openQuotaSize: eventRow.openQuotaSize,
           },
         ] as const;
       }),
     );
-    const snapshots = new Map(snapshotEntries);
+    const snapshots = new Map(snapshotEntries.filter((e) => e !== null));
 
     await db.delete(signups).where(inArray(signups.id, signupIds));
 
