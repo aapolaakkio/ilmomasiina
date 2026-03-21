@@ -1,6 +1,5 @@
 import { test as base, expect } from "@playwright/test";
 
-import { closePool } from "./helpers/db";
 import { resetDb } from "./helpers/resetDb";
 
 type TestFixtures = {
@@ -19,8 +18,3 @@ export const test = base.extend<TestFixtures>({
 });
 
 export { expect };
-
-/** Global teardown: close the test DB pool. */
-export async function globalTeardown() {
-  await closePool();
-}

@@ -80,9 +80,6 @@ docker compose up
 | `pnpm lint`         | Lint with Oxlint             |
 | `pnpm format`       | Format with Oxfmt            |
 | `pnpm format:check` | Check formatting             |
-| `pnpm test`         | Run all Playwright tests     |
-| `pnpm test:api`     | Run API tests only           |
-| `pnpm test:e2e`     | Run E2E browser tests only   |
 
 ## Documentation
 

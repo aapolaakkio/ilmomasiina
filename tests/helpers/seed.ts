@@ -11,7 +11,7 @@ import {
   UserRole,
   users,
 } from "../../src/db/schema";
-import { db } from "./db";
+import { db } from "@/db";
 
 import type { EventID, QuestionID, QuotaID, SignupID, UserID } from "../../src/db/schema";
 

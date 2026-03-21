@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: ".nvmrc"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -70,7 +70,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -84,7 +84,7 @@ jobs:
           - 5432:5432
 
     env:
-      SKIP_ENV_VALIDATION: 'true'
+      SKIP_ENV_VALIDATION: "true"
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ilmomasiina_test
       THIS_IS_A_TEST_DB_AND_CAN_BE_WIPED: 1
@@ -92,7 +92,7 @@ jobs:
       AUTH_SECRET: ci-test-auth-secret
       AUTH_GOOGLE_ID: ci-test-google-id
       AUTH_GOOGLE_SECRET: ci-test-google-secret
-      MAIL_FROM: 'Ilmomasiina <test@ilmomasiina.test>'
+      MAIL_FROM: "Ilmomasiina <test@ilmomasiina.test>"
       BASE_URL: http://localhost:3000
       NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT: Ilmomasiina
       NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT_SHORT: Ilmomasiina
@@ -109,7 +109,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
+          node-version: "24"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -130,10 +130,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run database migrations
-        run: npx tsx src/db/migrate.ts
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.apt-cache
+          key: ${{ runner.os }}-apt-deps-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-deps-
 
-      - name: Cache Playwright browsers
+      - name: Configure apt cache
+        run: |
+          sudo mkdir -p "$GITHUB_WORKSPACE/.apt-cache/archives"
+          echo 'Dir::Cache "'"$GITHUB_WORKSPACE"'/.apt-cache";' | sudo tee /etc/apt/apt.conf.d/99-ci-apt-cache.conf
+
+      - name: Run database migrations
+        run: pnpm db:migrate
+
+      - name: Cache Playwright Browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
@@ -141,11 +154,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-playwright-
 
-      - name: Install Playwright browsers
+      - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      - name: Fix apt cache permissions for saving
+        run: sudo chown -R "$(whoami):$(whoami)" "$GITHUB_WORKSPACE/.apt-cache"
+
       - name: Run Playwright tests
-        run: pnpm test
+        run: npx playwright test
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

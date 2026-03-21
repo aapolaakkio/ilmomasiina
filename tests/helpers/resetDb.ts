@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import { db } from "./db";
+import { db } from "@/db";
 
 // All tables in truncation order (respecting FK constraints).
 const TABLES = [
