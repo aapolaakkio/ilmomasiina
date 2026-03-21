@@ -1,7 +1,5 @@
-import nextEnv from "@next/env";
+import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
-
-nextEnv.loadEnvConfig(process.cwd());
 
 export default defineConfig({
   dialect: "postgresql",
