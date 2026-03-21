@@ -1,11 +1,11 @@
-import { loadEnvConfig } from "@next/env";
+import nextEnv from "@next/env";
 
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import path from "path";
 import { Pool } from "pg";
 
-loadEnvConfig(process.cwd());
+nextEnv.loadEnvConfig(process.cwd());
 
 const client = new Pool({
   connectionString: process.env.DATABASE_URL,
