@@ -251,16 +251,12 @@ export default function EventEditor({ event: initialEvent, isNew, copy, categori
         </Alert>
       )}
 
-      {displayError && (
-        <Alert variant="danger" className="mb-4">
-          {displayError}
-        </Alert>
-      )}
-      {saveSuccessMessage && (
-        <Alert variant="success" className="mb-4">
-          {saveSuccessMessage}
-        </Alert>
-      )}
+      <Alert
+        variant={displayError ? "danger" : "success"}
+        className={`mb-4 ${(displayError ?? saveSuccessMessage) ? "visible" : "invisible"}`}
+      >
+        {displayError ?? saveSuccessMessage ?? "\u00A0"}
+      </Alert>
 
       {editConflict && (
         <EditorEditConflictAlert
