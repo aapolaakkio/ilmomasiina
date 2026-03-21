@@ -114,5 +114,7 @@ export default defineConfig({
     command: "pnpm dev",
     url: "http://localhost:3000/",
     reuseExistingServer: true,
+    stdout: "pipe",
+    stderr: "pipe",
   },
 });

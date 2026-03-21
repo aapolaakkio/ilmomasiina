@@ -84,7 +84,6 @@ jobs:
           - 5432:5432
 
     env:
-      SKIP_ENV_VALIDATION: "true"
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ilmomasiina_test
       NEW_EDIT_TOKEN_SECRET: ci-test-edit-token-secret
