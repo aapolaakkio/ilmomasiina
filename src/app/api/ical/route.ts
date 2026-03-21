@@ -54,7 +54,7 @@ export async function GET(_request: NextRequest, _context: RouteContext<"/api/ic
       description: event.description ?? undefined,
       location: event.location ?? undefined,
       categories: event.category ? [event.category] : undefined,
-      url: `${env.BASE_URL}events/${event.slug}`,
+      url: `${env.BASE_URL}/event/${event.slug}`,
     })),
   );
 
