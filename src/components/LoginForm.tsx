@@ -3,13 +3,13 @@
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
-import { signInAction } from "@/actions/signIn";
+import { signInAction, signInWithCredentialsAction } from "@/actions/signIn";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 
-type Props = { initialSetup: boolean };
+type Props = { initialSetup: boolean; testCredentialsEnabled?: boolean };
 
-export default function LoginForm({ initialSetup }: Props) {
+export default function LoginForm({ initialSetup, testCredentialsEnabled }: Props) {
   const t = useTranslations("login");
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
@@ -52,6 +52,24 @@ export default function LoginForm({ initialSetup }: Props) {
               {t("submit")}
             </Button>
           </form>
+          {testCredentialsEnabled && (
+            <form action={signInWithCredentialsAction} className="mt-4 border-t border-gray-200 pt-4">
+              <label htmlFor="test-credentials-email" className="mb-1 block text-sm font-medium text-gray-700">
+                Test login
+              </label>
+              <input
+                id="test-credentials-email"
+                name="email"
+                type="email"
+                required
+                placeholder="admin@test.com"
+                className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              />
+              <Button type="submit" variant="secondary" className="w-full">
+                Sign in with test credentials
+              </Button>
+            </form>
+          )}
         </div>
       </div>
     </div>

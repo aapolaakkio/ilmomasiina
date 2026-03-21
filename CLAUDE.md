@@ -5,7 +5,6 @@
 - `pnpm lint`: Lint all files using Oxlint.
 - `pnpm typecheck`: Run TypeScript type checking.
 - `pnpm test`: Run all Playwright tests.
-- `pnpm test:api`: Run API tests only.
 - `pnpm test:e2e`: Run E2E browser tests only.
 
 # Code style
