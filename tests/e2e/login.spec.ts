@@ -4,9 +4,6 @@ import { resetDb } from "../helpers/resetDb";
 import { seedAdminUser } from "../helpers/seed";
 import { signInAsTestUser } from "../helpers/testSession";
 
-// These tests use their own auth state (not the admin storageState).
-test.use({ storageState: { cookies: [], origins: [] } });
-
 test.beforeEach(async () => {
   await resetDb();
 });

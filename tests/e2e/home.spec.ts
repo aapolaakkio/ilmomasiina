@@ -3,9 +3,6 @@ import { test, expect } from "@playwright/test";
 import { resetDb } from "../helpers/resetDb";
 import { seedAdminUser, seedEvent } from "../helpers/seed";
 
-// Use unauthenticated state for public pages.
-test.use({ storageState: { cookies: [], origins: [] } });
-
 test.beforeEach(async () => {
   await resetDb();
   // Seed an admin user so the app doesn't show initial setup page.

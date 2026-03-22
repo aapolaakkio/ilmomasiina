@@ -3,9 +3,6 @@ import { expect, test } from "@playwright/test";
 import { resetDb } from "../helpers/resetDb";
 import { seedAdminUser, seedFullEvent, seedQuota, seedSignup } from "../helpers/seed";
 
-// Public pages — no auth needed.
-test.use({ storageState: { cookies: [], origins: [] } });
-
 test.beforeEach(async () => {
   await resetDb();
   await seedAdminUser();

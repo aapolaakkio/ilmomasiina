@@ -5,9 +5,6 @@ import { seedAdminUser, seedEditorUser, seedEvent, seedEventEditor } from "../he
 import { signInAsTestUser } from "../helpers/testSession";
 
 test.describe("unauthenticated access", () => {
-  // No auth — clear storageState.
-  test.use({ storageState: { cookies: [], origins: [] } });
-
   test.beforeEach(async () => {
     await resetDb();
     await seedAdminUser();
@@ -21,9 +18,6 @@ test.describe("unauthenticated access", () => {
 });
 
 test.describe("editor role access", () => {
-  // Editor signs in via test session API — no storageState.
-  test.use({ storageState: { cookies: [], origins: [] } });
-
   test("editor sees all events in the list; edit and delete only for events they can edit; read-only for others", async ({
     page,
   }) => {

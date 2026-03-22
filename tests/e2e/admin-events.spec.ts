@@ -2,12 +2,12 @@ import { expect, test } from "@playwright/test";
 
 import { resetDb } from "../helpers/resetDb";
 import { seedAdminUser, seedEvent, seedFullEvent } from "../helpers/seed";
+import { signInAsTestUser } from "../helpers/testSession";
 
-// Authenticated as admin via `storageState` in playwright.config.ts (auth.setup.ts).
-
-test.beforeEach(async () => {
+test.beforeEach(async ({ page }) => {
   await resetDb();
   await seedAdminUser("admin@test.com");
+  await signInAsTestUser(page, "admin@test.com");
 });
 
 test.describe("admin event list", () => {
