@@ -10,8 +10,20 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  SKIP_ENV_VALIDATION: true
-  NODE_ENV: production
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ilmomasiina_test
+  NEW_EDIT_TOKEN_SECRET: ci-test-edit-token-secret
+  AUTH_SECRET: ci-test-auth-secret
+  AUTH_GOOGLE_ID: ci-test-google-id
+  AUTH_GOOGLE_SECRET: ci-test-google-secret
+  MAIL_FROM: "Ilmomasiina <test@ilmomasiina.test>"
+  BASE_URL: http://localhost:3000
+  NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT: Ilmomasiina
+  NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT_SHORT: Ilmomasiina
+  NEXT_PUBLIC_BRANDING_FOOTER_HOME_TEXT: Example.com
+  NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK: https://example.com
+  BRANDING_MAIL_FOOTER_TEXT: Ilmomasiina test
+  BRANDING_MAIL_FOOTER_LINK: https://example.com
+  CRON_SECRET: ci-test-cron-secret
 
 jobs:
   lint:
@@ -82,24 +94,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-
-    env:
-      NODE_ENV: test
-      SKIP_ENV_VALIDATION: true
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ilmomasiina_test
-      NEW_EDIT_TOKEN_SECRET: ci-test-edit-token-secret
-      AUTH_SECRET: ci-test-auth-secret
-      AUTH_GOOGLE_ID: ci-test-google-id
-      AUTH_GOOGLE_SECRET: ci-test-google-secret
-      MAIL_FROM: "Ilmomasiina <test@ilmomasiina.test>"
-      BASE_URL: http://localhost:3000
-      NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT: Ilmomasiina
-      NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT_SHORT: Ilmomasiina
-      NEXT_PUBLIC_BRANDING_FOOTER_HOME_TEXT: Example.com
-      NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK: https://example.com
-      BRANDING_MAIL_FOOTER_TEXT: Ilmomasiina test
-      BRANDING_MAIL_FOOTER_LINK: https://example.com
-      CRON_SECRET: ci-test-cron-secret
 
     steps:
       - name: Checkout repository
