@@ -12,13 +12,8 @@ const nextConfig: NextConfig = {
     globalNotFound: true,
   },
   // Server external packages that shouldn't be bundled
-  serverExternalPackages: [
-    "drizzle-orm",
-    "pg",
-    "bcrypt",
-    "nodemailer",
-    "stripe",
-  ],
+  serverExternalPackages: ["drizzle-orm", "pg", "bcrypt", "nodemailer", "stripe"],
+  allowedDevOrigins: ["127.0.0.1"],
 };
 
 const withNextIntl = createNextIntlPlugin();

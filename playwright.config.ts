@@ -2,6 +2,19 @@ import "dotenv/config";
 
 import { defineConfig, devices } from "@playwright/test";
 
+const browserProjects = (name: string, device: (typeof devices)[keyof typeof devices]) => ({
+  name,
+  dependencies: ["setup" as const],
+  testIgnore: "**/auth.setup.ts",
+  use: {
+    ...device,
+    storageState: "tests/.auth/admin.json",
+    contextOptions: {
+      permissions: ["clipboard-read", "clipboard-write"],
+    },
+  },
+});
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -31,90 +44,19 @@ export default defineConfig({
   projects: [
     { name: "setup", testMatch: "**/auth.setup.ts" },
     ...(process.env.CI
-      ? [
-          // In CI, only run Chromium for faster test execution
-          {
-            name: "chromium",
-            dependencies: ["setup"],
-            testIgnore: "**/auth.setup.ts",
-            use: {
-              ...devices["Desktop Chrome"],
-              storageState: "tests/.auth/admin.json",
-              contextOptions: {
-                permissions: ["clipboard-read", "clipboard-write"],
-              },
-            },
-          },
-        ]
+      ? [browserProjects("chromium", devices["Desktop Chrome"])]
       : [
-          // Local development: run all browsers
-          {
-            name: "chromium",
-            dependencies: ["setup"],
-            testIgnore: "**/auth.setup.ts",
-            use: {
-              ...devices["Desktop Chrome"],
-              storageState: "tests/.auth/admin.json",
-              contextOptions: {
-                permissions: ["clipboard-read", "clipboard-write"],
-              },
-            },
-          },
-
-          {
-            name: "firefox",
-            dependencies: ["setup"],
-            testIgnore: "**/auth.setup.ts",
-            use: {
-              ...devices["Desktop Firefox"],
-              storageState: "tests/.auth/admin.json",
-              contextOptions: {
-                permissions: ["clipboard-read", "clipboard-write"],
-              },
-            },
-          },
-
-          {
-            name: "webkit",
-            dependencies: ["setup"],
-            testIgnore: "**/auth.setup.ts",
-            use: {
-              ...devices["Desktop Safari"],
-              storageState: "tests/.auth/admin.json",
-              contextOptions: {
-                permissions: ["clipboard-read", "clipboard-write"],
-              },
-            },
-          },
-
-          /* Test against mobile viewports. */
-          // {
-          //   name: 'Mobile Chrome',
-          //   use: { ...devices['Pixel 5'] },
-          // },
-          // {
-          //   name: 'Mobile Safari',
-          //   use: { ...devices['iPhone 12'] },
-          // },
-
-          /* Test against branded browsers. */
-          // {
-          //   name: 'Microsoft Edge',
-          //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-          // },
-          // {
-          //   name: 'Google Chrome',
-          //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-          // },
+          browserProjects("chromium", devices["Desktop Chrome"]),
+          browserProjects("firefox", devices["Desktop Firefox"]),
+          browserProjects("webkit", devices["Desktop Safari"]),
         ]),
   ],
 
   /* Run your local dev server before starting the tests */
   webServer: {
     command: "pnpm dev",
-    url: "http://localhost:3000/",
-    reuseExistingServer: true,
-    stdout: "pipe",
-    stderr: "pipe",
+    url: "http://localhost:3000/en/",
+    reuseExistingServer: !process.env.CI,
+    timeout: process.env.CI ? 180_000 : 60_000,
   },
 });
