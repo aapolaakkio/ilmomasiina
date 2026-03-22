@@ -2,20 +2,6 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import Stripe from "stripe";
 import { z, ZodType } from "zod";
 
-const booleanFromEnv = z.preprocess((value) => {
-  if (value === "true" || value === "1" || value === true) return true;
-  if (value === "false" || value === "0" || value === false) return false;
-  return value;
-}, z.boolean());
-
-const integerFromEnv = z.preprocess((value) => {
-  if (typeof value === "string") {
-    const parsed = Number.parseInt(value, 10);
-    if (Number.isSafeInteger(parsed)) return parsed;
-  }
-  return value;
-}, z.number().int());
-
 const jsonFromEnv = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((value) => {
     if (typeof value !== "string") return value;
@@ -25,12 +11,6 @@ const jsonFromEnv = <T extends z.ZodTypeAny>(schema: T) =>
       return value;
     }
   }, schema);
-
-const nullableString = z
-  .string()
-  .optional()
-  .transform((value) => value ?? null);
-const nullableInteger = integerFromEnv.optional().transform((value) => value ?? null);
 
 const stripeBrandingSchema: ZodType<Stripe.Checkout.SessionCreateParams.BrandingSettings> = z.strictObject({
   background_color: z.string().optional(),
@@ -86,45 +66,82 @@ const stripeBrandingSchema: ZodType<Stripe.Checkout.SessionCreateParams.Branding
 export const env = createEnv({
   server: {
     NODE_ENV: z.enum(["production", "development", "test", "bench"]).default("development"),
-    DEBUG_DB_LOGGING: booleanFromEnv.default(false),
+    DEBUG_DB_LOGGING: z
+      .string()
+      .optional()
+      .default("false")
+      .transform((value) => value === "true" || value === "1"),
     DATABASE_URL: z.string(),
-    EDIT_TOKEN_SALT: nullableString,
+    EDIT_TOKEN_SALT: z.string().optional(),
     NEW_EDIT_TOKEN_SECRET: z.string(),
     AUTH_SECRET: z.string(),
     AUTH_GOOGLE_ID: z.string(),
     AUTH_GOOGLE_SECRET: z.string(),
-    SESSION_TTL: integerFromEnv.default(10800),
+    SESSION_TTL: z
+      .string()
+      .optional()
+      .default("10800")
+      .transform((value) => parseInt(value, 10)),
     MAIL_FROM: z.string(),
     BRANDING_MAIL_FOOTER_TEXT: z.string(),
     BRANDING_MAIL_FOOTER_LINK: z.string(),
     BRANDING_ICAL_CALENDAR_NAME: z.string().default("Ilmomasiina"),
-    ICAL_UID_DOMAIN: nullableString,
+    ICAL_UID_DOMAIN: z.string().optional(),
     BASE_URL: z.string(),
-    SMTP_HOST: nullableString,
-    SMTP_PORT: nullableInteger,
-    SMTP_TLS: booleanFromEnv.default(false),
-    SMTP_USER: nullableString,
-    SMTP_PASSWORD: nullableString,
-    SIGNUP_CONFIRM_MINS: integerFromEnv.default(30),
-    SIGNUP_CONFIRM_AFTER_CLOSE: booleanFromEnv.default(false),
-    ANONYMIZE_AFTER_DAYS: integerFromEnv.default(180),
-    HIDE_EVENT_AFTER_DAYS: integerFromEnv.default(180),
-    DELETION_GRACE_PERIOD_DAYS: integerFromEnv.default(14),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z
+      .string()
+      .optional()
+      .transform((value) => (value ? parseInt(value, 10) : undefined)),
+    SMTP_TLS: z
+      .string()
+      .optional()
+      .transform((value) => value === "true" || value === "1"),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASSWORD: z.string().optional(),
+    SIGNUP_CONFIRM_MINS: z
+      .string()
+      .optional()
+      .default("30")
+      .transform((value) => parseInt(value, 10)),
+    SIGNUP_CONFIRM_AFTER_CLOSE: z
+      .string()
+      .optional()
+      .transform((value) => value === "true" || value === "1"),
+    ANONYMIZE_AFTER_DAYS: z
+      .string()
+      .optional()
+      .default("180")
+      .transform((value) => parseInt(value, 10)),
+    HIDE_EVENT_AFTER_DAYS: z
+      .string()
+      .optional()
+      .default("180")
+      .transform((value) => parseInt(value, 10)),
+    DELETION_GRACE_PERIOD_DAYS: z
+      .string()
+      .optional()
+      .default("14")
+      .transform((value) => parseInt(value, 10)),
     CURRENCY: z.string().default("EUR"),
-    STRIPE_SECRET_KEY: nullableString,
-    STRIPE_WEBHOOK_SECRET: nullableString,
-    STRIPE_CHECKOUT_EXPIRY_MINS: integerFromEnv.default(30),
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    STRIPE_CHECKOUT_EXPIRY_MINS: z
+      .string()
+      .optional()
+      .default("30")
+      .transform((value) => parseInt(value, 10)),
     STRIPE_BRANDING_JSON: jsonFromEnv(stripeBrandingSchema).default({}),
     CRON_SECRET: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT: z.string().default("Ilmomasiina"),
     NEXT_PUBLIC_BRANDING_HEADER_TITLE_TEXT_SHORT: z.string().default("Ilmomasiina"),
-    NEXT_PUBLIC_BRANDING_FOOTER_GDPR_TEXT: nullableString,
-    NEXT_PUBLIC_BRANDING_FOOTER_GDPR_LINK: nullableString,
-    NEXT_PUBLIC_BRANDING_FOOTER_HOME_TEXT: nullableString,
-    NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK: nullableString,
-    NEXT_PUBLIC_BRANDING_CANCELLATION_LINK: nullableString,
+    NEXT_PUBLIC_BRANDING_FOOTER_GDPR_TEXT: z.string().optional(),
+    NEXT_PUBLIC_BRANDING_FOOTER_GDPR_LINK: z.string().optional(),
+    NEXT_PUBLIC_BRANDING_FOOTER_HOME_TEXT: z.string().optional(),
+    NEXT_PUBLIC_BRANDING_FOOTER_HOME_LINK: z.string().optional(),
+    NEXT_PUBLIC_BRANDING_CANCELLATION_LINK: z.string().optional(),
     NEXT_PUBLIC_DEFAULT_LANGUAGE: z.enum(["fi", "sv", "en"]).default("fi"),
     NEXT_PUBLIC_APP_TIMEZONE: z.string().default("Europe/Helsinki"),
   },
@@ -171,5 +188,5 @@ export const env = createEnv({
     NEXT_PUBLIC_APP_TIMEZONE: process.env.NEXT_PUBLIC_APP_TIMEZONE,
   },
   skipValidation: process.env.SKIP_ENV_VALIDATION === "true" || process.env.SKIP_ENV_VALIDATION === "1",
-  emptyStringAsUndefined: false,
+  emptyStringAsUndefined: true,
 });
