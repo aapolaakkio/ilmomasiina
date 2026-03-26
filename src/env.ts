@@ -61,12 +61,6 @@ const stripeBrandingSchema: ZodType<Stripe.Checkout.SessionCreateParams.Branding
     .optional(),
 });
 
-/** parseInt that returns a fallback when the input is undefined (e.g. when SKIP_ENV_VALIDATION is set). */
-const safeParseInt = (fallback: number) => (value: string | undefined) => {
-  const parsed = parseInt(value ?? "", 10);
-  return Number.isNaN(parsed) ? fallback : parsed;
-};
-
 // --- env ---
 
 export const env = createEnv({
@@ -83,7 +77,11 @@ export const env = createEnv({
     AUTH_SECRET: z.string(),
     AUTH_GOOGLE_ID: z.string(),
     AUTH_GOOGLE_SECRET: z.string(),
-    SESSION_TTL: z.string().optional().default("10800").transform(safeParseInt(10800)),
+    SESSION_TTL: z
+      .string()
+      .optional()
+      .default("10800")
+      .transform((value) => parseInt(value, 10)),
     MAIL_FROM: z.string(),
     BRANDING_MAIL_FOOTER_TEXT: z.string(),
     BRANDING_MAIL_FOOTER_LINK: z.string(),
@@ -94,29 +92,45 @@ export const env = createEnv({
     SMTP_PORT: z
       .string()
       .optional()
-      .transform((value) => {
-        if (!value) return undefined;
-        const parsed = parseInt(value, 10);
-        return Number.isNaN(parsed) ? undefined : parsed;
-      }),
+      .transform((value) => (value ? parseInt(value, 10) : undefined)),
     SMTP_TLS: z
       .string()
       .optional()
       .transform((value) => value === "true" || value === "1"),
     SMTP_USER: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
-    SIGNUP_CONFIRM_MINS: z.string().optional().default("30").transform(safeParseInt(30)),
+    SIGNUP_CONFIRM_MINS: z
+      .string()
+      .optional()
+      .default("30")
+      .transform((value) => parseInt(value, 10)),
     SIGNUP_CONFIRM_AFTER_CLOSE: z
       .string()
       .optional()
       .transform((value) => value === "true" || value === "1"),
-    ANONYMIZE_AFTER_DAYS: z.string().optional().default("180").transform(safeParseInt(180)),
-    HIDE_EVENT_AFTER_DAYS: z.string().optional().default("180").transform(safeParseInt(180)),
-    DELETION_GRACE_PERIOD_DAYS: z.string().optional().default("14").transform(safeParseInt(14)),
+    ANONYMIZE_AFTER_DAYS: z
+      .string()
+      .optional()
+      .default("180")
+      .transform((value) => parseInt(value, 10)),
+    HIDE_EVENT_AFTER_DAYS: z
+      .string()
+      .optional()
+      .default("180")
+      .transform((value) => parseInt(value, 10)),
+    DELETION_GRACE_PERIOD_DAYS: z
+      .string()
+      .optional()
+      .default("14")
+      .transform((value) => parseInt(value, 10)),
     CURRENCY: z.string().default("EUR"),
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
-    STRIPE_CHECKOUT_EXPIRY_MINS: z.string().optional().default("30").transform(safeParseInt(30)),
+    STRIPE_CHECKOUT_EXPIRY_MINS: z
+      .string()
+      .optional()
+      .default("30")
+      .transform((value) => parseInt(value, 10)),
     STRIPE_BRANDING_JSON: jsonFromEnv(stripeBrandingSchema).default({}),
     CRON_SECRET: z.string().min(1),
   },
