@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { generateEditToken } from "../helpers/editToken";
 import { resetDb } from "../helpers/resetDb";
@@ -22,6 +22,9 @@ test("user can delete their signup", async ({ page }) => {
 
   await page.goto(`/en/signup/${signup.id}/${editToken}`);
 
+  // Verify the signup is loaded before deleting
+  await expect(page.locator("#signup-firstName")).toHaveValue("Delete");
+
   // First click shows confirmation
   await page.getByRole("button", { name: /delete signup/i }).click();
   // Second click confirms deletion
@@ -29,4 +32,7 @@ test("user can delete their signup", async ({ page }) => {
 
   // Should redirect to event page after deletion
   await page.waitForURL(`**/event/${event.slug}`);
+
+  // Verify the deleted signup's name no longer appears in the signups list
+  await expect(page.getByText("Delete Me")).not.toBeVisible();
 });

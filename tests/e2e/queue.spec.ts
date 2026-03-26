@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { generateEditToken } from "../helpers/editToken";
 import { resetDb } from "../helpers/resetDb";
@@ -31,6 +31,9 @@ test("new signup goes to queue when quota is full", async ({ page }) => {
 
   // After saving, the event page should show queue info
   await page.waitForURL(`**/event/${event.slug}`);
+
+  // Verify the signup ended up in the queue (heading shows count)
+  await expect(page.getByRole("heading", { name: /In queue: 1/i })).toBeVisible();
 });
 
 test("queue signup is promoted when in-quota signup is deleted", async ({ page }) => {
@@ -47,12 +50,17 @@ test("queue signup is promoted when in-quota signup is deleted", async ({ page }
     email: "first@test.com",
   });
   // Second signup (should go to queue — created later via createdAt)
-  await seedSignup(quota.id, {
+  const secondSignup = await seedSignup(quota.id, {
     firstName: "Second",
     lastName: "Person",
     email: "second@test.com",
     createdAt: new Date(Date.now() + 1000),
   });
+
+  // Verify second signup is initially in the queue
+  const secondEditToken = generateEditToken(secondSignup.id);
+  await page.goto(`/en/signup/${secondSignup.id}/${secondEditToken}`);
+  await expect(page.getByText(/in the queue/i)).toBeVisible();
 
   // Delete the first signup
   const editToken = generateEditToken(firstSignup.id);
@@ -62,6 +70,11 @@ test("queue signup is promoted when in-quota signup is deleted", async ({ page }
   await page.getByRole("button", { name: /click again to confirm/i }).click();
 
   // After deletion, the second signup should be promoted to the quota.
-  // Verify on the event page that signups are shown correctly.
   await page.waitForURL(`**/event/${event.slug}`);
+
+  // The event page should no longer show any queue section
+  await expect(page.getByRole("heading", { name: /In queue/i })).not.toBeVisible();
+
+  // Second signup should now be visible in the quota section
+  await expect(page.getByText("Second")).toBeVisible();
 });

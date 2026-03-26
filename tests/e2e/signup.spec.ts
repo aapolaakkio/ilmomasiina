@@ -142,7 +142,8 @@ test.describe("signup to full quota", () => {
     await page.locator("#signup-email").fill("queue@example.com");
     await page.getByRole("button", { name: /save/i }).click();
 
-    // After saving, verify queue position is shown
+    // After saving, verify queue info is shown on the event page
     await page.waitForURL(`**/event/${event.slug}`);
+    await expect(page.getByRole("heading", { name: /In queue: 1/i })).toBeVisible();
   });
 });
