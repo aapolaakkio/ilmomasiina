@@ -36,7 +36,16 @@ ENV NEXT_PUBLIC_DEFAULT_LANGUAGE=${NEXT_PUBLIC_DEFAULT_LANGUAGE}
 ENV NEXT_PUBLIC_APP_TIMEZONE=${NEXT_PUBLIC_APP_TIMEZONE}
 ENV NODE_ENV=${NODE_ENV}
 
+ARG SKIP_ENV_VALIDATION
+ARG DATABASE_URL
+ENV SKIP_ENV_VALIDATION=${SKIP_ENV_VALIDATION}
+ENV DATABASE_URL=${DATABASE_URL}
 RUN corepack enable pnpm && pnpm run build
+
+# Remove prerendered RSC/meta files that contain build-time data
+# https://github.com/vercel/next.js/discussions/46544#discussioncomment-11136615
+RUN find . -type f -name '*.meta' -exec rm -f {} \;
+RUN find . -type f -name '*.rsc' -exec rm -f {} \;
 
 # Production image
 FROM base AS runner

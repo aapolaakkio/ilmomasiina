@@ -173,6 +173,21 @@ jobs:
     needs: [lint, test]
     if: github.ref == 'refs/heads/dev'
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ilmomasiina_build
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -203,7 +218,11 @@ jobs:
         with:
           context: .
           push: true
+          network: host
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SKIP_ENV_VALIDATION=true
+            DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ilmomasiina_build
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
