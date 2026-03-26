@@ -3,9 +3,12 @@ import { randomBytes } from "crypto";
 import {
   events,
   eventEditors,
+  eventLanguages,
   PaymentMode,
+  questionLanguages,
   questions,
   QuestionType,
+  quotaLanguages,
   quotas,
   signups,
   UserRole,
@@ -144,6 +147,34 @@ export async function seedSignup(quotaId: QuotaID, overrides: SignupOverrides = 
 
 export async function seedEventEditor(eventId: EventID, userId: UserID) {
   await db.insert(eventEditors).values({ eventId, userId });
+}
+
+// --- Language versions ---
+
+export async function seedEventLanguage(
+  eventId: EventID,
+  language: string,
+  overrides: Partial<Omit<typeof eventLanguages.$inferInsert, "eventId" | "language">> = {},
+) {
+  await db.insert(eventLanguages).values({
+    eventId,
+    language,
+    title: overrides.title ?? "",
+    ...overrides,
+  });
+}
+
+export async function seedQuotaLanguage(quotaId: QuotaID, language: string, title: string) {
+  await db.insert(quotaLanguages).values({ quotaId, language, title });
+}
+
+export async function seedQuestionLanguage(
+  questionId: QuestionID,
+  language: string,
+  question: string,
+  options?: string[] | null,
+) {
+  await db.insert(questionLanguages).values({ questionId, language, question, options: options ?? null });
 }
 
 // --- Convenience ---
