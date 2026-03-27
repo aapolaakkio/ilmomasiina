@@ -7,13 +7,13 @@ import SignupButton from "@/components/SignupButton";
 import { env } from "@/env";
 import { appLocaleToBcp47 } from "@/i18n/intlLocale";
 import { Link } from "@/i18n/navigation";
-import { getAdminSession } from "@/auth";
 import { getLocalizedEvent } from "@/lib/localizedEvent";
 import { getSignupsByQuota, stringifyAnswer } from "@/lib/signupUtils";
-import { Button } from "@/components/ui/Button";
 import { SignupStatus } from "@/db/schema";
 import { formatAppDateTime } from "@/lib/intlDateTime";
 import { getEventBySlug, getPublicEventSlugsForStaticParams } from "@/services/events/getEventDetails";
+import { Suspense } from "react";
+import AdminEditLink from "@/components/AdminEditLink";
 
 export async function generateStaticParams() {
   return getPublicEventSlugsForStaticParams();
@@ -56,7 +56,6 @@ export default async function SingleEventPage({ params }: PageProps<"/[locale]/e
   const signupsByQuota = getSignupsByQuota(localizedEvent);
   const bcp47Locale = appLocaleToBcp47(locale);
   const publicQuestions = localizedEvent.questions.filter((q) => q.public);
-  const adminSession = await getAdminSession();
 
   return (
     <>
@@ -67,13 +66,9 @@ export default async function SingleEventPage({ params }: PageProps<"/[locale]/e
         <div className="md:col-span-2">
           <div className="mb-4 flex items-center gap-3">
             <h1 className="text-2xl font-bold">{localizedEvent.title}</h1>
-            {adminSession && (
-              <Link href={`/admin/edit/${event.id}`}>
-                <Button variant="outline" size="small">
-                  {t("editEvent")}
-                </Button>
-              </Link>
-            )}
+            <Suspense>
+              <AdminEditLink event={event} />
+            </Suspense>
           </div>
           <div className="mb-6 space-y-1 border-y border-gray-200 py-4 text-sm text-gray-700">
             {localizedEvent.category && (
