@@ -67,6 +67,8 @@ Anything that _requires frontend rebuild_ needs to be passed as a build arg and 
 
 ```
 docker build \
+  --build-arg SKIP_ENV_VALIDATION=1 \
+  --build-arg DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/ilmomasiina_build \
   --build-arg BRANDING_HEADER_TITLE_TEXT='Kilta ry ilmomasiina' \
   --build-arg BRANDING_HEADER_TITLE_TEXT_SHORT='Ilmomasiina' \
   --build-arg BRANDING_FOOTER_GDPR_TEXT='Tietosuoja' \
@@ -199,12 +201,14 @@ B-tier App Service Plans have been tried and at least B1 doesn't seem to handle 
    - This requires connecting to the database manually:
      1. From the _Networking_ page, under _Firewall rules_, add a rule for _current client IP address_ and save. Wait a bit for the changes to apply.
      2. From the _Connect_ tab, copy the `psql` command to your shell:
+
         ```shell
         psql -h {postgres-server-name}.postgres.database.azure.com -p 5432 -U {admin_user_name} {db_name}
         ```
 
         - This all-in-one command is under _Connect from browser or locally_. You can also use the variant with environment variables.
         - The portal was a bit buggy for me and I needed to add the database name manually.
+
      3. Create a new user for Ilmomasiina:
         ```sql
         CREATE USER ilmo_user WITH PASSWORD '<add a password here>';
@@ -216,6 +220,7 @@ B-tier App Service Plans have been tried and at least B1 doesn't seem to handle 
      5. Exit the PostgreSQL session with `exit`.
      6. Try signing in with your new user: replace your admin username in the `psql`
         command with the new user (above: `ilmo_user`).
+
 5. Create an _Azure Web App_ (resource category _Web_).
    - _Basics_ step: ([screenshot](./screenshots/web-app-basics.png))
      - _Web App name:_ Choose freely, will appear in your URLs as `https://{your-app-name}.azurewebsites.net/`.
@@ -268,6 +273,7 @@ If you don't want to use Docker Compose, or already have a database, you can run
 2. **Optional:** Make [customizations](#customization) in other files if necessary.
    - After this, build your customized image via [GitHub Actions](#github-actions) or [locally](#local-docker-build).
 3. Run the container manually or with e.g. `systemd`.
+
    ```
    docker run -it --rm --init --env-file=.env -p 3000:3000 ghcr.io/tietokilta/ilmomasiina:latest
    ```
@@ -278,6 +284,7 @@ If you don't want to use Docker Compose, or already have a database, you can run
      - Non-customized Tietokilta image, pinned version: `ghcr.io/tietokilta/ilmomasiina:2.0.0` (example)
      - Customized image, built in CI or uploaded by you: `ghcr.io/yourorg/ilmomasiina:latest` (example)
      - Locally built image: `ilmomasiina` (what was after `-t` in `docker build`)
+
 4. Access the app at <http://localhost:3000>.
 
 ### Running without Docker

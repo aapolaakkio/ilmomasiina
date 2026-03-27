@@ -59,7 +59,12 @@ The app will be available at http://localhost:3000.
 Build and run with Docker:
 
 ```sh
-docker build -t ilmomasiina .
+# Postgres must be running with migrations applied (`pnpm db:migrate`). Use host.docker.internal
+# on Docker Desktop; on Linux add: --add-host=host.docker.internal:host-gateway
+docker build -t ilmomasiina \
+  --build-arg SKIP_ENV_VALIDATION=1 \
+  --build-arg DATABASE_URL=postgresql://user:pass@host.docker.internal:5432/dbname \
+  .
 docker run -p 3000:3000 --env-file .env ilmomasiina
 ```
 

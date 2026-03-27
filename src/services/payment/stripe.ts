@@ -12,7 +12,7 @@ import { OnlinePaymentsDisabled, PaymentInProgress, PaymentRateLimited, SignupAl
 
 const stripeClient: Stripe | null = env.STRIPE_SECRET_KEY
   ? new Stripe(env.STRIPE_SECRET_KEY, {
-      apiVersion: "2026-02-25.clover",
+      apiVersion: "2026-03-25.dahlia",
       typescript: true,
     })
   : null;
@@ -53,7 +53,7 @@ export async function createCheckoutSession(signup: CheckoutSignup, payment: Che
   try {
     return await stripe.checkout.sessions.create({
       mode: "payment",
-      ui_mode: "hosted",
+      ui_mode: "hosted" as Stripe.Checkout.SessionCreateParams.UiMode,
       line_items: lineItems,
       allow_promotion_codes: true,
       customer_email: signup.email ?? undefined,
