@@ -252,7 +252,7 @@ export default async function SingleEventPage({ params }: PageProps<"/[locale]/e
                           <td className="group relative px-3 py-2 whitespace-nowrap">
                             {formatSignupTime(signup.createdAt, locale)}
                             <span className="invisible group-hover:visible text-gray-400">
-                              .{String(new Date(signup.createdAt).getMilliseconds()).padStart(3, "0")}
+                              .{String(signup.createdAt.getMilliseconds()).padStart(3, "0")}
                             </span>
                           </td>
                         </tr>

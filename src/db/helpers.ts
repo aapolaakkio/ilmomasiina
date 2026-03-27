@@ -15,7 +15,7 @@ interface EventDefaultFields {
   price: string | null;
   location: string | null;
   webpageUrl: string | null;
-  verificationEmail: string | null;
+  verificationEmail?: string | null;
 }
 
 /**

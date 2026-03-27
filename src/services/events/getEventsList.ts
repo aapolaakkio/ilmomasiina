@@ -59,7 +59,6 @@ const eventListColumns = {
   price: true,
   location: true,
   webpageUrl: true,
-  verificationEmail: true,
   date: true,
   endDate: true,
   registrationStartDate: true,
