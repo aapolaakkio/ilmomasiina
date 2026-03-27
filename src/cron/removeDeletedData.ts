@@ -5,7 +5,7 @@ import { db } from "../db";
 import { answers, events, questions, quotas, signups } from "../db/schema";
 
 export default async function removeDeletedData() {
-  const cutoff = new Date(Date.now() - env.DELETION_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+  const cutoff = new Date(Date.now() - Number(env.DELETION_GRACE_PERIOD_DAYS || 14) * 24 * 60 * 60 * 1000);
 
   // Hard-delete events past the grace period.
   // All children (quotas, questions, signups, answers, payments, language rows) cascade automatically.

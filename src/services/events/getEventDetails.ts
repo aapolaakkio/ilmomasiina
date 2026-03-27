@@ -10,7 +10,7 @@ import { answers, signups } from "../../db/schema";
 import { assignSignupPositions, computePositionsFromEvent } from "../signups/assignSignupPositions";
 
 async function getEventDetailsForUser(eventSlug: EventSlug) {
-  const hideBeforeDate = new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000);
+  const hideBeforeDate = new Date(Date.now() - Number(env.HIDE_EVENT_AFTER_DAYS || 180) * 24 * 60 * 60 * 1000);
 
   // Single query: fetch the event with all related data in one go
   const fullEvent = await db.query.events.findFirst({
@@ -149,7 +149,7 @@ async function getEventDetailsForUser(eventSlug: EventSlug) {
 
 /** Slugs for published events within the same visibility window as `getEventDetailsForUser` (for `generateStaticParams`). */
 export async function getPublicEventSlugsForStaticParams() {
-  const hideBeforeDate = new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000);
+  const hideBeforeDate = new Date(Date.now() - Number(env.HIDE_EVENT_AFTER_DAYS || 180) * 24 * 60 * 60 * 1000);
   return db.query.events.findMany({
     where: {
       deletedAt: { isNull: true },

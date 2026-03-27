@@ -17,7 +17,7 @@ function isUserVisibleEvent(event: {
   endDate: Date | null;
 }) {
   if (event.draft) return false;
-  const cutoff = new Date(Date.now() - env.HIDE_EVENT_AFTER_DAYS * 24 * 60 * 60 * 1000);
+  const cutoff = new Date(Date.now() - Number(env.HIDE_EVENT_AFTER_DAYS || 180) * 24 * 60 * 60 * 1000);
   return (
     (event.registrationEndDate != null && event.registrationEndDate > cutoff) ||
     (event.date != null && event.date > cutoff) ||

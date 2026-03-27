@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const token = await encode({
     secret: env.AUTH_SECRET,
     salt: "authjs.session-token",
-    maxAge: env.SESSION_TTL,
+    maxAge: Number(env.SESSION_TTL || 10800),
     token: {
       sub: String(dbUser.id),
       email,

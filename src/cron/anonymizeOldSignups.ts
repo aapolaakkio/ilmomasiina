@@ -9,7 +9,7 @@ const redactedEmail = "deleted@gdpr.invalid";
 const redactedAnswer = "Deleted";
 
 export default async function anonymizeOldSignups() {
-  const redactOlderThan = new Date(Date.now() - env.ANONYMIZE_AFTER_DAYS * 24 * 60 * 60 * 1000);
+  const redactOlderThan = new Date(Date.now() - Number(env.ANONYMIZE_AFTER_DAYS || 180) * 24 * 60 * 60 * 1000);
 
   // Find confirmed signups from old events that aren't already anonymized
   const toAnonymize = await db.query.signups.findMany({

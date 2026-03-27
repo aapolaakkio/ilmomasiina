@@ -22,13 +22,13 @@ export function isConfirmed(signup: Pick<SignupRow, "confirmedAt">) {
 
 /** The time this signup must be confirmed by before it expires. */
 export function getConfirmableUntil(signup: Pick<SignupRow, "createdAt">) {
-  return new Date(signup.createdAt.getTime() + env.SIGNUP_CONFIRM_MINS * 60 * 1000);
+  return new Date(signup.createdAt.getTime() + Number(env.SIGNUP_CONFIRM_MINS || 30) * 60 * 1000);
 }
 
 /** The time this signup is editable until, regardless of signups closing. */
 export function getEditableAtLeastUntil(signup: Pick<SignupRow, "createdAt">) {
   if (env.SIGNUP_CONFIRM_AFTER_CLOSE) {
-    return new Date(signup.createdAt.getTime() + env.SIGNUP_CONFIRM_MINS * 60 * 1000);
+    return new Date(signup.createdAt.getTime() + Number(env.SIGNUP_CONFIRM_MINS || 30) * 60 * 1000);
   }
   return signup.createdAt;
 }
