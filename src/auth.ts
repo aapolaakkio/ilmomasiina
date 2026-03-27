@@ -16,7 +16,7 @@ declare module "next-auth" {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
-  session: { strategy: "jwt", maxAge: env.SESSION_TTL },
+  session: { strategy: "jwt", maxAge: Number(env.SESSION_TTL || 10800) },
   pages: {
     signIn: "/login",
     error: "/login",
