@@ -1,6 +1,6 @@
 import { env } from "@/env";
+import { getTranslations } from "next-intl/server";
 
-import { t } from "../i18n/server";
 import mailTransporter from "./config";
 import {
   type ConfirmationMailParams,
@@ -49,9 +49,12 @@ export default class EmailService {
   static async sendConfirmationMail(to: string, language: string | null, params: ConfirmationMailParams) {
     try {
       const { html, lng } = await renderTemplate("confirmation", language, params);
-      const subjectKey =
-        params.type === "signup" ? "emails.confirmationSignupSubject" : "emails.confirmationEditSubject";
-      await EmailService.send(to, t(subjectKey, { lng, event: params.event.title }), html);
+      const t = await getTranslations({ locale: lng, namespace: "emails" });
+      const subject =
+        params.type === "signup"
+          ? t("confirmationSignupSubject", { event: params.event.title })
+          : t("confirmationEditSubject", { event: params.event.title });
+      await EmailService.send(to, subject, html);
     } catch (error) {
       console.error(error);
     }
@@ -60,7 +63,8 @@ export default class EmailService {
   static async sendPaymentConfirmationMail(to: string, language: string | null, params: PaymentMailParams) {
     try {
       const { html, lng } = await renderTemplate("payment", language, params);
-      await EmailService.send(to, t("emails.paymentSubject", { lng, event: params.event.title }), html);
+      const t = await getTranslations({ locale: lng, namespace: "emails" });
+      await EmailService.send(to, t("paymentSubject", { event: params.event.title }), html);
     } catch (error) {
       console.error(error);
     }
@@ -69,7 +73,8 @@ export default class EmailService {
   static async sendNewUserMail(to: string, language: string | null, params: NewUserMailParams) {
     try {
       const { html, lng } = await renderTemplate("newUser", language, params);
-      await EmailService.send(to, t("emails.newUserSubject", { lng }), html);
+      const t = await getTranslations({ locale: lng, namespace: "emails" });
+      await EmailService.send(to, t("newUserSubject"), html);
     } catch (error) {
       console.error(error);
     }
@@ -78,7 +83,8 @@ export default class EmailService {
   static async sendPromotedFromQueueMail(to: string, language: string | null, params: PromotedFromQueueMailParams) {
     try {
       const { html, lng } = await renderTemplate("queueMail", language, params);
-      await EmailService.send(to, t("emails.promotedFromQueueSubject", { lng, event: params.event.title }), html);
+      const t = await getTranslations({ locale: lng, namespace: "emails" });
+      await EmailService.send(to, t("promotedFromQueueSubject", { event: params.event.title }), html);
     } catch (error) {
       console.error(error);
     }

@@ -12,7 +12,7 @@ import type { ConfirmationMailData, PaymentMailData, PromotedMailData } from "@/
 import { env } from "@/env";
 import { getEffectivePaymentStatus } from "../db/computed";
 import { getQuestionForLanguage, getTitleForLanguage } from "../db/helpers";
-import { t } from "../i18n/server";
+import { getTranslations } from "next-intl/server";
 import { formatDateInTimezone } from "./formatDate";
 import { generateToken } from "../services/signups/editTokens";
 import EmailService, { ConfirmationMailParams, PaymentMailParams, PromotedFromQueueMailParams } from ".";
@@ -64,9 +64,8 @@ export const sendPromotedFromQueueMail = sendSynchronouslyInTest(
     if (event.deletedAt) return;
     const lang = signup.language ?? env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
 
-    const date =
-      event.date &&
-      formatDateInTimezone(event.date, env.NEXT_PUBLIC_APP_TIMEZONE, t("currencyFormat.locale", { lng: lang }));
+    const fmt = await getTranslations({ locale: lang, namespace: "currencyFormat" });
+    const date = event.date && formatDateInTimezone(event.date, env.NEXT_PUBLIC_APP_TIMEZONE, fmt("locale"));
 
     const params: PromotedFromQueueMailParams = {
       event: {
@@ -118,9 +117,8 @@ export const sendSignupConfirmationMail = sendSynchronouslyInTest(
       })
       .filter((x): x is { label: string; answer: string } => x !== null);
 
-    const date =
-      event.date &&
-      formatDateInTimezone(event.date, env.NEXT_PUBLIC_APP_TIMEZONE, t("currencyFormat.locale", { lng: lang }));
+    const fmt = await getTranslations({ locale: lang, namespace: "currencyFormat" });
+    const date = event.date && formatDateInTimezone(event.date, env.NEXT_PUBLIC_APP_TIMEZONE, fmt("locale"));
 
     const params: ConfirmationMailParams = {
       name: fullName,
@@ -162,7 +160,8 @@ export const sendPaymentConfirmationMail = sendSynchronouslyInTest(
 
     const lang = signup.language ?? env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
 
-    const priceFormatter = new Intl.NumberFormat(t("currencyFormat.locale", { lng: lang }), {
+    const fmt = await getTranslations({ locale: lang, namespace: "currencyFormat" });
+    const priceFormatter = new Intl.NumberFormat(fmt("locale"), {
       style: "currency",
       currency: payment.currency,
       minimumFractionDigits: 2,
