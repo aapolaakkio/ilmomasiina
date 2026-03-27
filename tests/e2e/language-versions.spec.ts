@@ -182,7 +182,7 @@ test.describe("public page language rendering", () => {
   });
 
   test("event page falls back to default language when translation is missing", async ({ page }) => {
-    const { event } = await seedFullEvent(
+    await seedFullEvent(
       { title: "Vain suomeksi", slug: "no-english", defaultLanguage: "fi", description: "Ei käännöstä" },
       { title: "Kiintiö", size: 10 },
     );
