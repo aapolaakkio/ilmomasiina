@@ -266,7 +266,9 @@ export const signupUpdateResponse = ownerEditableSignupAttributes.extend(ownerDy
 export type SignupUpdateResponse = z.infer<typeof signupUpdateResponse>;
 
 /** Schema for signups in event details from the public API. */
-const publicSignupSchema = publicEditableSignupAttributes.extend(publicDynamicSignupAttributes.shape);
+const publicSignupSchema = publicEditableSignupAttributes.extend(publicDynamicSignupAttributes.shape).extend({
+  id: signupID,
+});
 
 /** Schema for signups in event details from the admin API. */
 export const adminSignupSchema = adminEditableSignupAttributes

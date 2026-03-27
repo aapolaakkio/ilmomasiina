@@ -218,7 +218,7 @@ export default async function SingleEventPage({ params }: PageProps<"/[locale]/e
                     <tbody>
                       {quota.signups.map((signup, i) => (
                         <tr
-                          key={signup.createdAt.toISOString()}
+                          key={signup.id}
                           className={`border-b border-gray-100 ${!signup.confirmed ? "text-gray-400" : ""}`}
                         >
                           <td className="px-3 py-2">
