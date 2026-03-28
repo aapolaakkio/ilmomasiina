@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidateTag, updateTag } from "next/cache";
+
 import { requireEventAccessBySignup } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
 import { adminSignupUpdateBody, signupIdInput } from "@/db/zod";
@@ -14,5 +16,15 @@ export const updateSignupAsAdminAction = actionClient
   .inputSchema(schema)
   .action(async ({ parsedInput, ctx: { session, auditLogger } }) => {
     await requireEventAccessBySignup(session, parsedInput.signupId);
-    return updateSignupAsAdmin(parsedInput.signupId, parsedInput.body, auditLogger, parsedInput.body.sendEmail ?? true);
+    const result = await updateSignupAsAdmin(
+      parsedInput.signupId,
+      parsedInput.body,
+      auditLogger,
+      parsedInput.body.sendEmail ?? true,
+    );
+    updateTag(`admin-event:${result.eventId}`);
+    revalidateTag(`event-signups:${result.eventId}`, "max");
+    revalidateTag(`signup:${parsedInput.signupId}`, "max");
+    revalidateTag("admin-audit-log", "max");
+    return result;
   });

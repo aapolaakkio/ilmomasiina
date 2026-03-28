@@ -2,7 +2,7 @@ import { type DateArray, createEvents } from "ics";
 import type { NextRequest } from "next/server";
 
 import { env } from "@/env";
-import { db } from "@/db";
+import { getCachedIcalEvents } from "@/cache/ical";
 
 function dateToArray(date: Date): DateArray {
   return [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes()];
@@ -11,26 +11,7 @@ function dateToArray(date: Date): DateArray {
 export async function GET(_request: NextRequest, _context: RouteContext<"/api/ical">) {
   const uidDomain = env.ICAL_UID_DOMAIN ?? new URL(env.BASE_URL).hostname;
 
-  const eventRows = await db.query.events.findMany({
-    columns: {
-      id: true,
-      title: true,
-      description: true,
-      location: true,
-      category: true,
-      slug: true,
-      date: true,
-      endDate: true,
-    },
-    where: {
-      deletedAt: { isNull: true },
-      draft: false,
-      listed: true,
-      date: { isNotNull: true },
-      endDate: { isNotNull: true },
-    },
-    orderBy: { date: "asc" },
-  });
+  const eventRows = await getCachedIcalEvents();
 
   if (eventRows.length === 0) {
     const { value } = createEvents([]);

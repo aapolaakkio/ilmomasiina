@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateTag, updateTag } from "next/cache";
 
 import { requireEventAccess } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
@@ -19,8 +19,13 @@ export const updateEventAction = actionClient
     await requireEventAccess(session, parsedInput.eventId);
     try {
       const result = await updateEvent(parsedInput.eventId, parsedInput.body, auditLogger);
-      revalidatePath("/admin");
-      revalidatePath("/");
+      updateTag("admin-event-list");
+      updateTag(`admin-event:${parsedInput.eventId}`);
+      revalidateTag("event-list", "max");
+      revalidateTag(`event:${parsedInput.eventId}`, "max");
+      revalidateTag(`event-signups:${parsedInput.eventId}`, "max");
+      revalidateTag("categories", "max");
+      revalidateTag("ical-feed", "max");
       return result;
     } catch (err) {
       if (err instanceof EditConflict) {

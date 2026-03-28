@@ -6,8 +6,8 @@ import EventEditor from "@/components/admin/EventEditor";
 import { requireAdmin } from "@/auth/adminAuth";
 import { getLocalizedEvent } from "@/lib/localizedEvent";
 import type { EventID } from "@/db/schema";
-import { getCategories } from "@/services/events/getCategories";
-import { getEventByIdForAdmin, getEventByIdForViewer } from "@/services/events/getEventDetails";
+import { getCachedCategories } from "@/cache/categories";
+import { getCachedAdminEvent, getCachedAdminEventForViewer } from "@/cache/admin/events";
 import { getEventEditors } from "@/services/admin/events/eventEditors";
 import { hasEventAccess } from "@/auth/eventAccess";
 
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/admin/ed
   if (id === "new") return { title: t("titleNew") };
   const locale = await getLocale();
   try {
-    const event = await getEventByIdForAdmin(id as EventID);
+    const event = await getCachedAdminEvent(id as EventID);
     const localized = getLocalizedEvent(event, locale);
     return { title: `${t("titleEdit")} – ${localized.title}` };
   } catch {
@@ -32,7 +32,7 @@ export default async function EditEventPage({ params }: Pick<PageProps<"/[locale
 
   // "new" means create a new event
   if (id === "new") {
-    const categories = await getCategories();
+    const categories = await getCachedCategories();
     return <EventEditor event={null} isNew categories={categories} editors={[]} />;
   }
 
@@ -41,8 +41,8 @@ export default async function EditEventPage({ params }: Pick<PageProps<"/[locale
   try {
     const canEdit = await hasEventAccess(session, eventId);
     const [event, categories, editors] = await Promise.all([
-      canEdit ? getEventByIdForAdmin(eventId) : getEventByIdForViewer(eventId),
-      getCategories(),
+      canEdit ? getCachedAdminEvent(eventId) : getCachedAdminEventForViewer(eventId),
+      getCachedCategories(),
       getEventEditors(eventId),
     ]);
     return <EventEditor event={event} isNew={false} categories={categories} editors={editors} readOnly={!canEdit} />;

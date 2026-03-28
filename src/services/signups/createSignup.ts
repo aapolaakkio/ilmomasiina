@@ -27,7 +27,7 @@ function isUserVisibleEvent(event: {
 
 /** Create a new signup for a quota. Returns the signup ID and edit token. */
 export async function createSignup(body: SignupCreateBody, auditLogger: AuditLogger) {
-  const { newSignup } = await db.transaction(async (tx) => {
+  const { newSignup, eventId } = await db.transaction(async (tx) => {
     // Find the quota with its event
     const quotaData = await tx.query.quotas.findFirst({
       where: { id: { eq: body.quotaId }, deletedAt: { isNull: true } },
@@ -68,9 +68,9 @@ export async function createSignup(body: SignupCreateBody, auditLogger: AuditLog
       tx,
     });
 
-    return { newSignup: signup };
+    return { newSignup: signup, eventId: event.id };
   });
 
   const editToken = generateToken(newSignup.id);
-  return { id: newSignup.id, editToken };
+  return { id: newSignup.id, editToken, eventId };
 }

@@ -7,13 +7,18 @@ import fi from "./fi";
 import sv from "./sv";
 
 import { routing } from "./routing";
+import { notFound } from "next/navigation";
 
 const messages = { fi, en, sv } as const;
 
 export default getRequestConfig(async ({ locale }) => {
   if (!locale) {
     const paramValue = await rootParams.locale();
-    locale = hasLocale(routing.locales, paramValue) ? paramValue : routing.defaultLocale;
+    if (hasLocale(routing.locales, paramValue)) {
+      locale = paramValue;
+    } else {
+      notFound();
+    }
   }
 
   return {

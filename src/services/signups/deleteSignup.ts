@@ -17,7 +17,7 @@ export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin
 
   const cutoff = activeSignupCutoff();
 
-  await db.transaction(async (tx) => {
+  const { eventId } = await db.transaction(async (tx) => {
     // Lock the signup and fetch event data in a single JOIN query
     const [row] = await tx
       .select({
@@ -111,5 +111,9 @@ export async function deleteSignup(id: SignupID, auditLogger: AuditLogger, admin
       previousQuotas,
       previousOpenQuotaSize: event.openQuotaSize,
     });
+
+    return { eventId: event.id };
   });
+
+  return { eventId };
 }

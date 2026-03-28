@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import AuditLogView from "@/components/admin/AuditLog";
 import { requireAdmin } from "@/auth/adminAuth";
 import { parseAuditLogSearchParams } from "@/lib/auditLogUrl";
-import { getAuditLogItems } from "@/services/admin/auditlog/getAuditLogs";
+import { getCachedAuditLog } from "@/cache/admin/auditlog";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("auditLog");
@@ -18,7 +18,7 @@ export default async function AuditLogPage({ searchParams }: PageProps<"/[locale
 
   const raw = await searchParams;
   const query = parseAuditLogSearchParams(raw);
-  const logs = await getAuditLogItems(query);
+  const logs = await getCachedAuditLog(query);
 
   return <AuditLogView query={query} logs={logs} />;
 }

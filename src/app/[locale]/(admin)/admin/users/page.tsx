@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 
 import AdminUsersClient from "@/components/admin/AdminUsers";
 import { requireAdmin } from "@/auth/adminAuth";
-import { listUsers } from "@/services/admin/users/listUsers";
+import { getCachedAdminUsers } from "@/cache/admin/users";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("adminUsers");
@@ -15,7 +15,7 @@ export default async function AdminUsersPage(_props: PageProps<"/[locale]/admin/
   const session = await requireAdmin();
   if (session.role !== "admin") notFound();
 
-  const users = await listUsers();
+  const users = await getCachedAdminUsers();
 
   return <AdminUsersClient users={users} />;
 }

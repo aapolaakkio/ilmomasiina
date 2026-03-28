@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateTag, updateTag } from "next/cache";
 
 import { requireEventAccess } from "@/auth/eventAccess";
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
@@ -13,6 +13,11 @@ export const deleteEventAction = actionClient
   .action(async ({ parsedInput, ctx: { session, auditLogger } }) => {
     await requireEventAccess(session, parsedInput.eventId);
     await deleteEvent(parsedInput.eventId, auditLogger);
-    revalidatePath("/admin");
-    revalidatePath("/");
+    updateTag("admin-event-list");
+    updateTag(`admin-event:${parsedInput.eventId}`);
+    revalidateTag("event-list", "max");
+    revalidateTag(`event:${parsedInput.eventId}`, "max");
+    revalidateTag(`event-signups:${parsedInput.eventId}`, "max");
+    revalidateTag("categories", "max");
+    revalidateTag("ical-feed", "max");
   });

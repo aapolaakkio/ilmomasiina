@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateTag, updateTag } from "next/cache";
 
 import { actionClient, isAuthorizedMiddleware } from "@/auth/safe-action";
 import { eventCreateBody } from "@/db/zod";
@@ -11,7 +11,9 @@ export const createEventAction = actionClient
   .inputSchema(eventCreateBody)
   .action(async ({ parsedInput, ctx: { session, auditLogger } }) => {
     const result = await createEvent(parsedInput, auditLogger, session.user);
-    revalidatePath("/admin");
-    revalidatePath("/");
+    updateTag("admin-event-list");
+    revalidateTag("event-list", "max");
+    revalidateTag("categories", "max");
+    revalidateTag("ical-feed", "max");
     return result;
   });

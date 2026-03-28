@@ -5,12 +5,12 @@ import { getLocale, getTranslations } from "next-intl/server";
 import EditSignupForm from "@/components/EditSignupForm";
 import { getLocalizedEvent, getLocalizedSignup } from "@/lib/localizedEvent";
 import type { SignupID } from "@/db/schema";
-import { getSignupForEdit } from "@/services/signups/getSignupForEdit";
+import { getCachedSignupForEdit } from "@/cache/signups";
 import { verifyToken } from "@/services/signups/editTokens";
 
 /** Edit links are per-signup secrets; nothing is enumerated at build time. */
 export function generateStaticParams() {
-  return [];
+  return [{ id: "__placeholder__", editToken: "__placeholder__" }];
 }
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/signup/[id]/[editToken]">): Promise<Metadata> {
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/signup/[
   const signupId = id as SignupID;
   if (!verifyToken(signupId, editToken)) return {};
   try {
-    const data = await getSignupForEdit(signupId);
+    const data = await getCachedSignupForEdit(signupId);
     const localized = getLocalizedEvent(data.event, locale);
     const isConfirmed = data.signup.confirmed;
     return {
@@ -41,7 +41,7 @@ export default async function EditSignupPage({ params }: PageProps<"/[locale]/si
   }
 
   try {
-    const data = await getSignupForEdit(signupId);
+    const data = await getCachedSignupForEdit(signupId);
 
     const localizedEvent = getLocalizedEvent(data.event, locale);
     const localizedSignup = getLocalizedSignup(data, locale);

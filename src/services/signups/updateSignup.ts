@@ -92,6 +92,7 @@ async function refetchSignupWithPosition(signupId: SignupID) {
           languages: { columns: { language: true, title: true } },
           event: {
             columns: {
+              id: true,
               deletedAt: true,
               title: true,
               date: true,
@@ -186,6 +187,7 @@ export async function updateSignupAsUser(signupId: SignupID, body: SignupUpdateB
     confirmed: isConfirmed(updated),
     answers: updated.answers,
     paymentStatus: getEffectivePaymentStatus(updated, updated.payments),
+    eventId: updated.event.id,
   };
   return response;
 }
@@ -222,7 +224,10 @@ export async function updateSignupAsAdmin(
     });
   }
 
-  return formatSignupForAdmin(updated, updated.answers, updated.payments);
+  return {
+    ...formatSignupForAdmin(updated, updated.answers, updated.payments),
+    eventId: updated.event.id,
+  };
 }
 
 /** Create a signup as an admin. */
@@ -282,5 +287,8 @@ export async function createSignupAsAdmin(
     });
   }
 
-  return formatSignupForAdmin(updated, updated.answers, updated.payments);
+  return {
+    ...formatSignupForAdmin(updated, updated.answers, updated.payments),
+    eventId: updated.event.id,
+  };
 }

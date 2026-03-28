@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { handleStripeWebhook } from "@/services/payment/webhook";
 
-export const runtime = "nodejs";
-
 export async function POST(request: NextRequest, _context: RouteContext<"/api/payment/webhook">) {
   const rawBody = await request.text();
   const signature = request.headers.get("stripe-signature");

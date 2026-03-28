@@ -5,7 +5,7 @@ import AdminEventsList from "@/components/admin/AdminEventsList";
 import { requireAdmin } from "@/auth/adminAuth";
 import { isEventInPast } from "@/lib/adminEventsList";
 import { firstSearchParam } from "@/lib/nextSearchParams";
-import { getEventsListForAdmin } from "@/services/events/getEventsList";
+import { getCachedAdminEventList } from "@/cache/admin/events";
 
 export async function generateMetadata({ searchParams }: PageProps<"/[locale]/admin">): Promise<Metadata> {
   const t = await getTranslations("adminEvents");
@@ -21,7 +21,7 @@ export default async function AdminEventsListPage({ searchParams }: PageProps<"/
   const session = await requireAdmin();
   const showPast = firstPast === "1" || firstPast === "true";
 
-  const events = await getEventsListForAdmin();
+  const events = await getCachedAdminEventList();
   const filtered = events.filter((e) => isEventInPast(e) === showPast);
   const filteredEvents = showPast ? [...filtered].reverse() : filtered;
 

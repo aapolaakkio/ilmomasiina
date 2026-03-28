@@ -11,7 +11,8 @@ import { getLocalizedEvent } from "@/lib/localizedEvent";
 import { getSignupsByQuota, stringifyAnswer } from "@/lib/signupUtils";
 import { SignupStatus } from "@/db/schema";
 import { formatAppDateTime } from "@/lib/intlDateTime";
-import { getEventBySlug, getPublicEventSlugsForStaticParams } from "@/services/events/getEventDetails";
+import { getPublicEventSlugsForStaticParams } from "@/services/events/getEventDetails";
+import { getCachedEventBySlug } from "@/cache/events";
 import { Suspense } from "react";
 import AdminEditLink from "@/components/AdminEditLink";
 
@@ -31,7 +32,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/event/[s
   const { slug } = await params;
   const locale = await getLocale();
   try {
-    const event = await getEventBySlug(slug);
+    const event = await getCachedEventBySlug(slug);
     const localized = getLocalizedEvent(event, locale);
     return { title: localized.title };
   } catch {
@@ -45,7 +46,7 @@ export default async function SingleEventPage({ params }: PageProps<"/[locale]/e
 
   let event;
   try {
-    event = await getEventBySlug(slug);
+    event = await getCachedEventBySlug(slug);
   } catch {
     notFound();
   }

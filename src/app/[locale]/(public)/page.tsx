@@ -6,7 +6,7 @@ import { redirect } from "@/i18n/navigation";
 import { getLocalizedEventListItem } from "@/lib/localizedEvent";
 import { eventsToRows } from "@/lib/eventListUtils";
 import { ErrorCode } from "@/db/schema";
-import { getEventsListForUser } from "@/services/events/getEventsList";
+import { getCachedEventList } from "@/cache/events";
 import CustomError from "@/util/customError";
 
 import { EventListCards, EventListTable } from "./eventListViews";
@@ -21,7 +21,7 @@ export default async function EventListPage(_props: PageProps<"/[locale]">) {
 
   let events;
   try {
-    events = await getEventsListForUser({}, false);
+    events = await getCachedEventList({}, false);
   } catch (err) {
     if (err instanceof CustomError && err.code === ErrorCode.INITIAL_SETUP_NEEDED) {
       redirect({ href: "/login", locale });
