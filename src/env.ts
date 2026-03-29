@@ -75,11 +75,6 @@ export const env = createEnv({
     EDIT_TOKEN_SALT: z.string().optional(),
     NEW_EDIT_TOKEN_SECRET: z.string(),
     AUTH_SECRET: z.string(),
-    AUTH_TRUST_HOST: z
-      .string()
-      .optional()
-      .default("false")
-      .transform((value) => value === "true" || value === "1"),
     AUTH_GOOGLE_ID: z.string(),
     AUTH_GOOGLE_SECRET: z.string(),
     SESSION_TTL: z
