@@ -3,6 +3,7 @@ import { createMiddleware } from "next-safe-action";
 
 import { createAdminAuditLogger, requireAdmin } from "@/auth/adminAuth";
 import type { SignupID } from "@/db/schema";
+import CustomError from "@/util/customError";
 import { verifyToken } from "@/services/signups/editTokens";
 
 export class ActionError extends Error {}
@@ -16,11 +17,18 @@ export function verifyEditToken(signupId: SignupID, editToken: string) {
 
 export const actionClient = createSafeActionClient({
   handleServerError: (error) => {
+    // ActionError: explicit messages intended for the user (already localized or generic)
     if (error instanceof ActionError) {
       return error.message;
     }
+    // CustomError: known business errors — return the error code so the client uses its own fallback.
+    // These are expected errors and should not be logged.
+    if (error instanceof CustomError) {
+      return error.code;
+    }
+    // Unexpected errors: log and return a generic code
     console.error("Unhandled server error:", error);
-    return error.message;
+    return "UnknownError";
   },
   defaultValidationErrorsShape: "flattened",
 });

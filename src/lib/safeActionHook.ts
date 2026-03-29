@@ -10,8 +10,6 @@ export function isHookActionPending(status: HookActionStatus) {
 }
 
 function errorText(result: ResultSlice | undefined, fallback: string, validationFallback: string) {
-  const se = result?.serverError;
-  if (se != null && String(se) !== "") return String(se);
   if (result?.validationErrors) return validationFallback;
   return fallback;
 }
