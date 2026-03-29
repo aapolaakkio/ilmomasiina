@@ -28,7 +28,6 @@ const en = {
     eventList: "Event list",
     logout: "Logout",
   },
-  footer: {},
   login: {
     title: "Log in",
     setupTitle: "Initial setup",

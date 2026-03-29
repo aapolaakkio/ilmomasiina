@@ -28,7 +28,6 @@ const fi = {
     eventList: "Tapahtumalista",
     logout: "Kirjaudu ulos",
   },
-  footer: {},
   login: {
     title: "Kirjaudu",
     setupTitle: "Alkuasetukset",

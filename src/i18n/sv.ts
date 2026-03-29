@@ -28,7 +28,6 @@ const sv = {
     eventList: "Evenemangslista",
     logout: "Logga ut",
   },
-  footer: {},
   login: {
     title: "Logga in",
     setupTitle: "Inledande inställningar",
