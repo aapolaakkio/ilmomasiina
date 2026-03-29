@@ -4,14 +4,14 @@ import { sumBy } from "@/util/sumBy";
 
 import { SignupState, signupState } from "./signupState";
 
-export type AnyEventSchema = AdminEventResponse | UserEventResponse;
+type AnyEventSchema = AdminEventResponse | UserEventResponse;
 
 /** Grabs the signup type from {Admin,User}EventSchema and adds a reference to the quota. */
-export type SignupWithQuota<Ev extends AnyEventSchema = AnyEventSchema> = Ev["quotas"][number]["signups"][number] & {
+type SignupWithQuota<Ev extends AnyEventSchema = AnyEventSchema> = Ev["quotas"][number]["signups"][number] & {
   quota: Ev["quotas"][number];
 };
 
-export function getSignupsAsList<Ev extends AnyEventSchema>(event: Ev) {
+function getSignupsAsList<Ev extends AnyEventSchema>(event: Ev) {
   return event.quotas.flatMap(
     (quota) =>
       quota.signups?.map((signup) => ({
@@ -22,7 +22,7 @@ export function getSignupsAsList<Ev extends AnyEventSchema>(event: Ev) {
 }
 
 /** Computes the number of signups in the open quota and queue. */
-export function countOverflowSignups(quotas: QuotaWithSignupCount[], openQuotaSize: number) {
+function countOverflowSignups(quotas: QuotaWithSignupCount[], openQuotaSize: number) {
   const overflow = sumBy(quotas, (quota) => Math.max(0, quota.signupCount - (quota.size ?? Infinity)));
   return {
     openQuotaCount: Math.min(overflow, openQuotaSize),
@@ -31,7 +31,7 @@ export function countOverflowSignups(quotas: QuotaWithSignupCount[], openQuotaSi
 }
 
 /** Expands the quota type from {Admin,User}EventSchema, makes quota properties nullable and adds references to quota. */
-export type QuotaSignups<Ev extends AnyEventSchema = AnyEventSchema> = Omit<
+type QuotaSignups<Ev extends AnyEventSchema = AnyEventSchema> = Omit<
   Ev["quotas"][number],
   "id" | "title" | "size" | "price" | "signups"
 > & {

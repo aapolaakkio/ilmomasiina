@@ -5,7 +5,7 @@ function withAppTimeZone(options: Omit<Intl.DateTimeFormatOptions, "timeZone">) 
 }
 
 /** Named presets for dates shown in the app UI (always {@link env.NEXT_PUBLIC_APP_TIMEZONE}). */
-export type AppDateTimeStyle = "date" | "dateTime" | "dateTimeWeekday" | "dateTimeSeconds";
+type AppDateTimeStyle = "date" | "dateTime" | "dateTimeWeekday" | "dateTimeSeconds";
 
 const STYLE_OPTIONS: Record<AppDateTimeStyle, Intl.DateTimeFormatOptions> = {
   date: withAppTimeZone({

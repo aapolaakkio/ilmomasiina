@@ -1,8 +1,8 @@
 import { AuditEvent } from "@/db/schema";
 import type { SignupCreateBody } from "@/db/zod";
+import { eventVisibilityCutoff } from "@/db/filters";
 
 import type { AuditLogger } from "../../auditlog";
-import { env } from "@/env";
 import { db } from "../../db";
 import { signups } from "../../db/schema";
 import { generateToken } from "./editTokens";
@@ -17,7 +17,7 @@ function isUserVisibleEvent(event: {
   endDate: Date | null;
 }) {
   if (event.draft) return false;
-  const cutoff = new Date(Date.now() - Number(env.HIDE_EVENT_AFTER_DAYS || 180) * 24 * 60 * 60 * 1000);
+  const cutoff = eventVisibilityCutoff();
   return (
     (event.registrationEndDate != null && event.registrationEndDate > cutoff) ||
     (event.date != null && event.date > cutoff) ||

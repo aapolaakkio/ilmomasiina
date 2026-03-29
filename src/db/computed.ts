@@ -33,11 +33,6 @@ export function getEditableAtLeastUntil(signup: Pick<SignupRow, "createdAt">) {
   return signup.createdAt;
 }
 
-/** Whether the signup has a price greater than 0. */
-function hasPrice(signup: Pick<SignupRow, "price">) {
-  return signup.price != null && signup.price > 0;
-}
-
 /**
  * Determines the effective end date of the event, matching the Sequelize model getter.
  * Returns the latest of endDate, date, registrationEndDate (as a timestamp), or null if none set.
@@ -76,7 +71,7 @@ export function getEffectivePaymentStatus(
   if (refundedPayment || signup.manualPaymentStatus === ManualPaymentStatus.REFUNDED)
     return SignupPaymentStatus.REFUNDED;
   // If no need to pay, don't check further
-  if (!hasPrice(signup)) return null;
+  if (signup.price == null || signup.price <= 0) return null;
   // If the signup has a price but no payment, it's pending
   return SignupPaymentStatus.PENDING;
 }

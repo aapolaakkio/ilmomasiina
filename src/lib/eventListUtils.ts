@@ -4,12 +4,12 @@ import { sumBy } from "@/util/sumBy";
 
 import { SignupState, signupState, type SignupStateInfo } from "./signupState";
 
-export interface EventTableOptions {
+interface EventTableOptions {
   /** If true, quotas are not placed on separate rows. */
   compact?: boolean;
 }
 
-export type EventRow = {
+type EventRow = {
   id: EventID;
   type: "event";
   slug: EventSlug;
@@ -21,7 +21,7 @@ export type EventRow = {
   totalSignupCount: number;
   totalQuotaSize: number | null;
 };
-export type QuotaRow = {
+type QuotaRow = {
   type: "quota" | "openquota" | "waitlist";
   id: QuotaID;
   title?: string;
