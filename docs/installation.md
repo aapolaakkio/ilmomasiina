@@ -265,6 +265,7 @@ You can use Docker Compose to run both a database and production container local
 4. Run `docker-compose -f docker-compose.prod.yml up` manually or e.g. via `systemd`.
 5. Access the app at <http://localhost:8000>.
 6. If you get `UntrustedHost` errors from Auth.js, set `AUTH_TRUST_HOST=true` in your `.env` file.
+7. Set `AUTH_URL` in your `.env` to the public URL of the app (e.g. `http://localhost:8000`). This is required for OAuth callbacks to work correctly behind a reverse proxy. The callback URL `{AUTH_URL}/api/auth/callback/google` must be registered in your Google Cloud Console.
 
 ### Docker (manual)
 
@@ -281,7 +282,7 @@ If you don't want to use Docker Compose, or already have a database, you can run
 
    - You might have to add stuff here to e.g. allow database connections.
      - In particular, `--network host` allows connecting to a database running on `localhost` on the host machine. Remove `-p 3000:3000` when using this.
-   - If running behind a reverse proxy, set `AUTH_TRUST_HOST=true` in your `.env` to avoid Auth.js `UntrustedHost` errors.
+   - If running behind a reverse proxy, set `AUTH_TRUST_HOST=true` and `AUTH_URL` to the public URL in your `.env`. See the [`.env.example`](../.env.example) for details.
    - This runs a non-customized Tietokilta image from the latest stable version. For other options, replace `ghcr.io/tietokilta/ilmomasiina:latest` with:
      - Non-customized Tietokilta image, pinned version: `ghcr.io/tietokilta/ilmomasiina:2.0.0` (example)
      - Customized image, built in CI or uploaded by you: `ghcr.io/yourorg/ilmomasiina:latest` (example)
