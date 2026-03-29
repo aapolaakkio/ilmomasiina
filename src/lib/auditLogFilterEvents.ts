@@ -13,4 +13,7 @@ export const AUDIT_LOG_FILTER_EVENTS: { value: AuditEvent; labelKey: string }[] 
   { value: AuditEvent.PROMOTE_SIGNUP, labelKey: "actions.promoteSignup" },
   { value: AuditEvent.CREATE_USER, labelKey: "actions.createUser" },
   { value: AuditEvent.DELETE_USER, labelKey: "actions.deleteUser" },
+  { value: AuditEvent.START_PAYMENT, labelKey: "actions.startPayment" },
+  { value: AuditEvent.COMPLETE_PAYMENT, labelKey: "actions.completePayment" },
+  { value: AuditEvent.EXPIRE_PAYMENT, labelKey: "actions.expirePayment" },
 ];

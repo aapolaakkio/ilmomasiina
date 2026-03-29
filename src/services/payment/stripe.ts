@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import Stripe from "stripe";
 
-import { PaymentID, PaymentStatus, type ProductSchema, SignupID } from "@/db/schema";
+import { AuditEvent, PaymentID, PaymentStatus, type ProductSchema, SignupID } from "@/db/schema";
 
+import type { AuditLogger } from "@/auditlog";
 import { env } from "@/env";
 import { type DrizzleDb, db } from "../../db";
 import { payments } from "../../db/schema";
@@ -72,6 +73,8 @@ export async function createCheckoutSession(signup: CheckoutSignup, payment: Che
 export async function checkoutSessionStatusUpdated(
   sessionId: Stripe.Checkout.Session["id"],
   status: Stripe.Checkout.Session.Status | null,
+  auditLogger: AuditLogger,
+  webhook: boolean,
 ) {
   if (!sessionId) throw new Error("Invalid Stripe session ID");
 
@@ -88,6 +91,7 @@ export async function checkoutSessionStatusUpdated(
         .returning();
       if (updated.length > 0) {
         const payment = updated[0];
+        await auditLogger(AuditEvent.COMPLETE_PAYMENT, { signupId: payment.signupId, extra: { webhook } });
         const signupRow = await db.query.signups.findFirst({
           where: { id: { eq: payment.signupId } },
           columns: { id: true, email: true, language: true },
@@ -121,10 +125,14 @@ export async function checkoutSessionStatusUpdated(
       break;
     }
     case "expired": {
-      await db
+      const expired = await db
         .update(payments)
         .set({ status: PaymentStatus.EXPIRED, updatedAt: new Date() })
-        .where(and(eq(payments.stripeCheckoutSessionId, sessionId), eq(payments.status, PaymentStatus.PENDING)));
+        .where(and(eq(payments.stripeCheckoutSessionId, sessionId), eq(payments.status, PaymentStatus.PENDING)))
+        .returning();
+      if (expired.length > 0) {
+        await auditLogger(AuditEvent.EXPIRE_PAYMENT, { signupId: expired[0].signupId, extra: { webhook } });
+      }
       break;
     }
     case "open":
@@ -136,7 +144,10 @@ export async function checkoutSessionStatusUpdated(
   }
 }
 
-export async function refreshCheckoutSession(payment: { stripeCheckoutSessionId: string | null }) {
+export async function refreshCheckoutSession(
+  payment: { stripeCheckoutSessionId: string | null },
+  auditLogger: AuditLogger,
+) {
   const stripe = getStripe();
   let session: Stripe.Checkout.Session;
   try {
@@ -145,7 +156,7 @@ export async function refreshCheckoutSession(payment: { stripeCheckoutSessionId:
     if (err instanceof Stripe.errors.StripeRateLimitError) throw new PaymentRateLimited("Rate limit exceeded");
     throw err;
   }
-  await checkoutSessionStatusUpdated(session.id, session.status);
+  await checkoutSessionStatusUpdated(session.id, session.status, auditLogger, false);
   return session;
 }
 

@@ -241,6 +241,9 @@ const sv = {
       promoteSignup: "Anmälan: Lyftes från kön",
       createUser: "Användare: Skapa",
       deleteUser: "Användare: Ta bort",
+      startPayment: "Betalning: Starta",
+      completePayment: "Betalning: Slutförd",
+      expirePayment: "Betalning: Utgången",
     },
     description: {
       createdEvent: "skapade evenemanget {event}",
@@ -254,6 +257,9 @@ const sv = {
       promotedSignup: "anmälan {signup} lyftes upp från kön i evenemanget {event}",
       createdUser: "skapade användaren {user}",
       deletedUser: "tog bort användaren {user}",
+      startedPayment: "startade betalning för anmälan {signup} i evenemanget {event}",
+      completedPayment: "betalning slutförd för anmälan {signup}",
+      expiredPayment: "betalningsförfrågan utgick för anmälan {signup}",
       unknown: "okänd åtgärd {action}",
     },
     pagination: {

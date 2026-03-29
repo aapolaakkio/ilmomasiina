@@ -22,6 +22,9 @@ const ACTION_DESCRIPTIONS: Record<AuditEvent, { key: string; vars: "event" | "si
   [AuditEvent.PROMOTE_SIGNUP]: { key: "description.promotedSignup", vars: "signup" },
   [AuditEvent.CREATE_USER]: { key: "description.createdUser", vars: "user" },
   [AuditEvent.DELETE_USER]: { key: "description.deletedUser", vars: "user" },
+  [AuditEvent.START_PAYMENT]: { key: "description.startedPayment", vars: "signup" },
+  [AuditEvent.COMPLETE_PAYMENT]: { key: "description.completedPayment", vars: "signup" },
+  [AuditEvent.EXPIRE_PAYMENT]: { key: "description.expiredPayment", vars: "signup" },
 };
 
 function formatActionDescription(

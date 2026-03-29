@@ -243,6 +243,9 @@ const fi = {
       promoteSignup: "Ilmoittautuminen: Nousi jonosta",
       createUser: "Käyttäjä: Luo",
       deleteUser: "Käyttäjä: Poista",
+      startPayment: "Maksu: Aloita",
+      completePayment: "Maksu: Vahvista",
+      expirePayment: "Maksu: Vanhene",
     },
     description: {
       createdEvent: "loi tapahtuman {event}",
@@ -256,6 +259,9 @@ const fi = {
       promotedSignup: "ilmo {signup} nousi jonosta tapahtumassa {event}",
       createdUser: "loi käyttäjän {user}",
       deletedUser: "poisti käyttäjän {user}",
+      startedPayment: "aloitti maksun ilmolle {signup} tapahtumassa {event}",
+      completedPayment: "ilmon {signup} maksu vahvistettiin",
+      expiredPayment: "ilmon {signup} maksupyyntö vanheni",
       unknown: "tuntematon toiminto {action}",
     },
     pagination: {

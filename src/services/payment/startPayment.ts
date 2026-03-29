@@ -1,6 +1,7 @@
 import { and, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
 
-import { PaymentMode, PaymentStatus, type SignupID, SignupStatus } from "@/db/schema";
+import { AuditEvent, PaymentMode, PaymentStatus, type SignupID, SignupStatus } from "@/db/schema";
+import type { AuditLogger } from "@/auditlog";
 import { env } from "@/env";
 import { db } from "../../db";
 import { activeSignupCutoff } from "../../db/filters";
@@ -31,14 +32,14 @@ function validateSignupForPayment(
   }
 }
 
-async function createPayment(signupId: SignupID) {
+async function createPayment(signupId: SignupID, auditLogger: AuditLogger) {
   const expiresAt = new Date(
     Date.now() + env.STRIPE_CHECKOUT_EXPIRY_MINS * 60_000 + (env.STRIPE_CHECKOUT_EXPIRY_MINS === 30 ? 30_000 : 0),
   );
 
   const cutoff = activeSignupCutoff();
 
-  const [payment, signup] = await db.transaction(async (tx) => {
+  const [payment, signup, eventInfo] = await db.transaction(async (tx) => {
     // FOR UPDATE lock stays as db.select
     const [freshSignup] = await tx
       .select({
@@ -69,7 +70,7 @@ async function createPayment(signupId: SignupID) {
       columns: {},
       with: {
         event: {
-          columns: { id: true, openQuotaSize: true },
+          columns: { id: true, title: true, openQuotaSize: true },
           with: {
             quotas: {
               where: { deletedAt: { isNull: true } },
@@ -104,7 +105,7 @@ async function createPayment(signupId: SignupID) {
       })
       .returning();
 
-    return [newPayment, freshSignup] as const;
+    return [newPayment, freshSignup, quotaWithEvent.event] as const;
   });
 
   let session;
@@ -134,16 +135,25 @@ async function createPayment(signupId: SignupID) {
     throw error;
   }
 
+  await auditLogger(AuditEvent.START_PAYMENT, {
+    signupId,
+    event: { id: eventInfo.id, title: eventInfo.title },
+  });
+
   return session.url!;
 }
 
-async function handlePendingPayment(signupId: SignupID, payment: { stripeCheckoutSessionId: string | null }) {
-  const session = await refreshCheckoutSession(payment);
+async function handlePendingPayment(
+  signupId: SignupID,
+  payment: { stripeCheckoutSessionId: string | null },
+  auditLogger: AuditLogger,
+) {
+  const session = await refreshCheckoutSession(payment, auditLogger);
   switch (session.status!) {
     case "complete":
       throw new SignupAlreadyPaid("This signup has already been paid");
     case "expired":
-      return createPayment(signupId);
+      return createPayment(signupId, auditLogger);
     case "open":
       return session.url!;
     case null:
@@ -154,7 +164,7 @@ async function handlePendingPayment(signupId: SignupID, payment: { stripeCheckou
 }
 
 /** Start a payment for a signup. */
-export async function startPayment(signupId: SignupID) {
+export async function startPayment(signupId: SignupID, auditLogger: AuditLogger) {
   getStripe();
 
   // Relational query API (`db.query.*`, not deprecated `db._query`): signup + graph + blocking payment in one round trip
@@ -209,7 +219,7 @@ export async function startPayment(signupId: SignupID) {
   const activePayment = signupRow.payments[0];
 
   if (!activePayment) {
-    const paymentUrl = await createPayment(signupId);
+    const paymentUrl = await createPayment(signupId, auditLogger);
     return { paymentUrl };
   }
 
@@ -217,7 +227,7 @@ export async function startPayment(signupId: SignupID) {
     case PaymentStatus.PAID:
       throw new SignupAlreadyPaid("This signup has already been paid");
     case PaymentStatus.PENDING: {
-      const paymentUrl = await handlePendingPayment(signupId, activePayment);
+      const paymentUrl = await handlePendingPayment(signupId, activePayment, auditLogger);
       return { paymentUrl };
     }
     case PaymentStatus.CREATING:

@@ -241,6 +241,9 @@ const en = {
       promoteSignup: "Signup: Accepted from queue",
       createUser: "User: Create",
       deleteUser: "User: Delete",
+      startPayment: "Payment: Start",
+      completePayment: "Payment: Complete",
+      expirePayment: "Payment: Expire",
     },
     description: {
       createdEvent: "created event {event}",
@@ -254,6 +257,9 @@ const en = {
       promotedSignup: "signup {signup} was accepted from queue in event {event}",
       createdUser: "created user {user}",
       deletedUser: "deleted user {user}",
+      startedPayment: "started payment for signup {signup} in event {event}",
+      completedPayment: "payment completed for signup {signup}",
+      expiredPayment: "payment request expired for signup {signup}",
       unknown: "unknown action {action}",
     },
     pagination: {

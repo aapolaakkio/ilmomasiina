@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import EditSignupForm from "@/components/EditSignupForm";
 import { getLocalizedEvent, getLocalizedSignup } from "@/lib/localizedEvent";
+import { internalAuditLogger } from "@/auditlog";
 import type { SignupID } from "@/db/schema";
 import { completePayment } from "@/services/payment/completePayment";
 import { verifyToken } from "@/services/signups/editTokens";
@@ -34,7 +35,7 @@ export default async function PaymentCompletionPage({ params }: PageProps<"/[loc
   }
 
   try {
-    const data = await completePayment(signupId);
+    const data = await completePayment(signupId, internalAuditLogger);
 
     const localizedEvent = getLocalizedEvent(data.event, locale);
     const localizedSignup = getLocalizedSignup(data, locale);

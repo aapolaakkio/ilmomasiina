@@ -30,10 +30,13 @@ function eventLogger(ipAddress: string, user?: string) {
       tx,
       event,
       signup,
+      signupId,
       extra,
     }: {
       event?: AuditLogEvent;
       signup?: AuditLogSignup;
+      /** Pass signupId directly when the full signup model is not available. */
+      signupId?: SignupID;
       tx?: DrizzleDb;
       extra?: object;
     },
@@ -45,7 +48,7 @@ function eventLogger(ipAddress: string, user?: string) {
       action,
       eventId,
       eventName: (eventId === event?.id ? event?.title : signup?.quota?.event?.title) ?? null,
-      signupId: signup?.id ?? null,
+      signupId: signup?.id ?? signupId ?? null,
       signupName: signup?.firstName != null ? `${signup.firstName} ${signup.lastName}` : null,
       extra: extra ? JSON.stringify(extra) : null,
       ipAddress,

@@ -1,10 +1,11 @@
 import Stripe from "stripe";
 
+import type { AuditLogger } from "@/auditlog";
 import { env } from "@/env";
 import { checkoutSessionStatusUpdated, getStripe } from "./stripe";
 
 /** Handle an incoming Stripe webhook event. */
-export async function handleStripeWebhook(rawBody: string | Buffer, signature: string) {
+export async function handleStripeWebhook(rawBody: string | Buffer, signature: string, auditLogger: AuditLogger) {
   const stripe = getStripe();
 
   if (!env.STRIPE_WEBHOOK_SECRET) {
@@ -28,10 +29,10 @@ export async function handleStripeWebhook(rawBody: string | Buffer, signature: s
 
   switch (event.type) {
     case "checkout.session.completed":
-      await checkoutSessionStatusUpdated(event.data.object.id, "complete");
+      await checkoutSessionStatusUpdated(event.data.object.id, "complete", auditLogger, true);
       break;
     case "checkout.session.expired":
-      await checkoutSessionStatusUpdated(event.data.object.id, "expired");
+      await checkoutSessionStatusUpdated(event.data.object.id, "expired", auditLogger, true);
       break;
     default:
       break;

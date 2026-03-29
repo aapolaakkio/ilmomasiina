@@ -85,6 +85,9 @@ export enum AuditEvent {
   EDIT_SIGNUP = "signup.edit",
   CREATE_USER = "user.create",
   DELETE_USER = "user.delete",
+  START_PAYMENT = "payment.start",
+  COMPLETE_PAYMENT = "payment.complete",
+  EXPIRE_PAYMENT = "payment.expire",
 }
 
 export enum ErrorCode {
@@ -200,6 +203,9 @@ export const auditEventEnum = pgEnum("enum_audit_event", [
   AuditEvent.EDIT_SIGNUP,
   AuditEvent.CREATE_USER,
   AuditEvent.DELETE_USER,
+  AuditEvent.START_PAYMENT,
+  AuditEvent.COMPLETE_PAYMENT,
+  AuditEvent.EXPIRE_PAYMENT,
 ]);
 // --- Tables ---
 

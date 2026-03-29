@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { internalAuditLogger } from "@/auditlog";
 import { handleStripeWebhook } from "@/services/payment/webhook";
 
 export const runtime = "nodejs";
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest, _context: RouteContext<"/api/pa
     return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
   }
 
-  const result = await handleStripeWebhook(rawBody, signature);
+  const result = await handleStripeWebhook(rawBody, signature, internalAuditLogger);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
