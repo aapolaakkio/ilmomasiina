@@ -15,7 +15,7 @@ declare module "next-auth" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: env.AUTH_TRUST_HOST,
+  trustHost: env.AUTH_TRUST_HOST || env.NODE_ENV !== "production",
   providers: [Google],
   session: { strategy: "jwt", maxAge: Number(env.SESSION_TTL || 10800) },
   pages: {
