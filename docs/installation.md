@@ -264,6 +264,7 @@ You can use Docker Compose to run both a database and production container local
 3. **Optional:** Make [customizations](#customization) in other files if necessary.
 4. Run `docker-compose -f docker-compose.prod.yml up` manually or e.g. via `systemd`.
 5. Access the app at <http://localhost:8000>.
+6. If you get `UntrustedHost` errors from Auth.js, set `AUTH_TRUST_HOST=true` in your `.env` file.
 
 ### Docker (manual)
 
@@ -280,6 +281,7 @@ If you don't want to use Docker Compose, or already have a database, you can run
 
    - You might have to add stuff here to e.g. allow database connections.
      - In particular, `--network host` allows connecting to a database running on `localhost` on the host machine. Remove `-p 3000:3000` when using this.
+   - If running behind a reverse proxy, set `AUTH_TRUST_HOST=true` in your `.env` to avoid Auth.js `UntrustedHost` errors.
    - This runs a non-customized Tietokilta image from the latest stable version. For other options, replace `ghcr.io/tietokilta/ilmomasiina:latest` with:
      - Non-customized Tietokilta image, pinned version: `ghcr.io/tietokilta/ilmomasiina:2.0.0` (example)
      - Customized image, built in CI or uploaded by you: `ghcr.io/yourorg/ilmomasiina:latest` (example)
