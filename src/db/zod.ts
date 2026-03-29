@@ -711,13 +711,15 @@ export const confirmationMailData = z.object({
   quota: quotaSelect.pick({ title: true }).extend({
     languages: z.array(quotaLanguage.extend({ language: z.string() })),
   }),
-  event: mailEventBase.extend({
-    questions: z.array(
-      questionSelect.pick({ id: true, question: true, options: true }).extend({
-        languages: z.array(questionLanguage.extend({ language: z.string() })),
-      }),
-    ),
-  }),
+  event: mailEventBase
+    .merge(eventSelect.pick({ id: true, slug: true, endDate: true, description: true, category: true }))
+    .extend({
+      questions: z.array(
+        questionSelect.pick({ id: true, question: true, options: true }).extend({
+          languages: z.array(questionLanguage.extend({ language: z.string() })),
+        }),
+      ),
+    }),
 });
 
 export type ConfirmationMailData = z.infer<typeof confirmationMailData>;

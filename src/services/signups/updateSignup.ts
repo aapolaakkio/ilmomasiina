@@ -92,10 +92,15 @@ async function refetchSignupWithPosition(signupId: SignupID) {
           languages: { columns: { language: true, title: true } },
           event: {
             columns: {
+              id: true,
               deletedAt: true,
               title: true,
+              slug: true,
               date: true,
+              endDate: true,
+              description: true,
               location: true,
+              category: true,
               verificationEmail: true,
               payments: true,
               openQuotaSize: true,

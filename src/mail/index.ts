@@ -1,4 +1,8 @@
+import { createEvent } from "ics";
+import type Mail from "nodemailer/lib/mailer";
+
 import { env } from "@/env";
+import { createIcalEventAttrs } from "@/util/ical";
 import { getTranslations } from "next-intl/server";
 
 import mailTransporter from "./config";
@@ -37,12 +41,13 @@ function renderTemplate<T extends "confirmation" | "payment" | "newUser" | "queu
 }
 
 export default class EmailService {
-  static send(to: string, subject: string, html: string) {
+  static send(to: string, subject: string, html: string, icalEvent?: Mail.IcalAttachment) {
     return mailTransporter.sendMail({
       to,
       from: env.MAIL_FROM,
       subject,
       html,
+      icalEvent,
     });
   }
 
@@ -54,7 +59,33 @@ export default class EmailService {
         params.type === "signup"
           ? t("confirmationSignupSubject", { event: params.event.title })
           : t("confirmationEditSubject", { event: params.event.title });
-      await EmailService.send(to, subject, html);
+
+      let icalEvent: Mail.IcalAttachment | undefined;
+      const event = params.event;
+      const icalAttrs = createIcalEventAttrs({
+        id: event.id as string,
+        title: event.title,
+        description: (event.description as string | null) ?? null,
+        location: (event.location as string | null) ?? null,
+        category: (event.category as string | null) ?? null,
+        slug: event.slug as string,
+        date: (event.date as Date | null) ?? null,
+        endDate: (event.endDate as Date | null) ?? null,
+      });
+      if (icalAttrs) {
+        const { value, error: icalError } = createEvent(icalAttrs);
+        if (icalError || !value) {
+          console.error("Failed to create iCal event:", icalError);
+        } else {
+          icalEvent = {
+            content: value,
+            method: "PUBLISH",
+            filename: "invite.ics",
+          };
+        }
+      }
+
+      await EmailService.send(to, subject, html, icalEvent);
     } catch (error) {
       console.error(error);
     }
