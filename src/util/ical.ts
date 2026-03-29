@@ -10,9 +10,6 @@ function dateToArray(date: Date): DateArray5 {
   return [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes()];
 }
 
-/** Domain name for generating iCalendar UIDs. */
-const uidDomain = env.ICAL_UID_DOMAIN ?? new URL(env.BASE_URL).hostname;
-
 interface IcalEvent {
   id: string;
   title: string;
@@ -27,6 +24,8 @@ interface IcalEvent {
 /** Creates iCal event attributes from an event, or undefined if dates are missing. */
 export function createIcalEventAttrs(event: IcalEvent): EventAttributes | undefined {
   if (!event.date || !event.endDate) return undefined;
+
+  const uidDomain = env.ICAL_UID_DOMAIN ?? new URL(env.BASE_URL).hostname;
 
   const description = remark()
     .use(stripMarkdown)
