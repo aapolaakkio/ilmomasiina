@@ -21,6 +21,7 @@
     "format": "oxfmt \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
     "format:check": "oxfmt --check \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
     "db:migrate": "npx tsx src/db/migrate.ts",
+    "db:migrate:tietokilta": "npx tsx src/db/migrateFromTietokilta.ts",
     "db:generate": "drizzle-kit generate",
     "prepare": "simple-git-hooks"
   },
